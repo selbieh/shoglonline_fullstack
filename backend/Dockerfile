@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r ${REQUIREMENTS}
 FROM deps AS runtime
 RUN addgroup --system app && adduser --system --ingroup app app
 RUN mkdir -p /home/app && chown -R app:app /home/app
+RUN mkdir -p /home/app/.gunicorn && chown -R app:app /home/app/.gunicorn
 COPY --chown=app:app . .
 USER app
 ENV HOME=/home/app
