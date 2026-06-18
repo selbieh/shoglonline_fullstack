@@ -1,0 +1,82 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الوظائف — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-JOB-3 (فلترة/بحث/ترتيب) · FR-JOB-4 (قائمة المتابعة) · FR-SUB-1 (اشتراك الفئة) -->
+</head>
+<body data-shell="worker" data-active="jobs">
+<main class="container page-body">
+  <div class="row-between wrap">
+    <h1>الوظائف <span class="muted small">(٣٤٨)</span></h1>
+    <button class="btn btn-ghost btn-sm">▾ الترتيب: الأحدث</button>
+  </div>
+  <div class="banner banner-info row-between wrap">
+    <span>🔔 اشترك في فئة «التصميم والإبداع» ليصلك بريد فور نشر وظيفة جديدة — على مستوى حسابك وبأي وضع</span>
+    <button class="btn btn-primary btn-sm">اشترك</button>
+  </div>
+  <div class="cols">
+    <div class="col-main">
+      <article class="card stack">
+        <div class="row-between"><h3><a href="job-detail.html">تصميم هوية بصرية متكاملة لمتجر إلكتروني</a></h3><button class="icon-btn danger-text" title="في قائمة المتابعة">♥</button></div>
+        <p class="small muted">مطلوب مصمم محترف لتصميم شعار وهوية بصرية كاملة لمتجر أزياء، تشمل دليل الاستخدام وقوالب التواصل الاجتماعي…</p>
+        <div class="row wrap"><span class="chip">تصميم</span><span class="chip">هوية بصرية</span><span class="chip">عن بُعد</span><span class="chip chip-warn">تنتهي بعد ٢٥ يومًا</span></div>
+        <div class="row-between wrap">
+          <div class="row wrap small muted"><span>💰 <b class="success-text">٤٠٠–٥٠٠ د.ك</b></span><span>🕒 قبل ساعتين</span><span>💬 ٨ عروض</span></div>
+          <a class="btn btn-primary btn-sm" href="job-detail.html">قدّم عرضك</a>
+        </div>
+      </article>
+      <article class="card stack">
+        <div class="row-between"><h3><a href="#">تطوير تطبيق جوال (Flutter) لإدارة الحجوزات</a></h3><button class="icon-btn">♡</button></div>
+        <p class="small muted">نبحث عن مطور تطبيقات لبناء تطبيق حجوزات مع لوحة تحكم وتكامل مع بوابة دفع وإشعارات فورية…</p>
+        <div class="row wrap"><span class="chip">برمجة</span><span class="chip">Flutter</span><span class="chip">عن بُعد</span></div>
+        <div class="row-between wrap">
+          <div class="row wrap small muted"><span>💰 <b class="success-text">١٬٢٠٠ د.ك</b></span><span>🕒 قبل ٥ ساعات</span><span>💬 ١٤ عرضًا</span></div>
+          <a class="btn btn-primary btn-sm" href="#">قدّم عرضك</a>
+        </div>
+      </article>
+      <article class="card stack" style="opacity:.78">
+        <div class="row-between"><h3>تصميم شعار لشركتي الناشئة</h3><span class="chip chip-danger">وظيفتك أنت — لا يمكنك التقديم (BR-21)</span></div>
+        <p class="small muted">هذه وظيفة نشرتها بوضع «أوظِّف الآن» — تظهر لك للمتابعة فقط</p>
+        <div class="row-between wrap">
+          <div class="row wrap small muted"><span>💰 ١٠٠ د.ك</span><span>💬 ٣ عروض</span></div>
+          <a class="btn btn-secondary btn-sm" href="job-proposals.html">إدارة عروضها</a>
+        </div>
+      </article>
+      <nav class="pagination"><a href="#">‹</a><a href="#" class="active">١</a><a href="#">٢</a><a href="#">٣</a><a href="#">›</a></nav>
+    </div>
+    <aside class="col-side">
+      <div class="card stack">
+        <h3>تصفية النتائج</h3>
+        <div class="search"><input class="input" placeholder="عنوان، فئة، مهارة…"></div>
+        <div class="field"><label>الفئة</label>
+          <label class="check"><input type="checkbox" checked><span>التصميم والإبداع</span></label>
+          <label class="check"><input type="checkbox"><span>البرمجة والتطوير</span></label>
+          <label class="check"><input type="checkbox"><span>الكتابة والترجمة</span></label>
+          <label class="check"><input type="checkbox"><span>التسويق والمبيعات</span></label>
+        </div>
+        <div class="field"><label>نوع الموقع</label>
+          <label class="check"><input type="checkbox" checked><span>عن بُعد</span></label>
+          <label class="check"><input type="checkbox"><span>حضوري / هجين</span></label>
+        </div>
+        <div class="field"><label>عدد العروض المستلمة</label>
+          <label class="check"><input type="radio" name="q"><span>أقل من ٥</span></label>
+          <label class="check"><input type="radio" name="q" checked><span>٥ – ١٥</span></label>
+          <label class="check"><input type="radio" name="q"><span>أكثر من ١٥</span></label>
+        </div>
+        <div class="field"><label>الميزانية (د.ك)</label>
+          <div class="row"><input class="input" value="١٠٠" style="max-width:110px"><input class="input" value="١٬٥٠٠" style="max-width:110px"></div>
+        </div>
+        <div class="row-between"><a href="#" class="small">مسح الكل</a><button class="btn btn-primary btn-sm">تطبيق</button></div>
+      </div>
+      <div class="card stack">
+        <h4>قائمة المتابعة <span class="chip">٣</span></h4>
+        <a class="small" href="watchlist.html">عرض الوظائف المحفوظة ←</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

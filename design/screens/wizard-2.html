@@ -1,0 +1,59 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إكمال الملف ٢/٣ — التعليم والخبرة العملية</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PROF-2 — التعليم (مدرسة/تخصص/درجة/تواريخ) والخبرة (شركة/مسمى/مدة) إضافة/تعديل/حذف -->
+</head>
+<body style="background:var(--c-bg)">
+<main class="container" style="min-height:100vh;display:grid;place-content:center;padding-block:var(--sp-8)">
+  <div class="card card-pad-lg stack" style="max-width:760px;width:100%">
+    <div class="wizard-progress"><span class="done"></span><span class="done"></span><span class="done"></span><span></span><span></span></div>
+    <div>
+      <h2>تعليمك وخبرتك العملية</h2>
+      <p class="muted small">الخطوة ٣ من ٥ — يمكنك التخطي والإكمال لاحقًا من الإعدادات</p>
+    </div>
+    <div class="field"><label>التعليم</label>
+      <div class="card card-flat" style="background:var(--c-bg)">
+        <div class="row-between">
+          <div><b class="small">بكالوريوس الفنون التطبيقية — جامعة الكويت</b><p class="caption">تصميم جرافيك · ٢٠١٤–٢٠١٨</p></div>
+          <div class="row"><a class="small" href="#">تعديل</a><a class="small danger-text" href="#">حذف</a></div>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" style="align-self:flex-start">+ إضافة مرحلة تعليمية</button>
+    </div>
+    <div class="field"><label>الخبرة العملية</label>
+      <div class="card card-flat" style="background:var(--c-bg)">
+        <div class="row-between">
+          <div><b class="small">مصمم أول — وكالة إبداع، الكويت</b><p class="caption">قيادة فريق تصميم المنتجات · ٢٠٢٠–٢٠٢٤</p></div>
+          <div class="row"><a class="small" href="#">تعديل</a><a class="small danger-text" href="#">حذف</a></div>
+        </div>
+      </div>
+      <div class="card card-flat stack" style="background:var(--c-bg)">
+        <b class="small">إضافة خبرة جديدة</b>
+        <div class="grid-2">
+          <div class="field"><label>الشركة *</label><input class="input" placeholder="اسم الشركة"></div>
+          <div class="field"><label>المسمى الوظيفي *</label><input class="input" placeholder="مثال: مصمم UI"></div>
+          <div class="field"><label>من</label><input class="input" placeholder="٢٠١٨"></div>
+          <div class="field"><label>إلى</label><input class="input" placeholder="٢٠٢٠ أو «حتى الآن»"></div>
+        </div>
+        <div class="field"><label>الوصف</label><textarea class="textarea" style="min-height:64px" placeholder="مسؤولياتك وإنجازاتك باختصار…"></textarea></div>
+        <div class="row"><button class="btn btn-primary btn-sm">حفظ</button><button class="btn btn-secondary btn-sm">حفظ وإضافة أخرى</button><button class="btn btn-ghost btn-sm">إلغاء</button></div>
+      </div>
+    </div>
+    <div class="field"><label>اللغات</label>
+      <div class="row wrap">
+        <span class="chip">العربية · لغة أم ✕</span>
+        <span class="chip">الإنجليزية · متقدم ✕</span>
+        <button class="chip chip-outline">+ أضف لغة</button>
+      </div>
+    </div>
+    <div class="row-between">
+      <button class="btn btn-ghost">رجوع</button>
+      <div class="row"><button class="btn btn-ghost">تخطّي</button><button class="btn btn-primary">التالي</button></div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

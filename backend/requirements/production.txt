@@ -1,0 +1,5 @@
+-r base.txt
+gunicorn>=22.0
+whitenoise>=6.7
+sentry-sdk>=2.8  # error/perf monitoring; only inits when SENTRY_DSN is set (NFR-MNT-4)
+pip-audit>=2.7  # dependency vulnerability scan in CI (SEC)

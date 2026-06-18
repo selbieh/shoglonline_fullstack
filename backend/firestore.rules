@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// ShoghlOnline chat security rules (SRS §14, SEC-3, AC-13).
+//
+// The backend is the control plane: it owns conversation documents (participants, status,
+// names) via the Admin SDK — which bypasses these rules — and mints each user's custom token
+// (request.auth.uid == Django user id). These rules enforce, on every DIRECT client access:
+//   * a user reads only conversations they are a participant of,
+//   * sender-only message writes,
+//   * a read_only conversation rejects new messages (warranty end / context death, BR-10/FR-CHAT-7),
+//   * clients can NEVER create, rename, or delete a conversation (only the backend does),
+//   * messages are immutable (no edit/delete) — the PG mirror is the oversight record.
+//
+// Test these with the Firebase emulator (see backend/test/firestore.rules.test.js).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function conv(convId) {
+      return get(/databases/$(database)/documents/conversations/$(convId)).data;
+    }
+
+    function isParticipant(convId) {
+      return isSignedIn() && request.auth.uid in conv(convId).participants;
+    }
+
+    match /conversations/{convId} {
+      // members may read the conversation metadata; everyone else is denied (existence hidden).
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+
+      // only the backend (Admin SDK) provisions/updates/removes conversation docs.
+      allow create, update, delete: if false;
+
+      match /messages/{msgId} {
+        allow read: if isParticipant(convId);
+
+        // sender-only writes into an ACTIVE conversation the sender belongs to, with a strictly
+        // shaped payload (no attacker-controlled extra fields; body a string, files a list).
+        allow create: if isParticipant(convId)
+                      && request.auth.uid == request.resource.data.sender
+                      && conv(convId).status == 'active'
+                      && request.resource.data.body is string
+                      && request.resource.data.body.size() <= 5000
+                      && request.resource.data.files is list
+                      && request.resource.data.keys().hasOnly(['sender', 'body', 'files', 'createdAt', 'pgId']);
+
+        // messages are an immutable audit trail.
+        allow update, delete: if false;
+      }
+    }
+
+    // default deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

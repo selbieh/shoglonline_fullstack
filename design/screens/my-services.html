@@ -1,0 +1,38 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>خدماتي المميزة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-SVC-2 — إدارة الخدمات: نشطة/موقوفة/قيد المراجعة/مرفوضة + إيقاف لا يمس العقود الجارية -->
+</head>
+<body data-shell="worker" data-active="services">
+<main class="container page-body">
+  <div class="row-between wrap">
+    <h1>خدماتي المميزة</h1>
+    <a class="btn btn-primary" href="service-create.html">+ خدمة جديدة</a>
+  </div>
+  <div class="grid-3">
+    <article class="card stack">
+      <div style="height:140px;border-radius:var(--r-m);background:var(--c-tint);display:grid;place-content:center;font-size:34px">🎨</div>
+      <div class="row-between"><b class="small">تصميم شعار احترافي</b><span class="chip chip-success">نشطة</span></div>
+      <p class="caption">من ٤٥ د.ك · ⭐ 4.9 · ٨٧ طلبًا منجزًا · طلبان جاريان</p>
+      <div class="row wrap"><button class="btn btn-secondary btn-sm">تعديل</button><button class="btn btn-ghost btn-sm">إيقاف مؤقت</button><a class="btn btn-ghost btn-sm" href="service-requests-in.html">الطلبات (٢)</a></div>
+    </article>
+    <article class="card stack">
+      <div style="height:140px;border-radius:var(--r-m);background:var(--c-tint);display:grid;place-content:center;font-size:34px">🛍️</div>
+      <div class="row-between"><b class="small">واجهة متجر إلكتروني كاملة</b><span class="chip chip-warn">قيد مراجعة الإدارة</span></div>
+      <p class="caption">من ١٢٠ د.ك · ستظهر في الكتالوج فور الموافقة</p>
+      <div class="row wrap"><button class="btn btn-secondary btn-sm">تعديل</button><button class="btn btn-ghost btn-sm danger-text">حذف</button></div>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div style="height:140px;border-radius:var(--r-m);background:var(--c-bg);display:grid;place-content:center;font-size:34px">📦</div>
+      <div class="row-between"><b class="small">تغليف منتجات</b><span class="chip chip-neutral">موقوفة مؤقتًا</span></div>
+      <p class="caption">أوقفتها بنفسك — مخفية عن الكتالوج، والعقود الجارية عليها لا تتأثر</p>
+      <div class="row wrap"><button class="btn btn-success btn-sm">إعادة تفعيل</button><button class="btn btn-ghost btn-sm danger-text">حذف نهائي</button></div>
+    </article>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

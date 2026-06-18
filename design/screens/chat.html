@@ -1,0 +1,67 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>المحادثات — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-CHAT-1..10 — Firebase فوري، إيصالات قراءة، ملفات/صوت/إيموجي، بريد ١٠ دقائق (BR-12)، قفل الضمان، إبلاغ -->
+</head>
+<body data-shell="worker" data-active="chat">
+<main class="container page-body">
+  <h1>المحادثات</h1>
+  <div class="chat-shell">
+    <aside class="chat-list">
+      <div style="padding:var(--sp-4)"><div class="search"><input class="input" placeholder="ابحث باسم المحادثة…"></div></div>
+      <div class="conv active">
+        <div class="avatar">ش‌و</div>
+        <div class="meta"><b class="small">شركة الواحة للتجارة</b><p class="prev">شكرًا جزيلًا! هذه النسخة النهائية…</p></div>
+        <div class="stack" style="gap:4px;align-items:center"><span class="caption">14:25</span></div>
+      </div>
+      <div class="conv">
+        <div class="avatar">م‌ب</div>
+        <div class="meta"><b class="small">مؤسسة البيان</b><p class="prev">هل يمكن البدء الأسبوع القادم؟</p></div>
+        <div class="stack" style="gap:4px;align-items:center"><span class="caption">13:02</span><span class="badge-n">٢</span></div>
+      </div>
+      <div class="conv">
+        <div class="avatar">خ‌م</div>
+        <div class="meta"><b class="small">خالد المهندس</b><p class="prev">تم استلام الدفعة، شكرًا لك</p></div>
+        <span class="caption">أمس</span>
+      </div>
+      <div class="conv" style="opacity:.65">
+        <div class="avatar" style="background:var(--c-line);color:var(--c-sub)">م‌ز</div>
+        <div class="meta"><b class="small">متجر زهرة</b><p class="prev">🔒 للقراءة فقط — انتهت فترة الضمان</p></div>
+        <span class="caption">٢١ مايو</span>
+      </div>
+    </aside>
+
+    <section class="chat-room">
+      <div class="row-between" style="padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--c-line)">
+        <div class="row"><div class="avatar">ش‌و</div>
+          <div><b class="small">شركة الواحة للتجارة</b>
+          <p class="caption success-text">● متصل الآن · عقد #1042 — المحادثة مفتوحة حتى نهاية الضمان</p></div></div>
+        <div class="row"><a class="small" href="contract-worker.html">📄 عرض العقد</a><a class="small muted" href="#">⚑ إبلاغ</a></div>
+      </div>
+      <div class="chat-msgs">
+        <div class="bubble in">مرحبًا محمد، اطلعت على التسليم الثاني — دليل الهوية ممتاز 👏<div class="meta">14:22</div></div>
+        <div class="bubble out">شكرًا جزيلًا! هذه النسخة النهائية مرفقة مع كل الملفات المفتوحة
+          <div style="margin-top:6px"><span class="file-chip" style="background:rgb(255 255 255 / 18%);border-color:transparent;color:#fff">📎 brand-final.fig · 12MB</span></div>
+          <div class="meta">14:25 · ✓✓ تمت القراءة</div></div>
+        <div class="bubble in"><span class="audio-pill"><b>▶</b><span class="wave"></span>0:42</span>
+          <div class="meta">14:31 · رسالة صوتية</div></div>
+        <div class="bubble out">سأراجعها اليوم وأرد عليك قبل المساء بإذن الله<div class="meta">14:32 · ✓ تم الإرسال</div></div>
+        <div class="banner banner-info" style="align-self:center">✉️ إن لم تُقرأ رسالتك خلال ١٠ دقائق نرسل للطرف الآخر بريدًا تلقائيًا فيه مقتطف ورابط مباشر للمحادثة — مرة واحدة لكل رسالة غير مقروءة</div>
+      </div>
+      <div class="chat-input">
+        <button class="icon-btn" title="إيموجي">😊</button>
+        <button class="icon-btn" title="إرفاق ملف (صور، فيديو، PDF، Word، Excel، ZIP — حتى ٢٥ م.ب)">📎</button>
+        <button class="icon-btn" title="تسجيل صوتي">🎤</button>
+        <input class="input" placeholder="اكتب رسالتك…">
+        <button class="btn btn-primary">إرسال</button>
+      </div>
+    </section>
+  </div>
+  <div class="banner banner-warn">🔒 مثال محادثة منتهية الضمان: حقل الإرسال يُستبدل بـ«هذه المحادثة للقراءة فقط — انتهت فترة الضمان للعقد المرتبط» مع زر «فتح تذكرة دعم» إن احتجت متابعة</div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

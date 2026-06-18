@@ -1,0 +1,71 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>المحفظة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PAY-1 (٣ أرصدة للدور المزدوج) · FR-PAY-2 (إيداع معلّق + تسوية) · FR-PAY-9 (دفتر قيود) -->
+</head>
+<body data-shell="worker" data-active="wallet">
+<main class="container page-body">
+  <div class="row-between wrap">
+    <h1>محفظتي</h1>
+    <div class="row"><a class="btn btn-outline" href="withdraw.html">سحب الرصيد</a><button class="btn btn-primary">+ شحن المحفظة</button></div>
+  </div>
+
+  <div class="grid-3">
+    <div class="balance-card avail">
+      <div class="row-between"><span class="small muted">الرصيد المتاح</span><span>💰</span></div>
+      <p class="amount">٢٤٥٫٥٠ <span class="small">د.ك</span></p>
+      <p class="caption">جاهز للسحب أو شراء العروض أو تمويل عقود جديدة</p>
+    </div>
+    <div class="balance-card escrow">
+      <div class="row-between"><span class="small muted">محجوز ضمان (بصفتك صاحب عمل)</span><span>🛡</span></div>
+      <p class="amount">١٥٠٫٠٠ <span class="small">د.ك</span></p>
+      <p class="caption">محجوز لعقدك النشط #1037 — يُحرر أو يُرد حسب نتيجة العقد</p>
+    </div>
+    <div class="balance-card pending">
+      <div class="row-between"><span class="small muted">أرباح معلّقة (بصفتك مستقلًا)</span><span>⏳</span></div>
+      <p class="amount">٣٧٨٫٠٠ <span class="small">د.ك</span></p>
+      <p class="caption">تُحرَّر تلقائيًا بنهاية فترة الضمان — أقرب دفعة بعد ٤٢ يومًا</p>
+    </div>
+  </div>
+
+  <div class="banner banner-info">🧾 كل حركة مسجّلة بدفتر قيود مزدوج غير قابل للتعديل — رصيدك دائمًا = مجموع الحركات (FR-PAY-9). الإيداع يظهر «معلّقًا» فورًا ويُؤكَّد خلال دقائق؛ وإن تأخر، تتولاه التسوية التلقائية خلال ١٥ دقيقة.</div>
+
+  <section class="card stack">
+    <div class="row-between wrap"><h3>سجل الحركات</h3>
+      <div class="row"><button class="chip">الكل</button><button class="chip chip-outline">إيداع</button><button class="chip chip-outline">سحب</button><button class="chip chip-outline">عقود</button></div></div>
+    <table class="table">
+      <thead><tr><th>النوع</th><th>التاريخ</th><th>العملية</th><th>الرصيد</th><th>الطريقة</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+      <tbody>
+        <tr><td data-label="النوع">إيداع</td><td data-label="التاريخ">١٢ يونيو</td><td data-label="العملية">شحن رصيد</td><td data-label="الرصيد">متاح</td><td data-label="الطريقة">بطاقة ائتمان</td><td data-label="المبلغ" class="success-text"><b>+١٠٠٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-warn">معلّق — بانتظار تأكيد البوابة</span></td></tr>
+        <tr><td data-label="النوع">إيداع</td><td data-label="التاريخ">١٠ يونيو</td><td data-label="العملية">شحن رصيد</td><td data-label="الرصيد">متاح</td><td data-label="الطريقة">بطاقة ائتمان</td><td data-label="المبلغ" class="success-text"><b>+١٠٠٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-success">مكتمل</span></td></tr>
+        <tr><td data-label="النوع">حجز ضمان</td><td data-label="التاريخ">٨ يونيو</td><td data-label="العملية">عقد #1037</td><td data-label="الرصيد">ضمان</td><td data-label="الطريقة">محفظة</td><td data-label="المبلغ" class="danger-text"><b>−١٥٠٫٠٠</b></td><td data-label="الحالة"><span class="chip">محجوز</span></td></tr>
+        <tr><td data-label="النوع">أرباح عقد</td><td data-label="التاريخ">٥ يونيو</td><td data-label="العملية">عقد #1029</td><td data-label="الرصيد">معلّق</td><td data-label="الطريقة">تحويل داخلي</td><td data-label="المبلغ" class="warn-text"><b>+٣٧٨٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-warn">بانتظار نهاية الضمان</span></td></tr>
+        <tr><td data-label="النوع">سحب</td><td data-label="التاريخ">١ يونيو</td><td data-label="العملية">طلب #88</td><td data-label="الرصيد">متاح</td><td data-label="الطريقة">PayPal</td><td data-label="المبلغ" class="danger-text"><b>−٢٠٠٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-warn">قيد المعالجة</span></td></tr>
+        <tr><td data-label="النوع">شراء عروض</td><td data-label="التاريخ">٢٨ مايو</td><td data-label="العملية">باقة ٢٠ عرضًا</td><td data-label="الرصيد">متاح</td><td data-label="الطريقة">محفظة</td><td data-label="المبلغ" class="danger-text"><b>−١٥٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-success">مكتمل</span></td></tr>
+        <tr><td data-label="النوع">استرداد</td><td data-label="التاريخ">٢٢ مايو</td><td data-label="العملية">عقد #998 — قرار نزاع (تقسيم)</td><td data-label="الرصيد">متاح</td><td data-label="الطريقة">تحويل داخلي</td><td data-label="المبلغ" class="success-text"><b>+٦٠٫٠٠</b></td><td data-label="الحالة"><span class="chip chip-success">مكتمل</span></td></tr>
+      </tbody>
+    </table>
+    <nav class="pagination"><a href="#">‹</a><a href="#" class="active">١</a><a href="#">٢</a><a href="#">›</a></nav>
+  </section>
+</main>
+
+<!-- Charge modal (open as design state) -->
+<div class="modal-overlay">
+  <div class="modal">
+    <h3>شحن المحفظة <span class="x">✕</span></h3>
+    <div class="field"><label>المبلغ (د.ك) *</label><input class="input" value="١٧٥"></div>
+    <div class="field"><label>طريقة الدفع *</label>
+      <label class="check"><input type="radio" name="pm" checked><span>💳 بطاقة فيزا •••• 4821 (محفوظة)</span></label>
+      <label class="check"><input type="radio" name="pm"><span>💳 بطاقة جديدة — عبر بوابة الدفع الآمنة</span></label>
+      <label class="check"><input type="radio" name="pm"><span>🧾 Fawry Pay</span></label>
+    </div>
+    <div class="banner banner-info small">🔒 لا نخزّن بيانات بطاقتك إطلاقًا — الإدخال يتم في صفحة بوابة الدفع المشفّرة (PCI-DSS)</div>
+    <button class="btn btn-primary btn-block">المتابعة للدفع الآمن</button>
+  </div>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

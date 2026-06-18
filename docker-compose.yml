@@ -1,0 +1,96 @@
+# ShoghlOnline — local development stack (SRS §20)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shoghl
+      POSTGRES_USER: shoghl
+      POSTGRES_PASSWORD: shoghl
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shoghl"]
+      interval: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    ports:
+      - "6379:6379"   # published so a host-run backend (bare metal) can reach it too
+
+  backend:
+    build:
+      context: ./backend
+      args: { REQUIREMENTS: requirements/local.txt }
+    command: python manage.py runserver 0.0.0.0:8000
+    # .env supplies secrets/stubs; the inline `environment` below OVERRIDES it for the
+    # datastore URLs so the container ALWAYS talks to the db/redis services — never
+    # localhost — no matter what DATABASE_URL is set to in .env.
+    env_file: [.env]
+    environment: &backend_env
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DATABASE_URL: postgres://shoghl:shoghl@db:5432/shoghl
+      CACHE_URL: redis://redis:6379/1
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      # The env-drift test (tests/env) reads the repo-root .env.example, which lives one level
+      # above the mounted backend/ (i.e. "/" inside the container). Mount it read-only there so
+      # `docker compose exec backend pytest` exercises the same single source of truth as CI.
+      - ./.env.example:/.env.example:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    build:
+      context: ./backend
+      args: { REQUIREMENTS: requirements/local.txt }
+    command: celery -A config worker -l info
+    entrypoint: []
+    env_file: [.env]
+    environment: *backend_env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend: { condition: service_started }
+
+  beat:
+    build:
+      context: ./backend
+      args: { REQUIREMENTS: requirements/local.txt }
+    command: celery -A config beat -l info
+    entrypoint: []
+    env_file: [.env]
+    environment: *backend_env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend: { condition: service_started }
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1   # browser → backend (host)
+      INTERNAL_API_URL: http://backend:8000/api/v1        # server-side SSR → backend (container)
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  frontend_modules:

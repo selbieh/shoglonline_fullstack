@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+tmp/
+.env*.local
+next-env.d.ts
+*.tsbuildinfo
+# test artifacts (Vitest coverage / Playwright)
+coverage/
+playwright-report/
+test-results/
+.playwright/

@@ -1,0 +1,108 @@
+/**
+ * Minimal API client for the scaffold.
+ *
+ * NOTE (SEC-1 / SRS §16.3): tokens are kept in localStorage for the scaffold only.
+ * Before production launch, move the session to HTTP-only secure cookies issued by
+ * the backend (the SRS-preferred approach) — tracked as a Phase-3 hardening task.
+ */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+const ACCESS_KEY = "sh_access";
+const REFRESH_KEY = "sh_refresh";
+
+export const tokens = {
+  get access() {
+    return typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY);
+  },
+  set(access: string, refresh: string) {
+    localStorage.setItem(ACCESS_KEY, access);
+    localStorage.setItem(REFRESH_KEY, refresh);
+  },
+  clear() {
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  },
+  get refresh() {
+    return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
+  },
+};
+
+async function refreshAccess(): Promise<boolean> {
+  const refresh = tokens.refresh;
+  if (!refresh) return false;
+  const res = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh }),
+  });
+  if (!res.ok) return false;
+  const data = await res.json();
+  tokens.set(data.access, data.refresh ?? refresh);
+  return true;
+}
+
+export async function api<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+  retry = true,
+): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (tokens.access) headers.Authorization = `Bearer ${tokens.access}`;
+
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+
+  if (res.status === 401 && retry && (await refreshAccess())) {
+    return api<T>(path, options, false);
+  }
+  if (res.status === 401) {
+    tokens.clear();
+    if (typeof window !== "undefined") window.location.href = "/signin";
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw Object.assign(new Error("api_error"), { status: res.status, body });
+  }
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+
+export type Attachment = {
+  id: number;
+  original_name: string;
+  content_type: string;
+  size: number;
+  kind: "image" | "video" | "audio" | "document" | "archive" | "other";
+  url: string;
+  created_at: string;
+};
+
+/**
+ * Multipart upload to POST /uploads. Kept separate from `api()` because it must NOT send a
+ * JSON Content-Type (the browser sets the multipart boundary). Reuses the 401→refresh→retry path.
+ */
+export async function uploadFile(file: File, retry = true): Promise<Attachment> {
+  const form = new FormData();
+  form.append("file", file);
+  const headers: Record<string, string> = {};
+  if (tokens.access) headers.Authorization = `Bearer ${tokens.access}`;
+
+  const res = await fetch(`${API_URL}/uploads`, { method: "POST", headers, body: form });
+  if (res.status === 401 && retry && (await refreshAccess())) return uploadFile(file, false);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw Object.assign(new Error("api_error"), { status: res.status, body });
+  }
+  return res.json();
+}
+
+export type Me = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string;
+  active_mode: "find_job" | "find_worker" | "";
+  status: string;
+};

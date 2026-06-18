@@ -1,0 +1,65 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>التقييمات — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-REV-1..4 · BR-13 — تقييم متبادل بعد الإكمال فقط، تعديل ضمن الضمان، قفل بعده -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <h1>التقييمات</h1>
+  <div class="cols">
+    <div class="col-main">
+      <section class="card stack">
+        <h3>بانتظار تقييمك</h3>
+        <div class="row-between wrap">
+          <div class="row"><div class="avatar">ش‌و</div>
+            <div><b class="small">شركة الواحة — عقد #1029 «تصميم تطبيق»</b><p class="caption">اكتمل قبل ٣ أيام · يمكنك التعديل حتى نهاية الضمان (٥٧ يومًا متبقية)</p></div></div>
+          <button class="btn btn-primary btn-sm">قيّم الآن</button>
+        </div>
+      </section>
+      <section class="card stack">
+        <h3>تقييمات حصلت عليها <span class="muted small">(٤١)</span></h3>
+        <div><div class="row-between"><b class="small">شركة الواحة للتجارة · عقد #1029</b><span class="stars">★★★★★</span></div>
+          <p class="small muted">«عمل احترافي وتسليم قبل الموعد — دليل هوية ممتاز» · قبل يومين</p></div>
+        <hr class="divider">
+        <div><div class="row-between"><b class="small">خالد المهندس · عقد #1018</b><span class="stars">★★★★☆</span></div>
+          <p class="small muted">«تواصل سريع ومرونة في التعديلات» · الشهر الماضي · <span class="chip chip-neutral" style="padding:0 8px">مقفل — انتهى الضمان</span></p></div>
+      </section>
+      <section class="card stack">
+        <h3>تقييمات كتبتها</h3>
+        <div><div class="row-between"><b class="small">مؤسسة البيان (صاحب عمل) · عقد #1029</b><span class="row"><span class="stars">★★★★★</span><button class="btn btn-ghost btn-sm">تعديل</button></span></div>
+          <p class="small muted">«متطلبات واضحة ودفع سريع — أنصح بالتعامل معهم» · التعديل متاح ٥٧ يومًا</p></div>
+      </section>
+    </div>
+    <aside class="col-side">
+      <div class="card stack center">
+        <h4>تقييمك العام</h4>
+        <p style="font-size:44px;font-weight:800" class="brand-text">4.9</p>
+        <span class="stars" style="font-size:20px">★★★★★</span>
+        <p class="caption">٤١ عقدًا مكتملًا · 👍 ٣٩ · 👎 ٢</p>
+      </div>
+      <div class="banner banner-info small">قواعد التقييم: متاح فقط بعد إكمال عقد فعلي · تقييم واحد لكل طرف لكل عقد · لا يمكنك تقييم نفسك (BR-21)</div>
+    </aside>
+  </div>
+</main>
+
+<!-- Review modal (open) -->
+<div class="modal-overlay">
+  <div class="modal">
+    <h3>قيّم تجربتك مع شركة الواحة <span class="x">✕</span></h3>
+    <p class="caption">عقد #1029 — تصميم تطبيق · تقييمك علني ويظهر في ملفهم</p>
+    <div class="center"><span class="stars" style="font-size:34px">★★★★★</span></div>
+    <div class="field"><label>تعليقك *</label>
+      <textarea class="textarea">متطلبات واضحة منذ البداية ودفع فوري — تجربة ممتازة</textarea></div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn btn-primary">نشر التقييم</button>
+      <button class="btn btn-ghost">لاحقًا</button>
+    </div>
+    <p class="caption">يمكنك تعديل التقييم حتى نهاية فترة الضمان ثم يُقفل نهائيًا (BR-13)</p>
+  </div>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

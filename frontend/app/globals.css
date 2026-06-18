@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mirrors design/assets/tokens.css — keep both in sync */
+:root {
+  --c-primary: #6c70dc;
+  --c-primary-dark: #5155be;
+  --c-tint: #e9ecfa;
+  --c-bg: #f6f7fd;
+  --c-ink: #23263f;
+}
+
+body {
+  @apply bg-bg text-ink antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-m px-6 py-2.5 font-medium transition;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-dark;
+  }
+  .btn-secondary {
+    @apply btn bg-tint text-primary-dark;
+  }
+  .btn-google {
+    @apply btn border border-line-strong bg-white text-ink;
+  }
+  .card {
+    @apply rounded-l border border-line bg-white p-5 shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-tint px-3 py-0.5 text-sm font-medium text-primary-dark;
+  }
+  /* removable active-filter pill (chip + ✕ affordance) */
+  .chip-removable {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-tint px-3 py-1 text-sm font-medium text-primary-dark transition;
+    @apply hover:border-primary hover:bg-primary hover:text-white;
+  }
+  .chip-x {
+    @apply grid h-4 w-4 place-content-center rounded-full bg-primary/15 text-[10px] leading-none transition;
+  }
+  .chip-removable:hover .chip-x {
+    @apply bg-white/25;
+  }
+
+  /* ── Impressive brand surfaces (palette: #6C70DC / #5155BE / #3E418F) ── */
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-1 hover:shadow-lg;
+  }
+  /* modern elevated card — refined border, soft shadow, smooth hover lift */
+  .card-modern {
+    @apply relative rounded-l border border-line/80 bg-white shadow-soft transition duration-300;
+    @apply hover:-translate-y-1 hover:border-primary/30 hover:shadow-soft-lg;
+  }
+  /* soft tinted icon container (replaces emoji glyph tiles) */
+  .icon-tile {
+    @apply grid place-content-center rounded-m bg-tint text-primary-dark;
+  }
+  /* compact metadata row item: line-icon + label */
+  .meta {
+    @apply inline-flex items-center gap-1.5 text-sm text-sub;
+  }
+  /* outlined skill/tag pill */
+  .tag {
+    @apply inline-flex items-center rounded-full border border-line bg-bg px-2.5 py-0.5 text-xs font-medium text-sub;
+  }
+  /* coloured tag pill — pair with a tone from lib/tags `tagTone()` */
+  .tag-soft {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-l from-primary to-primary-deep bg-clip-text text-transparent;
+  }
+  .btn-gradient {
+    @apply btn text-white shadow-lg shadow-primary/30;
+    background-image: linear-gradient(135deg, #6c70dc, #5155be);
+  }
+  .btn-gradient:hover {
+    background-image: linear-gradient(135deg, #5155be, #3e418f);
+  }
+  /* glassy card on dark/gradient sections */
+  .glass {
+    @apply rounded-l border border-white/20 bg-white/10 backdrop-blur-md;
+  }
+
+  /* subtle ghost button — for low-emphasis actions (e.g. clear filters) */
+  .btn-ghost {
+    @apply inline-flex items-center gap-1 rounded-full border border-line-strong bg-white px-3 py-1 text-xs font-medium text-sub transition;
+    @apply hover:border-danger hover:bg-danger-t hover:text-danger;
+  }
+  /* segmented control (pill group) — e.g. sort order on dark bands */
+  .seg {
+    @apply inline-flex rounded-full border border-white/25 bg-white/10 p-1 backdrop-blur;
+  }
+  .seg-item {
+    @apply cursor-pointer rounded-full px-3 py-1 text-sm font-medium text-white/80 transition hover:text-white;
+  }
+  .seg-item-active {
+    @apply bg-white text-primary-dark shadow-sm hover:text-primary-dark;
+  }
+  /* unified text/select field */
+  .field {
+    @apply w-full rounded-m border border-line-strong bg-white px-3 py-2 text-sm text-ink transition;
+    @apply focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15;
+  }
+  /* floating accent badge that orbits the hero art */
+  .float-badge {
+    @apply absolute flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-sm font-bold text-ink shadow-glow backdrop-blur;
+  }
+  /* category radio rendered as a selectable row */
+  .filter-row {
+    @apply flex cursor-pointer items-center gap-2 rounded-m px-2.5 py-2 text-sm transition hover:bg-tint;
+  }
+  .filter-row-active {
+    @apply bg-tint font-bold text-primary-dark ring-1 ring-primary/25;
+  }
+}
+
+@layer utilities {
+  /* layered radial brand mesh — drop into any relative/overflow-hidden section */
+  .bg-mesh {
+    background-color: #f6f7fd;
+    background-image:
+      radial-gradient(45rem 45rem at 110% -10%, rgba(108, 112, 220, 0.18), transparent 60%),
+      radial-gradient(40rem 40rem at -10% 110%, rgba(62, 65, 143, 0.14), transparent 60%);
+  }
+  .bg-hero {
+    background-image: linear-gradient(135deg, #6c70dc 0%, #5155be 45%, #3e418f 100%);
+  }
+  /* soft gradient cover strips for cards (rotate variants by index) */
+  .cover-a { background-image: linear-gradient(120deg, #888ee2, #5155be); }
+  .cover-b { background-image: linear-gradient(120deg, #6c70dc, #3e418f); }
+  .cover-c { background-image: linear-gradient(120deg, #A6ABE9, #6c70dc); }
+  /* faint dotted texture */
+  .dots {
+    background-image: radial-gradient(rgba(108, 112, 220, 0.18) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  .shadow-glow { box-shadow: 0 18px 50px -12px rgba(81, 85, 190, 0.45); }
+  /* modern layered elevation — resting + hover lift for cards */
+  .shadow-soft {
+    box-shadow: 0 1px 2px rgb(35 38 63 / 4%), 0 6px 20px -8px rgb(35 38 63 / 10%);
+  }
+  .shadow-soft-lg {
+    box-shadow: 0 2px 6px rgb(35 38 63 / 5%), 0 18px 40px -12px rgb(81 85 190 / 28%);
+  }
+  /* spotlight glow layered ON TOP of the hero gradient. The linear gradient is kept
+     as the base layer so that `bg-hero bg-spotlight` (both set background-image, and
+     this class wins by source order) never loses the gradient → white text stays
+     readable on the dark band. */
+  .bg-spotlight {
+    background-color: #5155be;
+    background-image:
+      radial-gradient(38rem 30rem at 75% 0%, rgba(255, 255, 255, 0.18), transparent 60%),
+      linear-gradient(135deg, #6c70dc 0%, #5155be 45%, #3e418f 100%);
+  }
+  /* thin top accent bar for cards (use with ::before-style wrapper) */
+  .accent-top { box-shadow: inset 0 4px 0 0 var(--c-primary); }
+
+  /* ── motion ── */
+  .animate-float { animation: floaty 6s ease-in-out infinite; }
+  .animate-float-slow { animation: floaty 9s ease-in-out infinite; }
+  .animate-float-delayed { animation: floaty 7s ease-in-out infinite; animation-delay: -2.5s; }
+  .animate-fade-up { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .delay-100 { animation-delay: 0.1s; }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+  .delay-400 { animation-delay: 0.4s; }
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-float-delayed,
+  .animate-fade-up {
+    animation: none !important;
+  }
+  .card-hover:hover { transform: none; }
+}

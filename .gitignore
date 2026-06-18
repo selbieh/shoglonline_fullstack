@@ -1,0 +1,60 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node
+node_modules/
+.next/
+out/
+build/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Env
+.env
+.env.local
+.env.*.local
+.envs/.local/
+.envs/.production/
+# cookiecutter-django env secrets, anywhere in the tree (e.g. backend/.envs/)
+**/.envs/
+
+# Credentials / service accounts — NEVER commit (matched anywhere in the tree)
+**/firebase-credentials.json
+**/*firebase*credential*.json
+**/*service-account*.json
+**/google-services.json
+**/GoogleService-Info.plist
+*.pem
+*.key
+*.p12
+*.p8
+
+# Docker
+.docker/
+
+# Misc
+*.pid
+*.sqlite3

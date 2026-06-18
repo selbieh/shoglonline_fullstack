@@ -1,0 +1,9 @@
+# Coverage targets business logic (services / api / tasks / models — TESTING_STRATEGY §13.3),
+# not auto-generated migrations or operational seed/demo management commands (those are
+# verified by behavior tests like the seed_demo idempotency test, not line coverage).
+[run]
+omit =
+    */migrations/*
+    */management/commands/*
+    */apps.py
+    */__init__.py

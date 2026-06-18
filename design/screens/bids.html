@@ -1,0 +1,61 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>رصيد العروض — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-BID-1..6 — الرصيد، الاستخدام بالفترات، الباقات، قواعد الاسترداد -->
+</head>
+<body data-shell="worker" data-active="jobs">
+<main class="container page-body">
+  <h1>رصيد العروض</h1>
+  <div class="grid-4">
+    <div class="card"><p class="muted small">الرصيد الحالي</p><p style="font-size:28px;font-weight:800" class="brand-text">١٢ عرضًا</p><p class="caption">عروض الدعوات لا تُخصم</p></div>
+    <div class="card"><p class="muted small">هذا الشهر</p><p style="font-size:28px;font-weight:800">٩</p><p class="caption">آخر استخدام: اليوم</p></div>
+    <div class="card"><p class="muted small">هذه السنة</p><p style="font-size:28px;font-weight:800">٤١</p><p class="caption">يشمل دعوتين مجانيتين</p></div>
+    <div class="card"><p class="muted small">منذ البداية</p><p style="font-size:28px;font-weight:800">٦٧</p><p class="caption">منها ٣ مستردة</p></div>
+  </div>
+
+  <h2>باقات العروض</h2>
+  <div class="grid-4">
+    <div class="card stack center">
+      <h3>باقة البداية</h3>
+      <p style="font-size:32px;font-weight:800" class="brand-text">١٠ <span class="small">عروض</span></p>
+      <p class="caption">٩ د.ك · ٠٫٩٠ د.ك للعرض</p>
+      <button class="btn btn-secondary btn-block">شراء من المحفظة</button>
+    </div>
+    <div class="card stack center" style="border:2.5px solid var(--c-primary)">
+      <span class="chip" style="background:var(--c-primary);color:#fff;align-self:center">الأكثر توفيرًا</span>
+      <h3>الباقة الشهرية</h3>
+      <p style="font-size:32px;font-weight:800" class="brand-text">٢٠ <span class="small">عرضًا</span></p>
+      <p class="caption">١٥ د.ك · ٠٫٧٥ د.ك للعرض</p>
+      <button class="btn btn-primary btn-block">شراء من المحفظة</button>
+    </div>
+    <div class="card stack center">
+      <h3>باقة المحترف</h3>
+      <p style="font-size:32px;font-weight:800" class="brand-text">٥٠ <span class="small">عرضًا</span></p>
+      <p class="caption">٣٠ د.ك · ٠٫٦٠ د.ك للعرض</p>
+      <button class="btn btn-secondary btn-block">شراء من المحفظة</button>
+    </div>
+    <div class="card stack" style="background:var(--c-tint);border-color:transparent">
+      <h3>🎁 عروض مجانية</h3>
+      <p class="small">• عروض ترحيبية عند التسجيل<br>• الدعوات المباشرة لا تُخصم أبدًا<br>• استرداد تلقائي إن أُغلقت الوظيفة قبل البتّ أو رفضت الإدارة عرضك</p>
+    </div>
+  </div>
+
+  <section class="card stack">
+    <h3>سجل الاستخدام</h3>
+    <table class="table">
+      <thead><tr><th>التاريخ</th><th>الوظيفة</th><th>الحركة</th><th>الرصيد بعدها</th></tr></thead>
+      <tbody>
+        <tr><td data-label="التاريخ">اليوم</td><td data-label="الوظيفة">تصميم هوية بصرية لمتجر</td><td data-label="الحركة" class="danger-text">−١ تقديم عرض</td><td data-label="الرصيد">١٢</td></tr>
+        <tr><td data-label="التاريخ">أمس</td><td data-label="الوظيفة">مونتاج فيديو (أُغلقت)</td><td data-label="الحركة" class="success-text">+١ استرداد تلقائي</td><td data-label="الرصيد">١٣</td></tr>
+        <tr><td data-label="التاريخ">قبل يومين</td><td data-label="الوظيفة">لوحة تحكم عقارية — دعوة خالد</td><td data-label="الحركة" class="muted">٠ — دعوة مجانية</td><td data-label="الرصيد">١٢</td></tr>
+        <tr><td data-label="التاريخ">٢٨ مايو</td><td data-label="الوظيفة">باقة ٢٠ عرضًا</td><td data-label="الحركة" class="success-text">+٢٠ شراء</td><td data-label="الرصيد">١٥</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

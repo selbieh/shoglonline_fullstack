@@ -1,0 +1,47 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>طلبات الشراء الواردة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-SVC-7 — قبول (→ عقد بعد تمويل المشتري) / رفض بسبب -->
+</head>
+<body data-shell="worker" data-active="services">
+<main class="container page-body">
+  <h1>طلبات الشراء الواردة</h1>
+  <div class="col-main">
+    <article class="card stack">
+      <div class="row-between wrap">
+        <div class="row"><div class="avatar">ع‌ف</div>
+          <div><b class="small">عبدالله فهد — طلب «تصميم شعار احترافي»</b><p class="caption">قبل ٤٠ دقيقة · الكمية: ١ · إضافات: تسليم مستعجل + ملفات مفتوحة</p></div></div>
+        <b class="success-text">الإجمالي: ٧٥ د.ك</b>
+      </div>
+      <div class="banner banner-info small">📝 وصف الطلب: «شعار لمقهى مختص بالقهوة العربية، أفضّل الألوان الترابية، مرفق أمثلة أحبها» <span class="file-chip">📎 refs.zip</span></div>
+      <div class="row wrap">
+        <button class="btn btn-success btn-sm">قبول الطلب → ينشأ عقد</button>
+        <button class="btn btn-danger-soft btn-sm">رفض مع سبب</button>
+        <a class="btn btn-ghost btn-sm" href="chat.html">💬 استفسار قبل القبول</a>
+      </div>
+      <p class="caption">عند قبولك يُنشأ عقد ويُحجز المبلغ من محفظة المشتري — لا تبدأ العمل قبل أن يصبح العقد «نشطًا»</p>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div class="row-between wrap">
+        <div class="row"><div class="avatar">ن‌س</div>
+          <div><b class="small">نورة السالم — طلب «تصميم شعار احترافي»</b><p class="caption">أمس · الكمية: ٢</p></div></div>
+        <span class="chip chip-success">مقبول — عقد #1062 بانتظار التمويل</span>
+      </div>
+      <p class="caption">ينشط العقد فور شحن المشتري لمحفظته — وإن لم يموَّل خلال ٤٨ ساعة يُلغى تلقائيًا ويعود الطلب لحالته (BR-6a)</p>
+    </article>
+    <article class="card stack" style="opacity:.7">
+      <div class="row-between wrap">
+        <div class="row"><div class="avatar">م‌ر</div>
+          <div><b class="small">محل الريان — طلب «واجهة متجر»</b><p class="caption">قبل ٣ أيام</p></div></div>
+        <span class="chip chip-danger">رفضته</span>
+      </div>
+      <p class="caption">سببك: «جدولي ممتلئ هذا الشهر — أعتذر، يسعدني التعاون لاحقًا»</p>
+    </article>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نظام الإحالة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-AFF-1..5 · BR-18 — رابط مخصص، إحصاءات، عمولات تستحق عند تحرير الضمان، لا إحالة ذاتية -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <h1>نظام الإحالة</h1>
+  <p class="muted small">ادعُ أصدقاءك واربح نسبة من عمولة المنصة على عقودهم المكتملة — للطرفين: مستقلين وأصحاب أعمال</p>
+
+  <div class="grid-4">
+    <div class="card"><p class="muted small">النقرات</p><p style="font-size:26px;font-weight:800">٣٤٢</p></div>
+    <div class="card"><p class="muted small">تسجيلات عبر رابطك</p><p style="font-size:26px;font-weight:800" class="brand-text">٢٨</p></div>
+    <div class="card"><p class="muted small">عقود مؤهلة</p><p style="font-size:26px;font-weight:800">١١</p></div>
+    <div class="card"><p class="muted small">أرباح الإحالة</p><p style="font-size:26px;font-weight:800" class="success-text">٢٣٫٤٠ د.ك</p><p class="caption">تُضاف للمحفظة</p></div>
+  </div>
+
+  <div class="cols">
+    <div class="col-main">
+      <section class="card stack">
+        <h3>رابطك الخاص</h3>
+        <div class="row wrap">
+          <input class="input" style="flex:1;direction:ltr;text-align:left" value="https://shoghlonline.com/r/mohammed-design">
+          <button class="btn btn-primary">نسخ</button>
+        </div>
+        <div class="field"><label>تخصيص الرابط</label>
+          <div class="row"><input class="input" style="max-width:260px;direction:ltr;text-align:left" value="mohammed-design"><button class="btn btn-secondary btn-sm">حفظ</button></div>
+          <span class="hint">يجب أن يكون فريدًا — يتم التحقق تلقائيًا</span></div>
+        <div class="row wrap">
+          <button class="btn btn-secondary btn-sm">مشاركة فيسبوك</button>
+          <button class="btn btn-secondary btn-sm">مشاركة X</button>
+          <button class="btn btn-secondary btn-sm">مشاركة واتساب</button>
+        </div>
+      </section>
+      <section class="card stack">
+        <h3>سجل الإحالات</h3>
+        <table class="table">
+          <thead><tr><th>المُحال</th><th>التاريخ</th><th>الحدث</th><th>عمولتك</th></tr></thead>
+          <tbody>
+            <tr><td data-label="المُحال">س. عبدالله</td><td data-label="التاريخ">١٠ يونيو</td><td data-label="الحدث">عقد مكتمل #1101 — تحرر ضمانه</td><td data-label="عمولتك" class="success-text"><b>+٤٫٢٠ د.ك</b></td></tr>
+            <tr><td data-label="المُحال">ر. فيصل</td><td data-label="التاريخ">٨ يونيو</td><td data-label="الحدث">تسجيل جديد</td><td data-label="عمولتك" class="muted">—</td></tr>
+            <tr><td data-label="المُحال">س. عبدالله</td><td data-label="التاريخ">١ يونيو</td><td data-label="الحدث">عقد #1095 — بانتظار نهاية الضمان</td><td data-label="عمولتك" class="warn-text">٢٫١٠ د.ك معلّقة</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+    <aside class="col-side">
+      <div class="card stack">
+        <h4>كيف تُحسب العمولة؟</h4>
+        <p class="small">تربح نسبة من عمولة المنصة على كل عقد مكتمل يكون المُحال طرفًا فيه، خلال فترة الاستحقاق. تُستحق العمولة عند تحرير ضمان العقد (وليس عند قبوله) وتُسترد إن استُرد العقد لاحقًا بقرار نزاع (BR-18).</p>
+      </div>
+      <div class="banner banner-warn small">⚠️ الإحالة الذاتية ملغاة: تسجيلك أو عقودك عبر رابطك الخاص لا تُحتسب (BR-21) · يمكن للإدارة تجميد مشاركتك في النظام عند إساءة الاستخدام</div>
+    </aside>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>عروضي — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: BR-5 — كل حالات العرض السبع: قيد الموافقة/مُرسل/مُشاهد/مقبول/مرفوض/ملغى/مسحوب -->
+</head>
+<body data-shell="worker" data-active="jobs">
+<main class="container page-body">
+  <h1>عروضي</h1>
+  <div class="tabs">
+    <button class="active">الكل (٧)</button><button>قيد الانتظار (٣)</button><button>مقبولة (١)</button><button>منتهية (٣)</button>
+  </div>
+  <div class="col-main">
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small"><a href="job-detail.html">تصميم هوية بصرية متكاملة لمتجر إلكتروني</a></h3><span class="chip chip-warn">مُشاهد — لم يُبتّ بعد</span></div>
+      <p class="caption">قدّمت: ٤٢٠ د.ك · ١٤ يومًا · قبل يومين · شوهد قبل ٥ ساعات</p>
+      <div class="row"><button class="btn btn-secondary btn-sm">تعديل العرض</button><button class="btn btn-ghost btn-sm">إلغاء العرض</button><span class="caption">الإلغاء متاح لأنه لم يُقبل بعد — دون استرداد للعرض المخصوم</span></div>
+    </article>
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small"><a href="#">تصميم تطبيق توصيل</a></h3><span class="chip chip-success">مقبول 🎉 — تحوّل لعقد</span></div>
+      <p class="caption">قُبل بقيمة ٣٥٠ د.ك · العقد #1051 نشط</p>
+      <div class="row"><a class="btn btn-primary btn-sm" href="contract-worker.html">فتح العقد</a><a class="btn btn-secondary btn-sm" href="chat.html">💬 المحادثة</a></div>
+    </article>
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small">كتابة محتوى لمنصة تعليمية</h3><span class="chip">مُرسل — لم يُشاهد</span></div>
+      <p class="caption">قدّمت: ١٢٠ د.ك · ٧ أيام · قبل ٣ ساعات</p>
+      <div class="row"><button class="btn btn-secondary btn-sm">تعديل العرض</button><button class="btn btn-ghost btn-sm">إلغاء العرض</button></div>
+    </article>
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small">تصميم لوحة تحكم SaaS</h3><span class="chip chip-warn">بانتظار موافقة الإدارة</span></div>
+      <p class="caption">فعّلت الإدارة مراجعة العروض مؤقتًا — سيصل عرضك لصاحب العمل فور الموافقة، وإن رُفض يُسترد رصيدك</p>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div class="row-between wrap"><h3 class="small">هوية بصرية لمطعم</h3><span class="chip chip-danger">مرفوض</span></div>
+      <p class="caption">سبب صاحب العمل: «اخترنا مصممًا بخبرة أطول في قطاع المطاعم — شكرًا لاهتمامك»</p>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div class="row-between wrap"><h3 class="small">مونتاج فيديو إعلاني</h3><span class="chip chip-neutral">مسحوب — أُغلقت الوظيفة <b class="success-text">+ استُرد عرضك</b></span></div>
+      <p class="caption">أغلق صاحب العمل الوظيفة قبل البتّ في عرضك — أُعيد عرض واحد لرصيدك تلقائيًا (FR-BID-6)</p>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div class="row-between wrap"><h3 class="small">ترجمة موقع شركة</h3><span class="chip chip-neutral">ملغى — ألغيته بنفسك</span></div>
+      <p class="caption">قبل أن يُشاهد · العرض المخصوم لا يُسترد عند الإلغاء الذاتي (BR-7)</p>
+    </article>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

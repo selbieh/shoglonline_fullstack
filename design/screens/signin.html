@@ -1,0 +1,33 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تسجيل الدخول — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-AUTH-1..6 — جوجل فقط، لا كلمات مرور؛ حالتا «التسجيل مغلق» و«حساب مجمّد» -->
+</head>
+<body style="background:linear-gradient(160deg,var(--c-bg) 60%,var(--c-tint))">
+<main class="container" style="min-height:100vh;display:grid;place-content:center;padding-block:var(--sp-8)">
+  <div class="stack" style="gap:var(--sp-5);max-width:460px">
+    <div class="card card-pad-lg stack" style="align-items:center;text-align:center">
+      <h1 style="color:var(--c-primary);font-size:30px">شغل أونلاين</h1>
+      <h2 style="font-size:20px">مرحبًا بك! سجّل الدخول أو أنشئ حسابًا</h2>
+      <p class="muted small">بحساب جوجل فقط — لا حاجة لكلمة مرور أو رمز تحقق. الدخول الأول ينشئ حسابك تلقائيًا.</p>
+      <button class="btn btn-google btn-lg btn-block"><span class="g">G</span> المتابعة باستخدام جوجل</button>
+      <p class="caption">بالمتابعة فإنك توافق على <a href="#">الشروط والأحكام</a> و<a href="#">سياسة الخصوصية</a></p>
+      <div class="banner banner-info" style="text-align:right">🔒 يتحقق خادمنا من هوية جوجل (التوقيع والجهة والصلاحية) ثم يصدر جلسة آمنة خاصة بالمنصة — لا نخزّن أي كلمات مرور إطلاقًا</div>
+    </div>
+
+    <div class="card stack">
+      <h4 class="muted small">حالة ١ — التسجيل مغلق (Feature Flag: registration.enabled = off)</h4>
+      <div class="banner banner-warn">🚧 التسجيل مغلق حاليًا للمستخدمين الجدد — أصحاب الحسابات الحالية يسجّلون الدخول بشكل طبيعي. تابعنا ليصلك موعد فتح التسجيل.</div>
+    </div>
+
+    <div class="card stack">
+      <h4 class="muted small">حالة ٢ — حساب مجمّد (FR-ADM-5)</h4>
+      <div class="banner banner-danger">⛔ حسابك مجمّد من إدارة المنصة. عقودك وأرصدتك محفوظة ولن تُمسّ. <a href="#">تواصل مع الدعم</a> لمعرفة السبب وخطوات إعادة التفعيل.</div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

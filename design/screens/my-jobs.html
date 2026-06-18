@@ -1,0 +1,54 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>وظائفي — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-JOB-7 (إدارة + قفل العنوان/الوصف + الإغلاق يسحب العروض ويسترد رصيدها) · FR-JOB-11 (إعادة النشر) · FR-JOB-17 (انتهاء تلقائي) -->
+</head>
+<body data-shell="employer" data-active="jobs">
+<main class="container page-body">
+  <div class="row-between wrap"><h1>وظائفي</h1><a class="btn btn-primary" href="job-post.html">+ نشر وظيفة</a></div>
+  <div class="tabs"><button class="active">الكل (٥)</button><button>منشورة (١)</button><button>قيد التنفيذ (١)</button><button>قيد المراجعة (١)</button><button>منتهية (٢)</button></div>
+  <div class="col-main">
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small">تصميم شعار لشركتي الناشئة</h3>
+        <div class="row"><span class="chip chip-success">منشورة</span><span class="chip chip-warn">تنتهي تلقائيًا بعد ٢٥ يومًا</span></div></div>
+      <p class="caption">٨ عروض (٣ جديدة) · 🔒 العنوان والوصف مقفلان لوجود عروض (BR-4)</p>
+      <div class="row wrap">
+        <a class="btn btn-primary btn-sm" href="job-proposals.html">مراجعة العروض (٨)</a>
+        <button class="btn btn-secondary btn-sm">دعوة مستقل</button>
+        <button class="btn btn-ghost btn-sm">تعديل (الميزانية والمرفقات فقط)</button>
+        <button class="btn btn-danger-soft btn-sm">إغلاق الوظيفة</button>
+      </div>
+      <p class="caption">⚠️ إغلاق الوظيفة يسحب العروض الثمانية ويسترد رصيد أصحابها تلقائيًا (FR-BID-6) ويُخطرهم</p>
+    </article>
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small">تطوير متجر إلكتروني</h3><span class="chip">قيد التنفيذ</span></div>
+      <p class="caption">عقد #1037 مع سارة الخالد · ١٥٠ د.ك محجوزة في الضمان · الموعد ٥ يوليو</p>
+      <div class="row"><a class="btn btn-primary btn-sm" href="contract-employer.html">فتح العقد</a><a class="btn btn-secondary btn-sm" href="chat.html">💬 المحادثة</a></div>
+    </article>
+    <article class="card stack">
+      <div class="row-between wrap"><h3 class="small">كتابة محتوى الموقع</h3><span class="chip chip-warn">بانتظار موافقة الإدارة</span></div>
+      <p class="caption">أُرسلت قبل ٣ ساعات — تُنشر فور الموافقة ويصل بريد للمشتركين في فئة «الكتابة»</p>
+      <div class="row"><button class="btn btn-secondary btn-sm">تعديل</button><button class="btn btn-ghost btn-sm danger-text">سحب</button></div>
+    </article>
+    <article class="card stack" style="opacity:.85">
+      <div class="row-between wrap"><h3 class="small">تصميم هوية بصرية لمتجر</h3><span class="chip chip-success">مكتملة ⭐</span></div>
+      <p class="caption">أُنجزت مع محمد أشرف · قيّمته ٥ نجوم · فترة الضمان تنتهي بعد ٤٢ يومًا</p>
+      <div class="row wrap">
+        <button class="btn btn-secondary btn-sm">🔁 إعادة نشر (عام)</button>
+        <button class="btn btn-secondary btn-sm">🔁 خاص لنفس المستقل</button>
+        <button class="btn btn-ghost btn-sm">إعادة توظيف محمد</button>
+      </div>
+    </article>
+    <article class="card stack" style="opacity:.7">
+      <div class="row-between wrap"><h3 class="small">مونتاج فيديو إعلاني</h3><span class="chip chip-neutral">مغلقة — انتهت تلقائيًا</span></div>
+      <p class="caption">انقضت ٣٠ يومًا دون ترسية (FR-JOB-17) · أُعيد رصيد العروض للمتقدمين · يمكنك إعادة نشرها بتعديل</p>
+      <div class="row"><button class="btn btn-secondary btn-sm">🔁 إعادة نشر</button></div>
+    </article>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

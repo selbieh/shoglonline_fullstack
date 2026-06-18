@@ -1,0 +1,47 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إنشاء خدمة مميزة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-SVC-1 — اسم/وصف/صور/فئة/كلمات/سعر أدنى/إضافات + تنبيه المراجعة -->
+</head>
+<body data-shell="worker" data-active="services">
+<main class="container page-body" style="max-width:900px">
+  <h1>إنشاء خدمة مميزة</h1>
+  <div class="card card-pad-lg stack">
+    <div class="field"><label>اسم الخدمة *</label>
+      <input class="input" value="تصميم شعار احترافي مع ٣ اتجاهات ومراجعات غير محدودة">
+      <span class="hint">اجعل الاسم يصف الناتج النهائي بوضوح — يظهر في نتائج البحث وجوجل</span></div>
+    <div class="grid-2">
+      <div class="field"><label>الفئة *</label><select class="select"><option>التصميم والإبداع</option></select></div>
+      <div class="field"><label>التخصص الفرعي *</label><select class="select"><option>تصميم شعارات وهويات</option></select></div>
+    </div>
+    <div class="field"><label>وصف الخدمة *</label>
+      <textarea class="textarea">أصمم لك شعارًا فريدًا يعكس هوية مشروعك: جلسة فهم للنشاط والجمهور، ٣ اتجاهات مختلفة، مراجعات غير محدودة على الاتجاه المختار، وتسليم بصيغ PNG/SVG/PDF.</textarea></div>
+    <div class="field"><label>صور الخدمة (حتى ٥) *</label>
+      <div class="row wrap">
+        <div style="width:120px;height:80px;border-radius:var(--r-s);background:var(--c-tint);display:grid;place-content:center">🖼️ غلاف</div>
+        <div style="width:120px;height:80px;border-radius:var(--r-s);background:var(--c-tint);display:grid;place-content:center">🖼️</div>
+        <div class="dropzone" style="width:120px;padding:var(--sp-4)">+ إضافة</div>
+      </div></div>
+    <div class="grid-2">
+      <div class="field"><label>السعر الأساسي (د.ك) *</label><input class="input" value="٤٥"><span class="hint">صافيك بعد العمولة: <b class="success-text">٤٠٫٥٠ د.ك</b></span></div>
+      <div class="field"><label>الكلمات المفتاحية</label><input class="input" value="شعار، هوية، لوغو، تصميم"></div>
+    </div>
+    <div class="field"><label>الإضافات الاختيارية (Add-ons)</label>
+      <div class="card card-flat stack" style="background:var(--c-bg)">
+        <div class="row-between"><span class="small">تسليم مستعجل (٤٨ ساعة)</span><span class="row"><b class="small">+٢٠ د.ك</b><a class="small danger-text" href="#">حذف</a></span></div>
+        <div class="row-between"><span class="small">ملفات المصدر المفتوحة</span><span class="row"><b class="small">+١٠ د.ك</b><a class="small danger-text" href="#">حذف</a></span></div>
+        <button class="btn btn-outline btn-sm" style="align-self:flex-start">+ إضافة جديدة</button>
+      </div></div>
+    <div class="banner banner-warn">ℹ️ قد تخضع الخدمة لمراجعة الإدارة قبل ظهورها في الكتالوج (حسب إعدادات المنصة) — ستصلك نتيجة المراجعة بإشعار وبريد</div>
+    <div class="row-between">
+      <button class="btn btn-ghost">حفظ كمسودة</button>
+      <button class="btn btn-primary btn-lg">نشر الخدمة</button>
+    </div>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

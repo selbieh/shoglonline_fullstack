@@ -1,0 +1,70 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>تذاكر الدعم — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-TKT-1..5 · BR-14 — الحالات الخمس + الحل/الإغلاق التلقائي + الربط بالعقد -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <div class="row-between wrap"><h1>تذاكر الدعم</h1><button class="btn btn-primary">+ تذكرة جديدة</button></div>
+  <div class="cols">
+    <div class="col-main">
+      <section class="card stack">
+        <div class="row-between wrap">
+          <div><h3>#305 — مشكلة في رفع ملفات التسليم</h3>
+            <p class="caption">النوع: مشكلة تقنية · مرتبطة بالعقد #1042 · فُتحت قبل يومين</p></div>
+          <span class="chip chip-warn">بانتظار ردّك</span>
+        </div>
+        <div class="card card-flat stack" style="background:var(--c-bg)">
+          <b class="caption">أنت · قبل يومين</b>
+          <p class="small">عند رفع ملف ZIP أكبر من ٢٠ م.ب تظهر رسالة خطأ ولا يكتمل الرفع</p>
+        </div>
+        <div class="card card-flat stack" style="background:var(--c-tint)">
+          <b class="caption brand-text">فريق الدعم · أمس</b>
+          <p class="small brand-text">مرحبًا محمد، شكرًا للتفاصيل. رفعنا الحد إلى ٢٥ م.ب وجرّبنا الرفع بنجاح من طرفنا — هل ما زالت المشكلة قائمة لديك؟</p>
+        </div>
+        <div class="field"><textarea class="textarea" placeholder="اكتب ردّك…" style="min-height:70px"></textarea></div>
+        <div class="row-between">
+          <button class="btn" style="background:var(--c-success-t);color:var(--c-success)">✓ تم حل المشكلة</button>
+          <button class="btn btn-primary">إرسال الرد</button>
+        </div>
+        <p class="caption">تتحول التذكرة لـ«محلولة» تلقائيًا بعد ٧ أيام دون رد منك، ثم تُغلق نهائيًا بعد ٧ أيام أخرى (إعدادات المنصة)</p>
+      </section>
+    </div>
+    <aside class="col-side">
+      <div class="card stack">
+        <h4>تذاكري</h4>
+        <div class="card card-flat row-between" style="background:var(--c-tint)">
+          <div><b class="small">#305 رفع الملفات</b><p class="caption">تقنية · العقد #1042</p></div><span class="chip chip-warn" style="padding:1px 8px">بانتظارك</span></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)">
+          <div><b class="small">#298 نزاع عقد #998</b><p class="caption">نزاع · قرار: تقسيم ٤٠/٦٠</p></div><span class="chip chip-neutral" style="padding:1px 8px">مغلقة بتقرير</span></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)">
+          <div><b class="small">#291 موعد تحرير الأرباح</b><p class="caption">استفسار مالي</p></div><span class="chip chip-success" style="padding:1px 8px">محلولة</span></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)">
+          <div><b class="small">#283 تحديث بيانات</b><p class="caption">معلّقة من الإدارة: «بانتظار مستند»</p></div><span class="chip" style="padding:1px 8px">قيد الانتظار</span></div>
+      </div>
+      <div class="banner banner-info small">حالات التذكرة: مفتوحة ← قيد الانتظار ← معلّقة ← محلولة ← مغلقة · المغلقة للقراءة فقط · نزاعات العقود لا تُغلق إلا بقرار يسوّي العقد (BR-22)</div>
+    </aside>
+  </div>
+</main>
+
+<!-- New ticket modal (open as design state) -->
+<div class="modal-overlay">
+  <div class="modal">
+    <h3>تذكرة جديدة <span class="x">✕</span></h3>
+    <div class="field"><label>نوع التذكرة *</label>
+      <select class="select"><option>مشكلة تقنية</option><option>استفسار مالي</option><option>نزاع على عقد</option><option>أخرى</option></select></div>
+    <div class="field"><label>ربط بعقد (اختياري)</label>
+      <select class="select"><option>— بدون ربط —</option><option>عقد #1042 — هوية بصرية</option><option>عقد #1051 — تطبيق توصيل</option></select>
+      <span class="hint">ربط تذكرة النزاع بعقد يجمّد العقد حتى القرار</span></div>
+    <div class="field"><label>العنوان *</label><input class="input" placeholder="وصف مختصر للمشكلة"></div>
+    <div class="field"><label>التفاصيل *</label><textarea class="textarea" placeholder="اشرح المشكلة بخطواتها…"></textarea></div>
+    <div class="dropzone">📎 لقطات شاشة أو ملفات (اختياري)</div>
+    <button class="btn btn-primary btn-block">إرسال التذكرة</button>
+  </div>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

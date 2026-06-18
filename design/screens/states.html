@@ -1,0 +1,75 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>حالات الواجهة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: NFR-UX-3 — كل فعل له تأكيد ونتيجة؛ أنماط الفارغ/التحميل/الخطأ -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <h1>حالات الواجهة</h1>
+
+  <div class="grid-2">
+    <section class="card">
+      <h3>حالة فارغة — لا نتائج</h3>
+      <div class="empty">
+        <span class="art">🔍</span>
+        <h4>لا توجد وظائف تطابق بحثك</h4>
+        <p class="small">جرّب توسيع الفلاتر أو امسحها كلها — أو اشترك في الفئة ليصلك الجديد فورًا</p>
+        <div class="row"><button class="btn btn-secondary btn-sm">مسح الفلاتر</button><button class="btn btn-primary btn-sm">🔔 اشترك في الفئة</button></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>حالة فارغة — أول استخدام</h3>
+      <div class="empty">
+        <span class="art">📋</span>
+        <h4>لم تقدّم أي عروض بعد</h4>
+        <p class="small">لديك ١٢ عرضًا في رصيدك — تصفّح الوظائف وقدّم أول عرض</p>
+        <button class="btn btn-primary btn-sm">تصفّح الوظائف</button>
+      </div>
+    </section>
+
+    <section class="card stack">
+      <h3>تحميل — هياكل عظمية</h3>
+      <div class="skeleton" style="height:22px;width:60%"></div>
+      <div class="skeleton" style="height:14px;width:90%"></div>
+      <div class="skeleton" style="height:14px;width:80%"></div>
+      <div class="row"><div class="skeleton" style="height:32px;width:110px"></div><div class="skeleton" style="height:32px;width:80px"></div></div>
+    </section>
+
+    <section class="card stack">
+      <h3>أخطاء وتأكيدات</h3>
+      <div class="banner banner-danger">⚠️ تعذّر إرسال العرض — رصيدك من العروض غير كافٍ. <a href="#">اشترِ باقة</a></div>
+      <div class="banner banner-warn">📶 انقطع الاتصال — نعيد المحاولة تلقائيًا، رسائلك ستُرسل عند عودة الاتصال</div>
+      <div class="banner banner-success">✅ تم حفظ التغييرات</div>
+      <div class="banner banner-info">↩️ تم تجاهل التعديلات — لم يُحفظ شيء</div>
+    </section>
+  </div>
+
+  <section class="card stack">
+    <h3>نمط التأكيد قبل الأفعال الحاسمة (BR-22 · NFR-UX-3)</h3>
+    <div class="cols">
+      <div class="modal" style="max-width:480px;box-shadow:var(--sh-card)">
+        <h3>رفض التسليم <span class="x">✕</span></h3>
+        <p class="small muted">سيعود العقد لحالة «نشط» ويستطيع المستقل إعادة التسليم. السبب يصل للمستقل كما تكتبه.</p>
+        <div class="field"><label>سبب الرفض *</label><textarea class="textarea" placeholder="اشرح بدقة ما المطلوب تعديله…"></textarea></div>
+        <div class="row" style="justify-content:flex-start"><button class="btn btn-danger">تأكيد الرفض</button><button class="btn btn-ghost">تراجع</button></div>
+      </div>
+      <div class="modal" style="max-width:480px;box-shadow:var(--sh-card)">
+        <h3>حذف الحساب — يوجد ما يمنع <span class="x">✕</span></h3>
+        <div class="banner banner-danger">لا يمكن إتمام الحذف الآن (BR-2):</div>
+        <ul class="stack small">
+          <li>• عقد نشط #1042 بصفتك مستقلًا — أكمله أو اطلب إلغاءً بالتراضي</li>
+          <li>• رصيد متاح ٢٤٥٫٥٠ د.ك — اسحبه أولًا</li>
+          <li>• طلب سحب قيد المعالجة #88</li>
+        </ul>
+        <button class="btn btn-secondary btn-block">الذهاب لتسوية البنود</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

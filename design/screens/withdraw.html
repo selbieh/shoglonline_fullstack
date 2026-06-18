@@ -1,0 +1,47 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سحب الرصيد — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PAY-3 (الخصم الفوري عند الطلب، يُرد عند الرفض) · FR-PAY-4 (طرق دفع محفوظة Tokenized) -->
+</head>
+<body data-shell="worker" data-active="wallet">
+<main class="container page-body">
+  <nav class="small muted">المحفظة / سحب الرصيد</nav>
+  <h1>سحب الرصيد</h1>
+  <div class="cols">
+    <div class="col-main">
+      <section class="card stack">
+        <div class="row-between"><h3>طلب سحب جديد</h3><span class="small muted">المتاح: <b class="success-text">٢٤٥٫٥٠ د.ك</b></span></div>
+        <div class="field"><label>المبلغ (د.ك) *</label><input class="input" value="٢٠٠"><span class="hint">الحد الأدنى للسحب: ١٠ د.ك</span></div>
+        <div class="field"><label>وجهة السحب *</label>
+          <label class="check"><input type="radio" name="w" checked><span>💸 PayPal — m.ashraf@email.com</span></label>
+          <label class="check"><input type="radio" name="w"><span>🏦 تحويل بنكي — بنك الكويت الوطني •••• 5512</span></label>
+        </div>
+        <div class="banner banner-warn small">⚠️ يُخصم المبلغ من رصيدك المتاح فور تأكيد الطلب (منعًا للصرف المزدوج) — وإن رُفض الطلب يُرد كاملًا تلقائيًا</div>
+        <button class="btn btn-primary">تأكيد طلب السحب</button>
+      </section>
+      <section class="card stack">
+        <h3>طلبات السحب السابقة</h3>
+        <div class="row-between wrap"><div><b class="small">طلب #88 — ٢٠٠٫٠٠ د.ك عبر PayPal</b><p class="caption">١ يونيو</p></div><span class="chip chip-warn">قيد المعالجة</span></div>
+        <hr class="divider">
+        <div class="row-between wrap"><div><b class="small">طلب #71 — ١٥٠٫٠٠ د.ك تحويل بنكي</b><p class="caption">٢ مايو · اكتمل خلال يومين</p></div><span class="chip chip-success">مدفوع</span></div>
+        <hr class="divider">
+        <div class="row-between wrap"><div><b class="small">طلب #63 — ٥٠٫٠٠ د.ك عبر PayPal</b><p class="caption">١٢ أبريل · السبب: بيانات حساب غير مطابقة · أُعيد المبلغ لرصيدك</p></div><span class="chip chip-danger">مرفوض — رُدّ المبلغ</span></div>
+      </section>
+    </div>
+    <aside class="col-side">
+      <div class="card stack">
+        <div class="row-between"><h4>طرق الدفع المحفوظة</h4><button class="btn btn-outline btn-sm">+ إضافة</button></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)"><div><b class="small">💳 فيزا •••• 4821</b><p class="caption">للشحن · افتراضية</p></div><a class="small danger-text" href="#">حذف</a></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)"><div><b class="small">💸 PayPal</b><p class="caption">للسحب · m.ashraf@email.com</p></div><a class="small danger-text" href="#">حذف</a></div>
+        <div class="card card-flat row-between" style="background:var(--c-bg)"><div><b class="small">🏦 بنك الكويت الوطني •••• 5512</b><p class="caption">للسحب</p></div><a class="small danger-text" href="#">حذف</a></div>
+        <p class="caption">🔒 تُحفظ البطاقات كرموز مشفّرة لدى بوابة الدفع — لا نرى رقم بطاقتك أبدًا</p>
+      </div>
+    </aside>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ماذا تريد أن تفعل؟ — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-MODE-1 — اختيار العرض الأول؛ §3.1 الوضع مجرد عدسة عرض -->
+<style>
+.mode-card { text-align:center; padding: var(--sp-7) var(--sp-6); cursor:pointer; transition: var(--tr); border-width: 2px; }
+.mode-card:hover { border-color: var(--c-primary); transform: translateY(-3px); }
+.mode-card.selected { border-color: var(--c-primary); box-shadow: 0 0 0 4px var(--c-tint); }
+.mode-card .emoji { font-size: 52px; }
+</style>
+</head>
+<body style="background:var(--c-bg)">
+<main class="container" style="min-height:100vh;display:grid;place-content:center;padding-block:var(--sp-8)">
+  <div class="stack center" style="max-width:880px;gap:var(--sp-6)">
+    <div>
+      <h1>أهلًا أحمد 👋 ماذا تريد أن تفعل اليوم؟</h1>
+      <p class="muted" style="max-width:620px;margin-inline:auto">اختيارك يحدد شكل الواجهة فقط — حسابك واحد ويمكنك التبديل بين الوضعين في أي وقت من زر في أعلى الصفحة</p>
+    </div>
+    <div class="grid-2">
+      <div class="card mode-card selected">
+        <span class="emoji">💼</span>
+        <h2 style="color:var(--c-primary-dark)">أبحث عن عمل</h2>
+        <p class="small muted">تصفّح الوظائف، قدّم العروض، أنشئ خدماتك المميزة، واستلم أرباحك بأمان عبر نظام الضمان</p>
+        <button class="btn btn-primary btn-block" style="margin-top:var(--sp-4)">متابعة كباحث عن عمل</button>
+      </div>
+      <div class="card mode-card">
+        <span class="emoji">🧑‍💼</span>
+        <h2>أوظِّف الآن</h2>
+        <p class="small muted">انشر وظائف، استقبل العروض وقارنها، اشترِ خدمات جاهزة، وأدر عقودك ومدفوعاتك من مكان واحد</p>
+        <button class="btn btn-secondary btn-block" style="margin-top:var(--sp-4)">اختيار هذا الوضع</button>
+      </div>
+    </div>
+    <div class="banner banner-info" style="text-align:right">💡 كل شيء محفوظ عند التبديل: عقودك ومحفظتك ومحادثاتك وإشعاراتك تعمل في الوضعين معًا — يمكنك مثلًا توظيف مصمم بينما تعمل أنت كمبرمج لعميل آخر</div>
+  </div>
+</main>
+</body>
+</html>

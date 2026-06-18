@@ -1,0 +1,50 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نشر وظيفة — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-JOB-1 (كل الحقول + الموقع + أسئلة فرز إلزامية/اختيارية) · FR-JOB-2 (بوابة المراجعة) · FR-JOB-16 (بريد المشتركين) -->
+</head>
+<body data-shell="employer" data-active="jobs">
+<main class="container page-body" style="max-width:920px">
+  <h1>نشر وظيفة جديدة</h1>
+  <div class="card card-pad-lg stack">
+    <div class="field"><label>عنوان الوظيفة *</label>
+      <input class="input" value="تصميم هوية بصرية متكاملة لمتجر إلكتروني">
+      <span class="hint">عنوان واضح = عروض أفضل · يُقفل التعديل عليه بعد استلام أول عرض (BR-4)</span></div>
+    <div class="grid-2">
+      <div class="field"><label>الفئة *</label><select class="select"><option>التصميم والإبداع</option></select></div>
+      <div class="field"><label>التخصص الفرعي *</label><select class="select"><option>هوية بصرية وشعارات</option></select></div>
+    </div>
+    <div class="field"><label>وصف الوظيفة *</label>
+      <textarea class="textarea" style="min-height:130px">نبحث عن مصمم جرافيك محترف لتصميم هوية بصرية متكاملة لمتجر أزياء إلكتروني جديد. يشمل النطاق: الشعار الأساسي ونسخه، لوحة الألوان والخطوط، دليل استخدام الهوية، قوالب منشورات التواصل، وبطاقات العمل.</textarea></div>
+    <div class="grid-2">
+      <div class="field"><label>الميزانية من (د.ك) *</label><input class="input" value="٤٠٠"></div>
+      <div class="field"><label>إلى (د.ك) *</label><input class="input" value="٥٠٠"></div>
+      <div class="field"><label>آخر موعد للتسليم *</label><input class="input" value="٣٠ يونيو ٢٠٢٦ 📅"></div>
+      <div class="field"><label>نوع الموقع *</label><select class="select"><option>عن بُعد</option><option>حضوري</option><option>هجين</option></select></div>
+    </div>
+    <div class="field"><label>المهارات المطلوبة *</label>
+      <div class="row wrap"><span class="chip">تصميم شعارات ✕</span><span class="chip">هوية بصرية ✕</span><span class="chip">Illustrator ✕</span><span class="chip">Figma ✕</span><button class="chip chip-outline">+ إضافة</button></div></div>
+    <div class="field"><label>أسئلة فرز للمتقدمين</label>
+      <div class="card card-flat stack" style="background:var(--c-bg)">
+        <div class="row-between"><span class="small">١. كم مشروع هوية بصرية أنجزت سابقًا؟</span>
+          <span class="row"><span class="chip chip-success" style="padding:1px 10px">إلزامي</span><a class="small danger-text" href="#">حذف</a></span></div>
+        <div class="row-between"><span class="small">٢. هل تقدّم ملفات مفتوحة المصدر؟</span>
+          <span class="row"><span class="chip chip-neutral" style="padding:1px 10px">اختياري</span><a class="small danger-text" href="#">حذف</a></span></div>
+        <button class="btn btn-outline btn-sm" style="align-self:flex-start">+ أضف سؤالًا</button>
+      </div>
+      <span class="hint">الأسئلة الإلزامية تمنع تقديم عروض ناقصة — توفّر وقتك</span></div>
+    <div class="field"><label>ملفات مرجعية</label>
+      <div class="dropzone">📎 اسحب الملفات أو اضغط للاختيار</div></div>
+    <div class="banner banner-warn">ℹ️ قد تخضع الوظيفة لمراجعة الإدارة قبل النشر (حسب إعدادات المنصة). عند النشر يصل بريد فوري لكل المشتركين في الفئة، وتُغلق تلقائيًا بعد ٣٠ يومًا إن لم تُرسَّ (قابل للتمديد).</div>
+    <div class="row-between">
+      <button class="btn btn-ghost">حفظ كمسودة</button>
+      <button class="btn btn-primary btn-lg">تأكيد الفئة ونشر الوظيفة</button>
+    </div>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الفواتير — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PAY-7 · BR-15 — طلب الفاتورة يتاح مع بداية كل فترة؛ تبويبان: كمستقل (طلب) وكصاحب عمل (تأكيد) -->
+</head>
+<body data-shell="worker" data-active="wallet">
+<main class="container page-body">
+  <h1>الفواتير</h1>
+  <div class="tabs"><button class="active">فواتيري كمستقل</button><button>طلبات واردة كصاحب عمل (١)</button></div>
+
+  <section class="card stack">
+    <div class="row-between wrap">
+      <div><h3>طلب فاتورة لفترة يونيو ٢٠٢٦</h3>
+        <p class="caption">يغطي عقودك المكتملة خلال الفترة · يتاح الطلب مع بداية كل شهر (إعداد المنصة)</p></div>
+      <span class="chip chip-success">متاح الآن</span>
+    </div>
+    <div class="card card-flat stack" style="background:var(--c-bg)">
+      <p class="small row-between"><span>عقد #1029 — تصميم تطبيق (مؤسسة البيان)</span><b>٣٧٨٫٠٠ د.ك</b></p>
+      <p class="small row-between"><span>عقد #1018 — شعار (خالد المهندس)</span><b>٧٢٫٠٠ د.ك</b></p>
+      <hr class="divider">
+      <p class="row-between"><b>إجمالي الفترة</b><b class="success-text">٤٥٠٫٠٠ د.ك</b></p>
+    </div>
+    <div class="field"><label>ملاحظات (اختياري)</label><input class="input" placeholder="أي تفاصيل تريد إظهارها في الفاتورة…"></div>
+    <div class="row"><button class="btn btn-primary">إرسال طلب الفاتورة</button><span class="caption">يُرسل لكل صاحب عمل لتأكيده ثم تصدر PDF</span></div>
+  </section>
+
+  <section class="card stack">
+    <h3>طلباتي السابقة</h3>
+    <div class="row-between wrap"><div><b class="small">فاتورة مايو ٢٠٢٦ — ٦٢٠٫٠٠ د.ك</b><p class="caption">أكّدها الطرفان · صدرت ٢ يونيو</p></div>
+      <div class="row"><span class="chip chip-success">مؤكدة</span><a class="btn btn-secondary btn-sm" href="#">⬇ تنزيل PDF</a></div></div>
+    <hr class="divider">
+    <div class="row-between wrap"><div><b class="small">فاتورة أبريل ٢٠٢٦ — ٣٨٠٫٠٠ د.ك</b><p class="caption">صدرت ١ مايو</p></div>
+      <div class="row"><span class="chip chip-success">مؤكدة</span><a class="btn btn-secondary btn-sm" href="#">⬇ تنزيل PDF</a></div></div>
+  </section>
+
+  <section class="card stack">
+    <h3>كصاحب عمل — طلب وارد للتأكيد</h3>
+    <div class="row-between wrap">
+      <div><b class="small">سارة الخالد تطلب فاتورة يونيو — عقد #1037 «تطوير متجر»</b><p class="caption">١٥٠٫٠٠ د.ك · ملاحظاتها: «فاتورة باسم المؤسسة لو تكرمت»</p></div>
+      <div class="row"><button class="btn btn-success btn-sm">تأكيد الفاتورة</button><button class="btn btn-ghost btn-sm">استفسار 💬</button></div>
+    </div>
+  </section>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

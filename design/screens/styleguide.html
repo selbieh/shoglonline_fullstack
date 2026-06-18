@@ -1,0 +1,120 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>دليل الأنماط — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: design tokens + component inventory (DESIGN_PLAN §2–3) -->
+<style>
+.sw { border-radius: var(--r-m); height: 72px; border: 1px solid var(--c-line); }
+.sw-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: var(--sp-3); }
+@media (max-width:760px){ .sw-grid { grid-template-columns: repeat(2,1fr); } }
+section.card { margin-bottom: var(--sp-5); }
+</style>
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <h1>دليل الأنماط</h1>
+
+  <section class="card stack">
+    <h3>الألوان</h3>
+    <div class="sw-grid">
+      <div><div class="sw" style="background:var(--c-primary)"></div><p class="caption">Primary #6C70DC</p></div>
+      <div><div class="sw" style="background:var(--c-primary-dark)"></div><p class="caption">Primary Dark #5155BE</p></div>
+      <div><div class="sw" style="background:var(--c-primary-deep)"></div><p class="caption">Deep #3E418F</p></div>
+      <div><div class="sw" style="background:var(--c-tint)"></div><p class="caption">Tint #E9ECFA</p></div>
+      <div><div class="sw" style="background:var(--c-bg)"></div><p class="caption">BG #F6F7FD</p></div>
+      <div><div class="sw" style="background:var(--c-ink)"></div><p class="caption">Ink #23263F</p></div>
+      <div><div class="sw" style="background:var(--c-sub)"></div><p class="caption">Sub #5D6275</p></div>
+      <div><div class="sw" style="background:var(--c-success)"></div><p class="caption">Success #1B8A5A</p></div>
+      <div><div class="sw" style="background:var(--c-warn)"></div><p class="caption">Warning #9A6A08</p></div>
+      <div><div class="sw" style="background:var(--c-danger)"></div><p class="caption">Danger #D93843</p></div>
+    </div>
+    <div class="banner banner-info">تحسين بسيط عن التصميم الأصلي: النصوص الصغيرة والروابط تستخدم الدرجة الداكنة #5155BE لتحقيق تباين WCAG AA — الهوية البصرية نفسها.</div>
+  </section>
+
+  <section class="card stack">
+    <h3>الخط — Tajawal</h3>
+    <h1>عنوان رئيسي ٣٤ — منصة شغل أونلاين</h1>
+    <h2>عنوان قسم ٢٦</h2>
+    <h3>عنوان بطاقة ٢٠</h3>
+    <h4>عنوان فرعي ١٧</h4>
+    <p>نص أساسي ١٥ — تجربة قراءة مريحة باللغة العربية مع ارتفاع سطر مناسب للنصوص الطويلة.</p>
+    <p class="small muted">نص ثانوي ١٣ للوصف والتلميحات.</p>
+    <p class="caption">شرح توضيحي ١١٫٥</p>
+  </section>
+
+  <section class="card stack">
+    <h3>الأزرار</h3>
+    <div class="row wrap">
+      <button class="btn btn-primary">زر أساسي</button>
+      <button class="btn btn-secondary">زر ثانوي</button>
+      <button class="btn btn-outline">زر محدد</button>
+      <button class="btn btn-ghost">زر شفاف</button>
+      <button class="btn btn-success">قبول</button>
+      <button class="btn btn-danger">حذف</button>
+      <button class="btn btn-danger-soft">رفض</button>
+      <button class="btn btn-primary" disabled>معطّل</button>
+      <button class="btn btn-google"><span class="g">G</span> المتابعة بجوجل</button>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h3>حالات الكيانات (مطابقة لآلات الحالة SRS §9.10)</h3>
+    <div class="row wrap">
+      <span class="chip">مسودة</span><span class="chip chip-warn">قيد المراجعة</span>
+      <span class="chip chip-success">منشورة</span><span class="chip">قيد التنفيذ</span>
+      <span class="chip chip-success">مكتمل</span><span class="chip chip-neutral">مغلقة</span>
+      <span class="chip chip-danger">مرفوض</span><span class="chip chip-warn">بانتظار التمويل</span>
+      <span class="chip chip-warn">تم التسليم</span><span class="chip chip-danger">نزاع</span>
+      <span class="chip chip-neutral">ملغى</span><span class="chip chip-neutral">مسحوب (مع استرداد العرض)</span>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h3>النماذج</h3>
+    <div class="grid-2">
+      <div class="field"><label>حقل نصي</label><input class="input" placeholder="نص توضيحي…"><span class="hint">تلميح مساعد</span></div>
+      <div class="field is-error"><label>حقل بخطأ</label><input class="input" value="قيمة غير صالحة"><span class="hint">هذا الحقل إلزامي — أدخل قيمة صحيحة</span></div>
+      <div class="field"><label>قائمة</label><select class="select"><option>التصميم والإبداع</option></select></div>
+      <div class="field"><label>بحث</label><div class="search"><input class="input" placeholder="ابحث…"></div></div>
+    </div>
+    <div class="row wrap">
+      <label class="check"><input type="checkbox" checked><span>خيار محدد</span></label>
+      <label class="check"><input type="checkbox"><span>خيار</span></label>
+      <label class="check"><input type="radio" name="r" checked><span>اختيار مفرد</span></label>
+      <span class="row"><span class="switch on"></span><span class="small">مفعّل</span></span>
+      <span class="row"><span class="switch"></span><span class="small">معطّل</span></span>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h3>مبدّل العرض (SRS §3.1 — حساب واحد، عرضان)</h3>
+    <div class="row wrap">
+      <div class="mode-toggle"><button>أوظِّف الآن</button><button class="active">أبحث عن عمل</button></div>
+      <div class="mode-toggle"><button class="active">أوظِّف الآن</button><button>أبحث عن عمل</button></div>
+      <span class="small muted">التبديل لحظي ولا يفقد أي بيانات — الصلاحيات بعلاقة المستخدم بالكيان لا بالوضع</span>
+    </div>
+  </section>
+
+  <section class="card stack">
+    <h3>التنبيهات</h3>
+    <div class="banner banner-info">ℹ️ معلومة: عند قبول عرض يُحجز المبلغ من محفظتك كضمان.</div>
+    <div class="banner banner-success">✅ نجاح: تم إرسال عرضك — خُصم عرض واحد من رصيدك.</div>
+    <div class="banner banner-warn">⏳ تنبيه: أرباحك معلّقة حتى نهاية فترة الضمان (٦٠ يومًا).</div>
+    <div class="banner banner-danger">⚠️ خطأ: لا يمكنك التقديم على وظيفتك الخاصة (BR-21).</div>
+  </section>
+
+  <section class="card stack">
+    <h3>مؤشر مراحل العقد</h3>
+    <div class="stepper">
+      <div class="step done"><span class="dot">✓</span><span class="lbl">بانتظار التمويل</span></div>
+      <div class="step current"><span class="dot">٢</span><span class="lbl">نشط</span></div>
+      <div class="step"><span class="dot">٣</span><span class="lbl">تم التسليم</span></div>
+      <div class="step"><span class="dot">٤</span><span class="lbl">مكتمل + ضمان</span></div>
+    </div>
+  </section>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إكمال الملف ١/٣ — الخبرة والمهارات</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PROF-3 — معالج متعدد الخطوات مع تخطٍ ورجوع ومؤشر اكتمال -->
+</head>
+<body style="background:var(--c-bg)">
+<main class="container" style="min-height:100vh;display:grid;place-content:center;padding-block:var(--sp-8)">
+  <div class="card card-pad-lg stack" style="max-width:760px;width:100%">
+    <div class="wizard-progress"><span class="done"></span><span class="done"></span><span></span><span></span><span></span></div>
+    <div>
+      <h2>ما مجال خبرتك؟</h2>
+      <p class="muted small">الخطوة ٢ من ٥ — هذه المعلومات تظهر لأصحاب العمل وتحسّن ترتيبك في البحث</p>
+    </div>
+    <div class="field"><label>الخدمة الرئيسية *</label>
+      <select class="select"><option>التصميم والإبداع</option><option>البرمجة والتطوير</option><option>الكتابة والترجمة</option></select>
+    </div>
+    <div class="field"><label>التخصص الفرعي *</label>
+      <select class="select"><option>تصميم واجهات وتجربة المستخدم UI/UX</option><option>تصميم شعارات وهويات</option></select>
+    </div>
+    <div class="field"><label>المهارات (مع مستوى الإتقان)</label>
+      <div class="row wrap">
+        <span class="chip" style="background:var(--c-primary);color:#fff">Figma · متقدم ✕</span>
+        <span class="chip">تصميم تفاعلي · متوسط ✕</span>
+        <span class="chip">Adobe Illustrator · متقدم ✕</span>
+        <button class="chip chip-outline">+ أضف مهارة</button>
+      </div>
+      <span class="hint">أضف ٣ مهارات على الأقل لظهور أفضل</span>
+    </div>
+    <div class="field"><label>مستوى خبرتك العام *</label>
+      <div class="row wrap">
+        <label class="check"><input type="radio" name="lv"><span>مبتدئ</span></label>
+        <label class="check"><input type="radio" name="lv"><span>متوسط</span></label>
+        <label class="check"><input type="radio" name="lv" checked><span>خبير</span></label>
+      </div>
+    </div>
+    <div class="row-between">
+      <button class="btn btn-ghost">رجوع</button>
+      <div class="row"><button class="btn btn-ghost">تخطّي</button><button class="btn btn-primary">التالي</button></div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

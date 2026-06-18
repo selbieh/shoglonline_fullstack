@@ -1,0 +1,38 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>توثيق الهوية — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PROF-6 — رفع هوية، مراجعة الأدمن، حالات: قيد المراجعة / موثّق / مرفوض بسبب -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body" style="max-width:760px">
+  <nav class="small muted">الإعدادات / توثيق الهوية</nav>
+  <h1>توثيق الهوية</h1>
+  <div class="card card-pad-lg stack">
+    <div class="row">
+      <span style="font-size:40px">🪪</span>
+      <div><b>شارة «موثّق» ترفع ثقة العملاء بك</b>
+        <p class="caption">الملفات تُخزَّن مشفّرة وتُستخدم للتحقق فقط — لا تظهر لأي مستخدم</p></div>
+    </div>
+    <div class="field"><label>نوع المستند *</label>
+      <select class="select"><option>البطاقة المدنية</option><option>جواز السفر</option></select></div>
+    <div class="grid-2">
+      <div class="dropzone">📷 الوجه الأمامي<br><span class="caption">JPG/PNG · حتى ١٠ م.ب</span></div>
+      <div class="dropzone">📷 الوجه الخلفي<br><span class="caption">JPG/PNG · حتى ١٠ م.ب</span></div>
+    </div>
+    <label class="check"><input type="checkbox"><span class="small">أقرّ بأن المستند يخصّني وأوافق على معالجة البيانات للتحقق من الهوية وفق سياسة الخصوصية</span></label>
+    <button class="btn btn-primary">إرسال للمراجعة</button>
+  </div>
+
+  <div class="card stack">
+    <h4 class="muted small">الحالات الثلاث بعد الإرسال</h4>
+    <div class="banner banner-warn">⏳ قيد المراجعة — يراجع الفريق مستندك خلال يوم عمل عادةً؛ ستصلك النتيجة بإشعار وبريد</div>
+    <div class="banner banner-success">✓ تم التوثيق — ظهرت شارة «موثّق» في ملفك العام وبجوار اسمك في العروض والخدمات</div>
+    <div class="banner banner-danger">✕ مرفوض — السبب: «الصورة غير واضحة — الأطراف مقصوصة». يمكنك إعادة الإرسال بمستند أوضح</div>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

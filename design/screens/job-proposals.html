@@ -1,0 +1,74 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إدارة العروض — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-JOB-8 (ترتيب + تقييم خاص) · FR-JOB-9 (قبول ذري، عقد واحد، رفض بسبب) · BR-6/6a · نافذة القبول مفتوحة -->
+</head>
+<body data-shell="employer" data-active="jobs">
+<main class="container page-body">
+  <nav class="small muted">وظائفي / تصميم شعار لشركتي الناشئة</nav>
+  <div class="row-between wrap">
+    <div><h1 style="font-size:24px">العروض المستلمة <span class="muted small">(٨)</span></h1>
+      <p class="caption">🔒 العنوان والوصف مقفلان لوجود عروض (BR-4)</p></div>
+    <button class="btn btn-ghost btn-sm">▾ الترتيب: تقييم المستقل</button>
+  </div>
+  <div class="col-main">
+    <article class="card stack">
+      <div class="row-between wrap">
+        <div class="row"><div class="avatar">م‌أ</div>
+          <div><b>محمد أشرف</b> <span class="verified small">✓</span><p class="caption"><span class="stars">★★★★★</span> 4.9 · ٤١ عقدًا · خبير</p></div></div>
+        <div class="row"><b class="success-text" style="font-size:18px">٤٢٠ د.ك</b><span class="chip">⏱ ١٤ يومًا</span><span class="chip chip-warn">جديد</span></div>
+      </div>
+      <p class="small muted">أعمل في تصميم الهويات منذ ٨ سنوات، نفّذت هويات لمتاجر أزياء في الخليج. أسلّم دليل هوية كاملًا مع الملفات المفتوحة…</p>
+      <div class="card card-flat small" style="background:var(--c-bg)">
+        <b class="caption">إجابات أسئلة الفرز:</b>
+        <p class="caption">١. كم مشروع هوية أنجزت؟ — «٢٣ مشروعًا منها ٧ لمتاجر أزياء» · ٢. ملفات مفتوحة؟ — «نعم Figma وAI كاملة»</p>
+      </div>
+      <div class="row-between wrap">
+        <div class="row"><span class="stars" title="تقييمك الخاص — لا يراه أحد غيرك">★★★★★</span><span class="caption">تقييمك الخاص (سري)</span></div>
+        <div class="row wrap">
+          <button class="btn btn-success btn-sm">قبول العرض</button>
+          <a class="btn btn-secondary btn-sm" href="chat.html">💬 مراسلة</a>
+          <button class="btn btn-danger-soft btn-sm">رفض مع سبب</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card stack">
+      <div class="row-between wrap">
+        <div class="row"><div class="avatar">س‌خ</div>
+          <div><b>سارة الخالد</b><p class="caption"><span class="stars">★★★★☆</span> 4.7 · ٢٨ عقدًا</p></div></div>
+        <div class="row"><b class="success-text" style="font-size:18px">٤٥٠ د.ك</b><span class="chip">⏱ ١٠ أيام</span><span class="chip chip-neutral">مُشاهد</span></div>
+      </div>
+      <p class="small muted">متخصصة في الهويات البصرية للقطاع التجاري، أقدّم ٣ اتجاهات مبدئية للاختيار…</p>
+      <div class="row-between wrap">
+        <div class="row"><span class="stars">★★★★☆</span><span class="caption">تقييمك الخاص (سري)</span></div>
+        <div class="row wrap"><button class="btn btn-success btn-sm">قبول العرض</button><a class="btn btn-secondary btn-sm" href="chat.html">💬 مراسلة</a><button class="btn btn-danger-soft btn-sm">رفض مع سبب</button></div>
+      </div>
+    </article>
+  </div>
+</main>
+
+<!-- Accept modal (escrow math) — shown open as design state -->
+<div class="modal-overlay">
+  <div class="modal">
+    <h3>قبول عرض محمد أشرف <span class="x">✕</span></h3>
+    <p class="small muted">سينشأ عقد واحد لهذه الوظيفة (عقد واحد فقط لكل وظيفة — BR-6) وتُرفض بقية العروض تلقائيًا بعد التمويل.</p>
+    <div class="card card-flat stack" style="background:var(--c-bg)">
+      <p class="small row-between"><span class="muted">قيمة العقد</span><b>٤٢٠٫٠٠ د.ك</b></p>
+      <p class="small row-between"><span class="muted">رصيدك المتاح</span><b class="success-text">٢٤٥٫٥٠ د.ك</b></p>
+      <p class="small row-between danger-text"><span>المطلوب شحنه</span><b>١٧٤٫٥٠ د.ك</b></p>
+      <hr class="divider">
+      <p class="caption">يُحجز المبلغ كاملًا في الضمان ولا يصل للمستقل إلا بعد قبولك للتسليم. إن لم يكتمل الشحن خلال ٤٨ ساعة يُلغى القبول تلقائيًا وتبقى بقية العروض كما هي (BR-6a).</p>
+    </div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn btn-primary">شحن المحفظة وإتمام القبول</button>
+      <button class="btn btn-ghost">تراجع</button>
+    </div>
+  </div>
+</div>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

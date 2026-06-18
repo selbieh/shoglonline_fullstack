@@ -1,0 +1,75 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>الإعدادات — شغل أونلاين</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: FR-PROF-1/5/7/9 · BR-2 — جوجل فقط، تفضيل العرض، تفضيلات الإشعارات، حذف بحواجز -->
+</head>
+<body data-shell="worker" data-active="home">
+<main class="container page-body">
+  <h1>الإعدادات</h1>
+  <div class="cols">
+    <div class="col-main">
+      <section class="card stack">
+        <h3>الحساب</h3>
+        <div class="row-between wrap">
+          <div><b class="small">تسجيل الدخول</b><p class="caption">مرتبط بحساب جوجل — لا توجد كلمة مرور لإدارتها</p></div>
+          <span class="chip"><b style="color:var(--c-google)">G</b> mohammed@gmail.com</span>
+        </div>
+        <hr class="divider">
+        <div class="row-between wrap">
+          <div><b class="small">العرض الافتراضي عند الدخول</b><p class="caption">مجرد تفضيل عرض — كلا الدورين يعملان دائمًا (SRS §3.1)</p></div>
+          <button class="btn btn-ghost btn-sm">أبحث عن عمل ▾</button>
+        </div>
+        <hr class="divider">
+        <div class="row-between wrap">
+          <div><b class="small">حالة الظهور</b><p class="caption">متصل / غير متصل — تذكير بريدي بعد ١٠ أيام من عدم الاتصال (BR-16)</p></div>
+          <span class="switch on"></span>
+        </div>
+        <hr class="divider">
+        <div class="row-between wrap">
+          <div><b class="small">رقم الجوال</b><p class="caption">+965 •••• 4421 — موثّق ✓</p></div>
+          <button class="btn btn-ghost btn-sm">تغيير</button>
+        </div>
+      </section>
+
+      <section class="card stack">
+        <h3>تفضيلات الإشعارات</h3>
+        <div class="row-between"><div><b class="small">بريد رسائل الدردشة غير المقروءة</b><p class="caption">بعد ١٠ دقائق من عدم القراءة — رابط مباشر للمحادثة</p></div><span class="switch on"></span></div>
+        <div class="row-between"><div><b class="small">بريد وظائف الفئات المشترَك بها</b><p class="caption">فوري أو ملخّص يومي — من صفحة الإشعارات</p></div><span class="switch on"></span></div>
+        <div class="row-between"><div><b class="small">إشعارات المتصفح (Push)</b><p class="caption">أحداث العقود والعروض والمدفوعات والتذاكر</p></div><span class="switch on"></span></div>
+        <div class="row-between"><div><b class="small">رسائل تسويقية</b><p class="caption">عروض ونصائح من المنصة</p></div><span class="switch"></span></div>
+        <p class="caption">الإشعارات التعاملية الحرجة (قبول/رفض، مدفوعات) تصل دائمًا ولا يمكن إيقافها</p>
+      </section>
+
+      <section class="card stack" style="border-color:var(--c-danger)">
+        <h3 class="danger-text">منطقة الخطر — حذف الحساب</h3>
+        <div class="banner banner-danger">لا يمكن الحذف مع وجود أيٍّ من (BR-2): عقد جارٍ بأي صفة · رصيد في أي محفظة · طلب سحب معلّق · طلب خدمة قائم — ستظهر لك قائمة البنود لتسويتها أولًا.</div>
+        <div class="row"><button class="btn btn-danger">طلب حذف الحساب</button><span class="caption">يُلغى النشر العام لملفك ووظائفك وخدماتك، وتُحفظ السجلات المالية وفق المتطلبات النظامية</span></div>
+      </section>
+    </div>
+
+    <aside class="col-side">
+      <div class="card stack center">
+        <div class="avatar avatar-lg">م‌أ</div>
+        <b>محمد أشرف</b>
+        <p class="caption">مصمم UI/UX · <span class="verified">✓ موثّق</span></p>
+        <div class="progress" style="width:100%"><span style="width:90%"></span></div>
+        <p class="caption">اكتمال الملف ٩٠٪ — أضف نموذج أعمال</p>
+        <a class="btn btn-outline btn-block btn-sm" href="profile-public.html">عرض ملفي العام</a>
+        <a class="btn btn-secondary btn-block btn-sm" href="id-verify.html">توثيق الهوية</a>
+      </div>
+      <div class="card stack">
+        <h4>روابط سريعة</h4>
+        <a class="small" href="bids.html">رصيد العروض</a>
+        <a class="small" href="invoices.html">الفواتير</a>
+        <a class="small" href="affiliate.html">نظام الإحالة</a>
+        <a class="small" href="tickets.html">الدعم الفني</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

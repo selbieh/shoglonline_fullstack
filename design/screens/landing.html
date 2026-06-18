@@ -1,0 +1,85 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>شغل أونلاين — وظّف أفضل المستقلين أو ابحث عن عملك التالي</title>
+<link rel="stylesheet" href="../assets/tokens.css"><link rel="stylesheet" href="../assets/base.css"><link rel="stylesheet" href="../assets/components.css">
+<!-- SRS: BO-3/BO-5 · SEO-1..3 (SSR, JobPosting/Organization JSON-LD via Next.js) -->
+<style>
+.hero { background: linear-gradient(160deg, var(--c-primary) 0%, var(--c-primary-dark) 100%); color: #fff; padding: var(--sp-10) 0; }
+.hero h1 { color: #fff; max-width: 620px; }
+.hero p { color: var(--c-inverse-soft); max-width: 560px; margin-top: var(--sp-3); font-size: var(--fs-h4); }
+.hero .cta { margin-top: var(--sp-6); display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+.hero .btn-light { background: #fff; color: var(--c-primary-dark); }
+.hero .stats { display: flex; gap: var(--sp-7); margin-top: var(--sp-7); flex-wrap: wrap; }
+.hero .stats b { font-size: 26px; display: block; }
+.cat-card { text-align: center; padding: var(--sp-5); }
+.cat-card .ico { font-size: 34px; }
+.cat-card h4 { margin-top: var(--sp-2); }
+.dual { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+@media (max-width:760px){ .dual { grid-template-columns: 1fr; } }
+.dual .card { padding: var(--sp-7); }
+.how { counter-reset: s; }
+.how li { display: flex; gap: var(--sp-3); align-items: flex-start; padding-block: var(--sp-2); }
+.how li::before { counter-increment: s; content: counter(s, arabic-indic); flex: none; width: 30px; height: 30px;
+  border-radius: 50%; background: var(--c-tint); color: var(--c-primary-dark); font-weight: 700; display: grid; place-content: center; }
+</style>
+</head>
+<body data-shell="visitor">
+<main>
+  <div class="hero"><div class="container">
+    <h1>تواصل مع أفضل المستقلين أو ابحث عن عملك التالي بسهولة</h1>
+    <p>منصة عربية واحدة للوظائف والخدمات المميزة — حساب واحد يتيح لك التوظيف والعمل معًا، بمدفوعات آمنة بنظام الضمان</p>
+    <div class="cta">
+      <button class="btn btn-light btn-lg">🧑‍💼 أوظِّف الآن</button>
+      <button class="btn btn-outline btn-lg" style="border-color:#fff;color:#fff">💼 أبحث عن عمل</button>
+    </div>
+    <div class="stats small">
+      <span><b>+١٢٬٠٠٠</b> مستقل موثّق</span>
+      <span><b>+٣٬٤٠٠</b> وظيفة منشورة</span>
+      <span><b>٩٨٪</b> مدفوعات عبر الضمان</span>
+    </div>
+  </div></div>
+
+  <div class="container page-body">
+    <div class="row-between"><h2>تصفّح حسب الفئة</h2><a href="#" class="small">كل الفئات ←</a></div>
+    <div class="grid-4">
+      <a class="card cat-card" href="#"><span class="ico">🎨</span><h4>التصميم والإبداع</h4><p class="caption">٨٤٠ وظيفة</p></a>
+      <a class="card cat-card" href="#"><span class="ico">💻</span><h4>البرمجة والتطوير</h4><p class="caption">١٬٢٢٠ وظيفة</p></a>
+      <a class="card cat-card" href="#"><span class="ico">✍️</span><h4>الكتابة والترجمة</h4><p class="caption">٥٦٠ وظيفة</p></a>
+      <a class="card cat-card" href="#"><span class="ico">📣</span><h4>التسويق والمبيعات</h4><p class="caption">٤٣٠ وظيفة</p></a>
+    </div>
+
+    <div class="dual" style="margin-top:var(--sp-7)">
+      <section class="card">
+        <span class="chip">لأصحاب الأعمال</span>
+        <h2 style="margin-top:var(--sp-3)">وظّف بثقة</h2>
+        <ul class="how">
+          <li>انشر وظيفتك مجانًا وسيصل إشعار فوري للمستقلين المشتركين في الفئة</li>
+          <li>قارن العروض ورتّبها وقيّمها سرًّا، وتحدث مع المستقل قبل القبول</li>
+          <li>المبلغ محجوز في الضمان ولا يصل للمستقل إلا بعد قبولك للتسليم</li>
+        </ul>
+        <button class="btn btn-primary">انشر وظيفة الآن</button>
+      </section>
+      <section class="card">
+        <span class="chip chip-success">للباحثين عن عمل</span>
+        <h2 style="margin-top:var(--sp-3)">اعمل واربح بأمان</h2>
+        <ul class="how">
+          <li>أكمل ملفك واشترك في فئاتك ليصلك كل جديد على بريدك</li>
+          <li>قدّم عروضك أو انشر خدماتك المميزة الجاهزة للبيع</li>
+          <li>أرباحك محفوظة في محفظتك وتُحرَّر تلقائيًا بعد فترة الضمان</li>
+        </ul>
+        <button class="btn btn-success">ابدأ بحساب جوجل</button>
+      </section>
+    </div>
+
+    <section class="center" style="margin-top:var(--sp-8)">
+      <h2>جاهز للبدء؟ حساب واحد للوضعين</h2>
+      <p class="muted">سجّل بنقرة واحدة عبر جوجل — بدون كلمات مرور</p>
+      <button class="btn btn-google btn-lg" style="margin-top:var(--sp-4)"><span class="g">G</span> المتابعة باستخدام جوجل</button>
+    </section>
+  </div>
+</main>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

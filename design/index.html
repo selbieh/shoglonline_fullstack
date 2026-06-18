@@ -1,0 +1,101 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>شغل أونلاين — دليل التصميم UI v2</title>
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/components.css">
+<style>
+.hub-hero { background: var(--c-primary); color: #fff; padding: var(--sp-9) 0; text-align: center; }
+.hub-hero h1 { color: #fff; }
+.hub-hero p { color: var(--c-inverse-soft); max-width: 680px; margin: var(--sp-3) auto 0; }
+.group h2 { margin: var(--sp-7) 0 var(--sp-4); }
+.shot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+@media (max-width: 960px) { .shot-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 480px) { .shot-grid { grid-template-columns: 1fr; } }
+.shot { display: block; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-m);
+  padding: var(--sp-4); transition: var(--tr); }
+.shot:hover { border-color: var(--c-primary); text-decoration: none; transform: translateY(-2px); box-shadow: var(--sh-card); }
+.shot .t { font-weight: 700; color: var(--c-ink); }
+.shot .srs { font-size: var(--fs-caption); color: var(--c-sub); display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="hub-hero">
+  <h1>شغل أونلاين — دليل التصميم</h1>
+  <p>نظام تصميم حيّ بالكود (RTL · Tajawal · #6C70DC) مطابق لوثيقة المتطلبات SRS v1.1 — كل شاشة موصولة بمرجعها</p>
+  <p class="caption" style="color:var(--c-inverse-soft)">افتح أي شاشة ثم صغّر النافذة لـ 390px لمعاينة الجوال</p>
+</div>
+<main class="container" style="padding-block: var(--sp-6) var(--sp-9)">
+
+  <div class="group"><h2>الأساسيات</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/styleguide.html"><span class="t">🎨 دليل الأنماط — الألوان والمكوّنات</span><span class="srs">Tokens · Components</span></a>
+      <a class="shot" href="screens/states.html"><span class="t">🧩 حالات الواجهة — فارغ / تحميل / خطأ</span><span class="srs">NFR-UX-3</span></a>
+    </div></div>
+
+  <div class="group"><h2>أ — الصفحات العامة (زائر)</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/landing.html"><span class="t">الصفحة الرئيسية</span><span class="srs">BO-3/5 · SEO-1</span></a>
+      <a class="shot" href="screens/jobs-public.html"><span class="t">الوظائف (زائر)</span><span class="srs">FR-JOB-3</span></a>
+      <a class="shot" href="screens/profile-public.html"><span class="t">الملف العام للمستقل</span><span class="srs">FR-PROF-4</span></a>
+      <a class="shot" href="screens/content-page.html"><span class="t">صفحة محتوى</span><span class="srs">FR-CMS-1</span></a>
+      <a class="shot" href="screens/faq.html"><span class="t">الأسئلة الشائعة</span><span class="srs">FR-CMS-2</span></a>
+      <a class="shot" href="screens/maintenance.html"><span class="t">وضع الصيانة</span><span class="srs">FR-ADM-3</span></a>
+      <a class="shot" href="screens/404.html"><span class="t">صفحة 404</span><span class="srs">SEO-8</span></a>
+    </div></div>
+
+  <div class="group"><h2>ب — الدخول والتهيئة</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/signin.html"><span class="t">تسجيل الدخول (جوجل فقط)</span><span class="srs">FR-AUTH-1..6</span></a>
+      <a class="shot" href="screens/consent.html"><span class="t">الموافقة على الشروط</span><span class="srs">FR-AUTH-2</span></a>
+      <a class="shot" href="screens/mode-select.html"><span class="t">اختيار الوضع</span><span class="srs">FR-MODE-1</span></a>
+      <a class="shot" href="screens/wizard-1.html"><span class="t">معالج الملف ١ — الخبرة والمهارات</span><span class="srs">FR-PROF-3</span></a>
+      <a class="shot" href="screens/wizard-2.html"><span class="t">معالج الملف ٢ — التعليم والعمل</span><span class="srs">FR-PROF-2</span></a>
+      <a class="shot" href="screens/wizard-3.html"><span class="t">معالج الملف ٣ — الأجر والنبذة + الإكمال</span><span class="srs">FR-PROF-2</span></a>
+    </div></div>
+
+  <div class="group"><h2>ج — وضع «أبحث عن عمل»</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/dash-worker.html"><span class="t">لوحة الباحث عن عمل</span><span class="srs">FR-MODE-2</span></a>
+      <a class="shot" href="screens/jobs.html"><span class="t">الوظائف + الفلاتر + الاشتراك</span><span class="srs">FR-JOB-3/4 · FR-SUB-1</span></a>
+      <a class="shot" href="screens/job-detail.html"><span class="t">تفاصيل الوظيفة + تقديم عرض</span><span class="srs">FR-JOB-5/6 · FR-BID-1 · BR-21</span></a>
+      <a class="shot" href="screens/my-proposals.html"><span class="t">عروضي (كل الحالات)</span><span class="srs">BR-5</span></a>
+      <a class="shot" href="screens/invitations.html"><span class="t">دعوات أصحاب العمل</span><span class="srs">FR-JOB-10</span></a>
+      <a class="shot" href="screens/watchlist.html"><span class="t">قائمة المتابعة</span><span class="srs">FR-JOB-4</span></a>
+      <a class="shot" href="screens/my-services.html"><span class="t">خدماتي المميزة</span><span class="srs">FR-SVC-2</span></a>
+      <a class="shot" href="screens/service-create.html"><span class="t">إنشاء خدمة مميزة</span><span class="srs">FR-SVC-1</span></a>
+      <a class="shot" href="screens/service-requests-in.html"><span class="t">طلبات الشراء الواردة</span><span class="srs">FR-SVC-7</span></a>
+    </div></div>
+
+  <div class="group"><h2>د — وضع «أوظِّف الآن»</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/dash-employer.html"><span class="t">لوحة صاحب العمل</span><span class="srs">FR-MODE-2</span></a>
+      <a class="shot" href="screens/job-post.html"><span class="t">نشر وظيفة</span><span class="srs">FR-JOB-1/2</span></a>
+      <a class="shot" href="screens/my-jobs.html"><span class="t">وظائفي</span><span class="srs">FR-JOB-7/11/17</span></a>
+      <a class="shot" href="screens/job-proposals.html"><span class="t">إدارة العروض + القبول</span><span class="srs">FR-JOB-8/9 · BR-6</span></a>
+      <a class="shot" href="screens/services.html"><span class="t">كتالوج الخدمات المميزة</span><span class="srs">FR-SVC-3/4</span></a>
+      <a class="shot" href="screens/service-detail.html"><span class="t">تفاصيل الخدمة + الشراء</span><span class="srs">FR-SVC-5 · BR-21</span></a>
+      <a class="shot" href="screens/service-requests-out.html"><span class="t">طلباتي للخدمات</span><span class="srs">FR-SVC-6</span></a>
+    </div></div>
+
+  <div class="group"><h2>هـ — المشترك بين الوضعين</h2>
+    <div class="shot-grid">
+      <a class="shot" href="screens/contract-employer.html"><span class="t">العقد — واجهة صاحب العمل</span><span class="srs">FR-TASK-1..9</span></a>
+      <a class="shot" href="screens/contract-worker.html"><span class="t">العقد — واجهة المستقل</span><span class="srs">FR-TASK-3/5</span></a>
+      <a class="shot" href="screens/chat.html"><span class="t">المحادثات (Firebase)</span><span class="srs">FR-CHAT-1..10 · BR-12</span></a>
+      <a class="shot" href="screens/wallet.html"><span class="t">المحفظة (٣ أرصدة) + الشحن</span><span class="srs">FR-PAY-1/9</span></a>
+      <a class="shot" href="screens/withdraw.html"><span class="t">السحب + طرق الدفع</span><span class="srs">FR-PAY-3/4</span></a>
+      <a class="shot" href="screens/bids.html"><span class="t">رصيد العروض والباقات</span><span class="srs">FR-BID-1..6</span></a>
+      <a class="shot" href="screens/invoices.html"><span class="t">الفواتير</span><span class="srs">FR-PAY-7 · BR-15</span></a>
+      <a class="shot" href="screens/notifications.html"><span class="t">الإشعارات + اشتراكات الفئات</span><span class="srs">FR-NOT-1 · FR-SUB</span></a>
+      <a class="shot" href="screens/tickets.html"><span class="t">تذاكر الدعم</span><span class="srs">FR-TKT-1..5</span></a>
+      <a class="shot" href="screens/reviews.html"><span class="t">التقييمات</span><span class="srs">FR-REV · BR-13</span></a>
+      <a class="shot" href="screens/affiliate.html"><span class="t">نظام الإحالة</span><span class="srs">FR-AFF-1..5</span></a>
+      <a class="shot" href="screens/settings.html"><span class="t">الإعدادات + حذف الحساب</span><span class="srs">FR-PROF · BR-2</span></a>
+      <a class="shot" href="screens/id-verify.html"><span class="t">توثيق الهوية</span><span class="srs">FR-PROF-6</span></a>
+    </div></div>
+</main>
+</body>
+</html>

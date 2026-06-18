@@ -1,0 +1,99 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% comment %}
+ShoghlOnline admin dashboard (ADM-2): KPI stat boxes + charts.
+Styling is self-contained (inline) so it renders correctly regardless of the
+Unfold CSS build; colors mirror the frontend brand tokens.
+{% endcomment %}
+
+{% block content %}
+<style>
+  .sh-wrap { --primary:#6C70DC; --primary-deep:#3E418F; --tint:#E9ECFA;
+             --success:#1B8A5A; --success-t:#E3F5EC; --warn:#9A6A08; --warn-t:#FCF3DD;
+             --danger:#D93843; --danger-t:#FCE9EA; --ink:#23263F; --sub:#5D6275; --line:#DADDEC; }
+  .sh-grid { display:grid; gap:14px; grid-template-columns:repeat(2,1fr); }
+  @media(min-width:720px){ .sh-grid{ grid-template-columns:repeat(3,1fr);} }
+  @media(min-width:1100px){ .sh-grid{ grid-template-columns:repeat(4,1fr);} }
+  .sh-box { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px;
+            display:flex; align-items:center; gap:12px; }
+  .sh-ico { width:42px; height:42px; border-radius:10px; display:grid; place-content:center; font-size:20px; }
+  .sh-val { font-size:22px; font-weight:800; color:var(--ink); line-height:1.1; }
+  .sh-lbl { font-size:12px; color:var(--sub); margin-top:2px; }
+  .sh-t-primary{ background:var(--tint); color:var(--primary-deep);}
+  .sh-t-success{ background:var(--success-t); color:var(--success);}
+  .sh-t-warn{ background:var(--warn-t); color:var(--warn);}
+  .sh-t-danger{ background:var(--danger-t); color:var(--danger);}
+  .sh-charts { display:grid; gap:14px; grid-template-columns:1fr; margin-top:18px; }
+  @media(min-width:980px){ .sh-charts{ grid-template-columns:2fr 1fr;} }
+  .sh-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .sh-card h3 { margin:0 0 10px; font-size:14px; color:var(--ink); }
+  .sh-h1 { font-size:20px; font-weight:800; color:var(--ink); margin:4px 0 14px; }
+</style>
+
+<div class="sh-wrap" dir="ltr">
+  <div class="sh-h1">📊 Dashboard</div>
+
+  <div class="sh-grid">
+    {% for b in stat_boxes %}
+      <div class="sh-box">
+        <div class="sh-ico sh-t-{{ b.tone }}">{{ b.emoji }}</div>
+        <div>
+          <div class="sh-val">{{ b.value }}</div>
+          <div class="sh-lbl">{{ b.label }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="sh-charts">
+    <div class="sh-card">
+      <h3>Activity — last 14 days</h3>
+      <canvas id="shTrend" height="120"></canvas>
+    </div>
+    <div class="sh-card">
+      <h3>Contracts by status</h3>
+      <canvas id="shStatus" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
+<script id="sh-chart-data" type="application/json">{{ chart_data_json|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  function draw() {
+    if (typeof Chart === "undefined") return;
+    var el = document.getElementById("sh-chart-data");
+    if (!el) return;
+    var d = JSON.parse(el.textContent || "{}");
+    var brand = "#6C70DC", deep = "#3E418F", green = "#1B8A5A";
+
+    var t = document.getElementById("shTrend");
+    if (t && d.trend) {
+      new Chart(t, {
+        type: "line",
+        data: { labels: d.trend.labels, datasets: [
+          { label: "Signups", data: d.trend.signups, borderColor: brand, backgroundColor: "rgba(108,112,220,.15)", tension: .35, fill: true },
+          { label: "Jobs", data: d.trend.jobs, borderColor: deep, tension: .35 },
+          { label: "Contracts", data: d.trend.contracts, borderColor: green, tension: .35 },
+        ]},
+        options: { responsive: true, plugins: { legend: { position: "bottom" } },
+                   scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+      });
+    }
+    var s = document.getElementById("shStatus");
+    if (s && d.contract_status) {
+      new Chart(s, {
+        type: "doughnut",
+        data: { labels: d.contract_status.labels, datasets: [{ data: d.contract_status.data,
+          backgroundColor: ["#9A6A08","#6C70DC","#3E418F","#1B8A5A","#D93843","#B9BED9"] }] },
+        options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+      });
+    }
+  }
+  if (document.readyState !== "loading") draw();
+  else document.addEventListener("DOMContentLoaded", draw);
+})();
+</script>
+{% endblock %}
