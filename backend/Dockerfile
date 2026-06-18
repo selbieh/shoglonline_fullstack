@@ -10,8 +10,10 @@ RUN pip install --no-cache-dir -r ${REQUIREMENTS}
 
 FROM deps AS runtime
 RUN addgroup --system app && adduser --system --ingroup app app
+RUN mkdir -p /home/app && chown -R app:app /home/app
 COPY --chown=app:app . .
 USER app
+ENV HOME=/home/app
 EXPOSE 8000
 COPY --chown=app:app entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["sh", "/entrypoint.sh"]
