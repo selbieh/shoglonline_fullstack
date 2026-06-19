@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, API_URL, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import type { Category } from "@/lib/types";
+import ContactHint from "@/components/ContactHint";
 import { InfoIcon } from "@/components/icons";
 
 /** Post a job (FR-JOB-1/2) — moderation flag may queue it for admin review. */
@@ -24,7 +26,7 @@ export default function NewJobPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!tokens.access) router.replace("/signin");
+    if (!tokens.access) router.replace(signinHereHref());
     fetch(`${API_URL}/categories`).then(async (r) => setCategories(await r.json()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -53,7 +55,7 @@ export default function NewJobPage() {
     }
   }
 
-  const input = "mt-1 w-full rounded-m border border-line-strong px-3 py-2";
+  const input = "mt-1 w-full field";
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -77,6 +79,7 @@ export default function NewJobPage() {
           وصف الوظيفة *
           <textarea className={`${input} min-h-32`} value={form.description}
             onChange={(e) => set("description", e.target.value)} />
+          <ContactHint text={form.description} />
         </label>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <label className="text-sm font-bold">الميزانية من *
@@ -101,7 +104,7 @@ export default function NewJobPage() {
           <p className="text-sm font-bold">أسئلة فرز للمتقدمين</p>
           {questions.map((q, i) => (
             <div key={i} className="mt-2 flex items-center gap-2">
-              <input className="flex-1 rounded-s border border-line px-3 py-1.5 text-sm" value={q.question}
+              <input className="flex-1 field" value={q.question}
                 onChange={(e) => setQuestions(questions.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))} />
               <label className="flex items-center gap-1 text-xs">
                 <input type="checkbox" checked={q.is_required}

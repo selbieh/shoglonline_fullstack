@@ -22,7 +22,9 @@ class MyConversationsView(ListAPIView):
 
     def get_queryset(self):
         u = self.request.user
-        return Conversation.objects.filter(Q(user_a=u) | Q(user_b=u))
+        return Conversation.objects.filter(Q(user_a=u) | Q(user_b=u)).select_related(
+            "user_a", "user_b", "job", "contract", "contract__service", "contract__job",
+        )
 
 
 class StartConversationView(APIView):

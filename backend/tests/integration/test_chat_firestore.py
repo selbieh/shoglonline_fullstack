@@ -1,11 +1,17 @@
 """Real-time chat control plane (SRS §14, AC-6/AC-13): the backend mints per-user Firebase
 tokens, owns conversation status, and syncs client-written messages back to Postgres."""
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.attachments.services import attach, create_attachment
 from apps.chat import firestore, services
 from apps.chat.models import Conversation, Message
+from apps.core.services import set_setting
 from tests.factories import ConversationFactory, UserFactory
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 32
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db, pytest.mark.srs("AC-6")]
 
@@ -108,3 +114,46 @@ def test_mirror_conversation_writes_string_participants(settings, mocker):
     payload = db.return_value.collection.return_value.document.return_value.set.call_args[0][0]
     assert payload["participants"] == [str(conv.user_a_id), str(conv.user_b_id)]
     assert all(isinstance(p, str) for p in payload["participants"])
+
+
+# --------------------------------------------------- attachments in the message mirror (FR-CHAT-4)
+def test_mirror_message_serializes_attachments_into_files(settings, mocker):
+    """An attachment message goes via the REST path; mirror_message must serialize the linked files
+    into the Firestore `files` array so the recipient's listener can render them inline."""
+    set_setting("uploads.allowed_mime", ["image/png"])
+    conv = ConversationFactory()
+    att = create_attachment(conv.user_a, SimpleUploadedFile("pic.png", PNG, content_type="image/png"))
+    msg = Message.objects.create(conversation=conv, sender=conv.user_a, body="انظر")
+    attach([att.id], msg, conv.user_a)
+
+    settings.FIRESTORE_STUB = False
+    db = mocker.patch("apps.chat.firebase.db")
+    firestore.mirror_message(msg)
+    conv_ref = db.return_value.collection.return_value.document.return_value
+    payload = conv_ref.collection.return_value.document.return_value.set.call_args[0][0]
+    assert payload["files"] == [{"id": att.id, "kind": "image", "name": "pic.png", "size": att.size}]
+    assert payload["pgId"] == msg.pk  # carries pgId so the sync Cloud Function skips it (no dup row)
+
+
+# ------------------------------------------------------- read receipts (reads.<uid> on the doc)
+def test_mark_read_mirrors_the_read_cursor(mocker):
+    """mark_read must mirror the user's cursor to Firestore so the other party can show ✓✓ live."""
+    spy = mocker.spy(firestore, "mirror_read")
+    conv = ConversationFactory()
+    services.mark_read(conv, conv.user_a)
+    assert spy.call_count == 1
+    called_conv, called_user, _ts = spy.call_args.args
+    assert called_conv.pk == conv.pk and called_user == conv.user_a
+
+
+def test_real_mirror_read_writes_string_uid_map(settings, mocker):
+    """reads is a map keyed by the string uid (rules compare against string auth.uid); merge=True
+    so writing one party's cursor never clobbers the other's."""
+    settings.FIRESTORE_STUB = False
+    db = mocker.patch("apps.chat.firebase.db")
+    conv = ConversationFactory()
+    ts = timezone.now()
+    firestore.mirror_read(conv, conv.user_a, ts)
+    call = db.return_value.collection.return_value.document.return_value.set.call_args
+    assert call.args[0] == {"reads": {str(conv.user_a_id): ts}}
+    assert call.kwargs.get("merge") is True

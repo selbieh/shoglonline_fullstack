@@ -149,9 +149,10 @@ def _filter_banned(text: str) -> str:
 def mark_read(conversation: Conversation, user) -> None:
     if not conversation.has_member(user):
         raise PermissionDenied(ERR["not_member"])
-    ConversationMember.objects.filter(conversation=conversation, user=user).update(
-        last_read_at=timezone.now()
-    )
+    now = timezone.now()
+    ConversationMember.objects.filter(conversation=conversation, user=user).update(last_read_at=now)
+    # Mirror the cursor into the Firestore conversation doc so the other party sees ✓✓ live.
+    firestore.mirror_read(conversation, user, now)
 
 
 def unread_count(conversation: Conversation, user) -> int:

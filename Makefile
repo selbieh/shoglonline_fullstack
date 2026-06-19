@@ -32,8 +32,11 @@ lint:
 	docker compose exec backend python -m ruff check .
 	docker compose exec frontend npx tsc --noEmit
 
-seed:          ## seed global settings (SRS §22.1)
+seed:
+	docker compose exec backend python manage.py makemigrations
+	docker compose exec backend python manage.py migrate          ## seed global settings (SRS §22.1)
 	docker compose exec backend python manage.py seed_settings
+	docker compose exec backend python manage.py seed
 
 superuser:     ## create an admin (staff) account — FR-AUTH-8
 	docker compose exec backend python manage.py createsuperuser

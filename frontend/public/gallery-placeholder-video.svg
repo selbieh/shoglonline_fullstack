@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" fill="none" role="img" aria-label="فيديو من المعرض">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1200" y2="675" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8389D4"/>
+      <stop offset="0.5" stop-color="#5E64B2"/>
+      <stop offset="1" stop-color="#3F4480"/>
+    </linearGradient>
+    <radialGradient id="s1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 60) rotate(130) scale(680)">
+      <stop stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="s2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(120 660) rotate(-50) scale(560)">
+      <stop stop-color="#21254F" stop-opacity="0.40"/>
+      <stop offset="1" stop-color="#21254F" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="d" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="2.5" fill="#ffffff" fill-opacity="0.12"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#g)"/>
+  <rect width="1200" height="675" fill="url(#d)"/>
+  <rect width="1200" height="675" fill="url(#s1)"/>
+  <rect width="1200" height="675" fill="url(#s2)"/>
+
+  <circle cx="1040" cy="540" r="62" stroke="#ffffff" stroke-opacity="0.14" stroke-width="3"/>
+  <circle cx="178" cy="150" r="34" stroke="#ffffff" stroke-opacity="0.16" stroke-width="3"/>
+
+  <!-- center emblem: frosted tile + play glyph -->
+  <g transform="translate(600 337.5)">
+    <rect x="-94" y="-94" width="188" height="188" rx="44" fill="#ffffff" fill-opacity="0.13" stroke="#ffffff" stroke-opacity="0.30" stroke-width="2.5"/>
+    <path d="M-18 -34 L44 0 L-18 34 Z" fill="#ffffff" stroke="#ffffff" stroke-width="14" stroke-linejoin="round"/>
+  </g>
+</svg>

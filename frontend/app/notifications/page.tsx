@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { GearIcon } from "@/components/icons";
 
 type Note = {
@@ -26,10 +27,10 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
-    load().catch(() => router.replace("/signin"));
+    load().catch(() => router.replace(signinHereHref()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

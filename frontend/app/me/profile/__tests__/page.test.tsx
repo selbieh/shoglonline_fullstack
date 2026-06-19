@@ -26,6 +26,7 @@ function base(idv: { status: string } = { status: "none" }) {
     http.get(`${API_URL}/me/profile`, () => HttpResponse.json(PROFILE)),
     http.get(`${API_URL}/skills`, () => HttpResponse.json([{ id: 1, name_ar: "بايثون" }, { id: 2, name_ar: "تصميم" }])),
     http.get(`${API_URL}/me/id-verification`, () => HttpResponse.json(idv)),
+    http.get(`${API_URL}/categories`, () => HttpResponse.json([{ id: 1, name_ar: "برمجة" }, { id: 2, name_ar: "تصميم" }])),
   );
 }
 
@@ -74,7 +75,9 @@ describe("ProfileEditPage", () => {
     );
     const { container, user } = render(<ProfileEditPage />);
     await screen.findByText("توثيق الهوية");
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    // The page now has two uploaders (portfolio image + national ID); the ID one is rendered last.
+    const fileInputs = container.querySelectorAll('input[type="file"]');
+    const input = fileInputs[fileInputs.length - 1] as HTMLInputElement;
     await user.upload(input, new File([new Uint8Array(9)], "id.png", { type: "image/png" }));
     expect(await screen.findByText("✅ أُرسلت هويتك للمراجعة")).toBeInTheDocument();
   });

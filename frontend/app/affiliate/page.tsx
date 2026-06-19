@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 
 type Summary = { slug: string; is_frozen: boolean; total_earned: string; accrued: string; referrals: number };
 type Referrals = {
@@ -25,13 +26,13 @@ export default function AffiliatePage() {
       setS(sum);
       setData(det);
     } catch {
-      router.replace("/signin");
+      router.replace(signinHereHref());
     }
   }, [router]);
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
@@ -52,7 +53,7 @@ export default function AffiliatePage() {
       <section className="card mt-5">
         <p className="text-sm text-sub">رابط الإحالة الخاص بك</p>
         <div className="mt-2 flex gap-2">
-          <input className="flex-1 rounded-m border border-line-strong px-3 py-2 text-sm" dir="ltr" readOnly value={link} />
+          <input className="flex-1 field" dir="ltr" readOnly value={link} />
           <button
             className="btn-secondary"
             onClick={() => {

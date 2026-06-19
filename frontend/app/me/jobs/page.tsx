@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 
 type Job = { id: number; title: string; slug: string; status: string; budget_min: string; budget_max: string; proposals_count: number };
@@ -35,10 +36,10 @@ export default function MyJobsPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
-    load().catch(() => router.replace("/signin"));
+    load().catch(() => router.replace(signinHereHref()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -114,12 +115,12 @@ export default function MyJobsPage() {
 
             {repostId === job.id && (
               <div className="mt-4 space-y-3 rounded-m bg-bg p-4">
-                <input className="w-full rounded-m border border-line-strong px-3 py-2 text-sm" aria-label="العنوان"
+                <input className="w-full field" aria-label="العنوان"
                   value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 <div className="flex gap-2">
-                  <input className="w-32 rounded-m border border-line-strong px-3 py-2 text-sm" aria-label="أدنى ميزانية"
+                  <input className="w-32 field" aria-label="أدنى ميزانية"
                     value={form.budget_min} onChange={(e) => setForm({ ...form, budget_min: e.target.value })} />
-                  <input className="w-32 rounded-m border border-line-strong px-3 py-2 text-sm" aria-label="أعلى ميزانية"
+                  <input className="w-32 field" aria-label="أعلى ميزانية"
                     value={form.budget_max} onChange={(e) => setForm({ ...form, budget_max: e.target.value })} />
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -132,7 +133,7 @@ export default function MyJobsPage() {
                       onChange={() => setForm({ ...form, visibility: "specific" })} /> لمستقل محدّد
                   </label>
                   {form.visibility === "specific" && (
-                    <input className="w-32 rounded-m border border-line-strong px-3 py-1.5 text-sm" placeholder="معرّف المستقل"
+                    <input className="w-32 field" placeholder="معرّف المستقل"
                       aria-label="معرّف المستقل" value={form.worker_id} onChange={(e) => setForm({ ...form, worker_id: e.target.value })} />
                   )}
                 </div>

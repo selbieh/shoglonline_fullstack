@@ -4,11 +4,19 @@
 
 /* Mirrors design/assets/tokens.css — keep both in sync */
 :root {
-  --c-primary: #6c70dc;
-  --c-primary-dark: #5155be;
+  --c-primary: #737ac9;
+  --c-primary-dark: #565dae;
+  --c-primary-deep: #424783;
   --c-tint: #e9ecfa;
+  --c-cta: #2b50c9; --c-cta-dark: #1f3da6;
+  --c-accent: #c6e3ff;       /* PDF light-blue accent (export/*.svg) */
+  --c-accent-line: #cedfff;
   --c-bg: #f6f7fd;
   --c-ink: #23263f;
+  --c-sub: #5d6275;
+  --c-line: #daddec;
+  --c-line-strong: #b9bed9;
+  --c-star: #fed26c;         /* brand gold — rating stars only */
 }
 
 body {
@@ -20,7 +28,7 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-m px-6 py-2.5 font-medium transition;
   }
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-dark;
+    @apply btn bg-cta text-white hover:bg-cta-dark;
   }
   .btn-secondary {
     @apply btn bg-tint text-primary-dark;
@@ -46,7 +54,7 @@ body {
     @apply bg-white/25;
   }
 
-  /* ── Impressive brand surfaces (palette: #6C70DC / #5155BE / #3E418F) ── */
+  /* ── Impressive brand surfaces (palette: #737AC9 / #565DAE / #424783) ── */
   .card-hover {
     @apply transition duration-200 hover:-translate-y-1 hover:shadow-lg;
   }
@@ -76,10 +84,10 @@ body {
   }
   .btn-gradient {
     @apply btn text-white shadow-lg shadow-primary/30;
-    background-image: linear-gradient(135deg, #6c70dc, #5155be);
+    background-image: linear-gradient(135deg, #2b50c9, #1f3da6);
   }
   .btn-gradient:hover {
-    background-image: linear-gradient(135deg, #5155be, #3e418f);
+    background-image: linear-gradient(135deg, #1f3da6, #16307e);
   }
   /* glassy card on dark/gradient sections */
   .glass {
@@ -101,10 +109,53 @@ body {
   .seg-item-active {
     @apply bg-white text-primary-dark shadow-sm hover:text-primary-dark;
   }
-  /* unified text/select field */
+  /* unified text/select field — large, soft & rounded to match the Sho8l PDF forms (12px, tall) */
   .field {
-    @apply w-full rounded-m border border-line-strong bg-white px-3 py-2 text-sm text-ink transition;
-    @apply focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15;
+    @apply w-full rounded-m border border-line bg-white px-5 py-4 text-[15px] text-ink transition;
+    @apply placeholder:text-sub/55 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+  }
+  /* textarea variant — grows instead of single-line height */
+  .field-area {
+    @apply min-h-[120px] py-3.5 leading-relaxed;
+  }
+  /* field label — sits above its input (PDF style) */
+  .field-label {
+    @apply mb-2 block text-[15px] font-semibold text-ink;
+  }
+  /* read-only / disabled field (PDF signup-confirm grey) */
+  .field-disabled {
+    @apply bg-bg text-sub;
+  }
+  /* pencil affordance on each editable profile section (opens its modal) */
+  .edit-pencil {
+    @apply grid h-8 w-8 shrink-0 place-content-center rounded-m bg-tint text-primary-dark transition hover:bg-primary hover:text-white;
+  }
+  /* section heading row: title + pencil */
+  .section-head {
+    @apply mb-3 flex items-center justify-between gap-2;
+  }
+  /* modal-scale buttons (حفظ / إنهاء) */
+  .btn-modal {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-m px-7 py-2.5 text-sm font-bold transition;
+  }
+  /* tall auth/wizard CTA */
+  .btn-lg {
+    @apply rounded-m px-6 py-3.5 text-base font-bold;
+  }
+  /* multiselect chip-input shell (skills / services) */
+  .chip-input {
+    @apply flex min-h-14 w-full flex-wrap items-center gap-2 rounded-m border border-line bg-white px-3 py-2.5 transition;
+    @apply focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20;
+  }
+  .chip-pick {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-tint px-3 py-1.5 text-sm font-medium text-primary-dark;
+  }
+  .chip-pick-x {
+    @apply grid h-4 w-4 place-content-center rounded-full text-primary-dark/60 transition hover:text-danger;
+  }
+  /* dropdown option row (typeahead / category list) */
+  .option-row {
+    @apply w-full cursor-pointer rounded-m px-3 py-2.5 text-right text-[15px] transition hover:bg-tint;
   }
   /* floating accent badge that orbits the hero art */
   .float-badge {
@@ -117,6 +168,29 @@ body {
   .filter-row-active {
     @apply bg-tint font-bold text-primary-dark ring-1 ring-primary/25;
   }
+
+  /* ── status-filter tab bar (مهامي / عروضي / خدماتي … per ppt_gaps slides) ── */
+  .tabs {
+    @apply flex flex-wrap items-center gap-2 border-b border-line;
+  }
+  .tab {
+    @apply inline-flex items-center gap-1.5 border-b-2 border-transparent px-3 pb-2.5 pt-1 text-sm font-medium text-sub transition hover:text-primary-dark;
+  }
+  .tab-active {
+    @apply border-primary text-primary-dark;
+  }
+  /* count pill that sits inside a tab */
+  .tab-count {
+    @apply rounded-full bg-tint px-1.5 text-xs font-bold text-primary-dark;
+  }
+
+  /* ── modal (PDF dialogs: receipts, add-payment, wizard sub-forms) ── */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 grid place-items-center bg-ink/45 p-4 backdrop-blur-sm;
+  }
+  .modal {
+    @apply w-full max-w-lg rounded-l border border-line bg-white p-7 shadow-pop;
+  }
 }
 
 @layer utilities {
@@ -124,38 +198,38 @@ body {
   .bg-mesh {
     background-color: #f6f7fd;
     background-image:
-      radial-gradient(45rem 45rem at 110% -10%, rgba(108, 112, 220, 0.18), transparent 60%),
-      radial-gradient(40rem 40rem at -10% 110%, rgba(62, 65, 143, 0.14), transparent 60%);
+      radial-gradient(45rem 45rem at 110% -10%, rgba(115, 122, 201, 0.18), transparent 60%),
+      radial-gradient(40rem 40rem at -10% 110%, rgba(66, 71, 131, 0.14), transparent 60%);
   }
   .bg-hero {
-    background-image: linear-gradient(135deg, #6c70dc 0%, #5155be 45%, #3e418f 100%);
+    background-image: linear-gradient(135deg, #737ac9 0%, #565dae 45%, #424783 100%);
   }
   /* soft gradient cover strips for cards (rotate variants by index) */
-  .cover-a { background-image: linear-gradient(120deg, #888ee2, #5155be); }
-  .cover-b { background-image: linear-gradient(120deg, #6c70dc, #3e418f); }
-  .cover-c { background-image: linear-gradient(120deg, #A6ABE9, #6c70dc); }
+  .cover-a { background-image: linear-gradient(120deg, #9197d6, #565dae); }
+  .cover-b { background-image: linear-gradient(120deg, #737ac9, #424783); }
+  .cover-c { background-image: linear-gradient(120deg, #B0B5E0, #737ac9); }
   /* faint dotted texture */
   .dots {
-    background-image: radial-gradient(rgba(108, 112, 220, 0.18) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(115, 122, 201, 0.18) 1px, transparent 1px);
     background-size: 16px 16px;
   }
-  .shadow-glow { box-shadow: 0 18px 50px -12px rgba(81, 85, 190, 0.45); }
+  .shadow-glow { box-shadow: 0 18px 50px -12px rgba(86, 93, 174, 0.45); }
   /* modern layered elevation — resting + hover lift for cards */
   .shadow-soft {
     box-shadow: 0 1px 2px rgb(35 38 63 / 4%), 0 6px 20px -8px rgb(35 38 63 / 10%);
   }
   .shadow-soft-lg {
-    box-shadow: 0 2px 6px rgb(35 38 63 / 5%), 0 18px 40px -12px rgb(81 85 190 / 28%);
+    box-shadow: 0 2px 6px rgb(35 38 63 / 5%), 0 18px 40px -12px rgb(86 93 174 / 28%);
   }
   /* spotlight glow layered ON TOP of the hero gradient. The linear gradient is kept
      as the base layer so that `bg-hero bg-spotlight` (both set background-image, and
      this class wins by source order) never loses the gradient → white text stays
      readable on the dark band. */
   .bg-spotlight {
-    background-color: #5155be;
+    background-color: #565dae;
     background-image:
       radial-gradient(38rem 30rem at 75% 0%, rgba(255, 255, 255, 0.18), transparent 60%),
-      linear-gradient(135deg, #6c70dc 0%, #5155be 45%, #3e418f 100%);
+      linear-gradient(135deg, #737ac9 0%, #565dae 45%, #424783 100%);
   }
   /* thin top accent bar for cards (use with ::before-style wrapper) */
   .accent-top { box-shadow: inset 0 4px 0 0 var(--c-primary); }

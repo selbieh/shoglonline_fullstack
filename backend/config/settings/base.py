@@ -181,6 +181,10 @@ CORS_ALLOW_CREDENTIALS = False
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["http://localhost:3000"])
 
+# Public base URL of the SPA — used to build absolute links inside emails, notifications and
+# referral links. MUST be set in production (env-driven) or those links point at localhost.
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000").rstrip("/")
+
 # ---------------------------------------------------------------- i18n (NFR-LOC)
 # Django's active language drives the Unfold/Django admin + DRF built-in strings.
 # The public site is Next.js (Arabic, separate) and the API's domain messages are

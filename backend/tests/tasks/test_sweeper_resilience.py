@@ -86,6 +86,31 @@ def test_reconcile_isolates_a_failing_gateway_poll(monkeypatch):
     assert Transaction.objects.get(gateway_ref=good_ref).status == Transaction.Status.SUCCEEDED
 
 
+def test_reconcile_captures_an_approved_order_whose_redirect_was_lost(monkeypatch):
+    """Live-mode safety net: the buyer approved on PayPal but the return redirect never reached us,
+    so the order is stuck APPROVED (not yet captured). The sweep must capture it, not just observe."""
+    ref = _stale_pending("25")
+    captured = {}
+
+    monkeypatch.setattr(paypal, "get_order_status", lambda r: "APPROVED")
+    monkeypatch.setattr(paypal, "capture_order", lambda r: captured.setdefault(r, True))
+
+    assert reconcile_pending_deposits() == 1
+    assert captured == {ref: True}  # the sweep actually captured, didn't just poll
+    assert Transaction.objects.get(gateway_ref=ref).status == Transaction.Status.SUCCEEDED
+
+
+def test_reconcile_leaves_approved_order_pending_when_capture_fails(monkeypatch):
+    """If the capture itself fails the row stays PENDING for the next tick — never settled blind."""
+    ref = _stale_pending("25")
+
+    monkeypatch.setattr(paypal, "get_order_status", lambda r: "APPROVED")
+    monkeypatch.setattr(paypal, "capture_order", lambda r: False)
+
+    assert reconcile_pending_deposits() == 0
+    assert Transaction.objects.get(gateway_ref=ref).status == Transaction.Status.PENDING
+
+
 def test_celery_is_configured_for_resilient_redelivery():
     """The reliability knobs NFR-REL-3 leans on must actually be in effect."""
     conf = app.conf

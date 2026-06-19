@@ -18,6 +18,12 @@ const PREFS = { chat_unread: true, job_alerts: true, proposal_updates: true, mar
 
 function base() {
   server.use(
+    http.get(`${API_URL}/auth/me`, () =>
+      HttpResponse.json({
+        id: 1, email: "u@x.com", email_verified: true, first_name: "سعيد", last_name: "",
+        avatar_url: "", phone_verified: false, active_mode: "find_job", status: "active",
+      }),
+    ),
     http.get(`${API_URL}/me/notification-preferences`, () => HttpResponse.json(PREFS)),
     http.get(`${API_URL}/me/profile`, () => HttpResponse.json({ visibility: "online" })),
   );

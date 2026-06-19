@@ -14,15 +14,59 @@ class WorkerProfile(models.Model):
         ONLINE = "online", "Online"
         OFFLINE = "offline", "Offline"
 
+    class Availability(models.TextChoices):  # ppt slide-07: التوفر للعمل
+        AVAILABLE_NOW = "available_now", "Available now"
+        AVAILABLE_SOON = "available_soon", "Available soon"
+        UNAVAILABLE = "unavailable", "Unavailable"
+
+    class PublishState(models.TextChoices):  # ppt slide-09: draft → published
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+
+    class ContactChannel(models.TextChoices):  # ppt slide-02: وسيلة تواصل (private — never public)
+        WHATSAPP = "whatsapp", "WhatsApp"
+        PHONE = "phone", "Phone"
+        EMAIL = "email", "Email"
+        TELEGRAM = "telegram", "Telegram"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="worker_profile"
     )
-    bio_title = models.CharField(max_length=120, blank=True)
+    # ppt slide-02: name shown to clients (falls back to user names in the serializer).
+    display_name = models.CharField(max_length=120, blank=True)
+    bio_title = models.CharField(max_length=120, blank=True)  # also the المسمى الوظيفي (slide-03)
     overview = models.TextField(blank=True)
     cover_image = models.URLField(blank=True)
+    intro_video = models.URLField(blank=True)  # ppt slide-02: فيديو تقديمي (optional)
+    # ppt slide-02: a required external-contact method collected at onboarding for platform/admin use.
+    # PRIVATE — deliberately excluded from every Public* serializer (slides 01/25: profile shows no
+    # external contact) and NOT passed through validate_no_contact (this field is meant to hold it).
+    private_contact_channel = models.CharField(
+        max_length=12, choices=ContactChannel.choices, blank=True
+    )
+    private_contact_value = models.CharField(max_length=160, blank=True)
     expertise_level = models.CharField(max_length=14, choices=ExpertiseLevel.choices, blank=True)
+    # ppt slide-03: main field + specialization (both catalog.Category; child = specialization).
+    main_category = models.ForeignKey(
+        "catalog.Category", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    specialization = models.ForeignKey(
+        "catalog.Category", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    years_experience = models.PositiveSmallIntegerField(null=True, blank=True)  # slide-03
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    # ppt slide-07: التوفر للعمل / عدد ساعات العمل أسبوعيًا / ملاحظات للعملاء.
+    availability = models.CharField(
+        max_length=14, choices=Availability.choices, default=Availability.AVAILABLE_NOW
+    )
+    weekly_hours = models.PositiveSmallIntegerField(null=True, blank=True)
+    client_notes = models.CharField(max_length=300, blank=True)
     visibility = models.CharField(max_length=8, choices=Visibility.choices, default=Visibility.ONLINE)
+    # ppt slide-09: published after the review step. Default PUBLISHED so existing/auto-created
+    # profiles stay visible; the directory filter is NOT gated on this yet (avoids hiding anyone).
+    publish_state = models.CharField(
+        max_length=10, choices=PublishState.choices, default=PublishState.PUBLISHED
+    )
     visibility_changed_at = models.DateTimeField(auto_now_add=True)  # BR-16 reminder anchor
     offline_reminder_sent = models.BooleanField(default=False)  # BR-16: fire once per offline window
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0)  # denorm
@@ -56,6 +100,12 @@ class EmployerProfile(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="employer_profile"
     )
     company_name = models.CharField(max_length=120, blank=True)
+    # ppt slide-26: create employer profile (field/location/timezone/logo).
+    field = models.CharField(max_length=120, blank=True)   # المجال
+    country = models.CharField(max_length=64, blank=True)
+    city = models.CharField(max_length=64, blank=True)
+    timezone = models.CharField(max_length=48, blank=True)
+    logo_url = models.URLField(blank=True)                 # شعار الشركة (optional)
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     rating_count = models.PositiveIntegerField(default=0)
     total_spent = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -80,6 +130,7 @@ class WorkerSkill(models.Model):
         BEGINNER = "beginner", "Beginner"
         INTERMEDIATE = "intermediate", "Intermediate"
         ADVANCED = "advanced", "Advanced"
+        EXPERT = "expert", "Expert"  # ppt slide-04: 4th skill level (خبير)
 
     profile = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name="skills")
     skill = models.ForeignKey("catalog.Skill", on_delete=models.CASCADE, related_name="worker_skills")
@@ -90,10 +141,75 @@ class WorkerSkill(models.Model):
 
 
 class PortfolioItem(models.Model):
+    """A piece of a worker's public work gallery (معرض الأعمال, FR-PROF-4). Each item is either
+    an uploaded image (linked via the Part 03 attachment pipeline — this row is the host), or an
+    external link / video URL (live project, YouTube, Vimeo …). Public by design — uploaded images
+    are served inline through the dedicated public portfolio-media endpoint, NOT /uploads/<id>."""
+
+    class MediaType(models.TextChoices):
+        IMAGE = "image", "Image"
+        VIDEO = "video", "Video"
+        LINK = "link", "Link"
+
+    class DurationUnit(models.TextChoices):  # ppt slide-05: مدة التنفيذ
+        DAY = "day", "Day"
+        MONTH = "month", "Month"
+
     profile = models.ForeignKey(WorkerProfile, on_delete=models.CASCADE, related_name="portfolio")
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
+    media_type = models.CharField(max_length=8, choices=MediaType.choices, default=MediaType.IMAGE)
+    url = models.URLField(blank=True)  # external link / video URL / external image URL
+    cover_url = models.URLField(blank=True)  # optional thumbnail for video/link items
+    # ppt slides 05/23: model a project (type, link, duration, skills, completion, ownership).
+    project_type = models.CharField(max_length=80, blank=True)        # نوع المشروع
+    project_link = models.URLField(blank=True)                        # رابط المشروع (distinct from media url)
+    duration_value = models.PositiveSmallIntegerField(null=True, blank=True)
+    duration_unit = models.CharField(max_length=8, choices=DurationUnit.choices, blank=True)
+    skills = models.JSONField(default=list, blank=True)               # المهارات المستخدمة (list[str])
+    completed_at = models.DateField(null=True, blank=True)            # تاريخ الإنجاز
+    ownership_confirmed = models.BooleanField(default=False)          # slide-23 تأكيد الشروط
+    # ppt slide-22 (work showcase): budget, feature bullets, and a public view counter.
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # الميزانية
+    features = models.JSONField(default=list, blank=True)             # مميزات المشروع (list[str])
+    views_count = models.PositiveIntegerField(default=0)             # مشاهدات العمل
+    attachments = GenericRelation(
+        "attachments.Attachment", content_type_field="host_type", object_id_field="object_id"
+    )
+    order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+
+class Certificate(models.Model):
+    """A training certificate / credential (الشهادات التدريبية, ppt slide-06). The optional
+    certificate file is linked via the Part 03 attachment pipeline (this row is the host),
+    mirroring PortfolioItem."""
+
+    profile = models.ForeignKey(
+        WorkerProfile, on_delete=models.CASCADE, related_name="certificates"
+    )
+    name = models.CharField(max_length=200)
+    issuer = models.CharField(max_length=160, blank=True)          # الجهة المانحة
+    cert_type = models.CharField(max_length=80, blank=True)        # نوع الشهادة
+    issued_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    issued_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    expiry_month = models.PositiveSmallIntegerField(null=True, blank=True)
+    expiry_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    no_expiry = models.BooleanField(default=False)                 # لا يوجد تاريخ انتهاء
+    credential_id = models.CharField(max_length=120, blank=True)
+    verification_link = models.URLField(blank=True)
+    skills = models.JSONField(default=list, blank=True)            # المهارات المكتسبة (list[str])
+    attachments = GenericRelation(
+        "attachments.Attachment", content_type_field="host_type", object_id_field="object_id"
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
 
 
 class Education(models.Model):
@@ -142,6 +258,8 @@ class IDVerification(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="id_verification"
     )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    doc_type = models.CharField(max_length=20, blank=True)  # national_id / passport / driver_license (slide-08)
+    consent = models.BooleanField(default=False)  # user consented to identity verification (slide-08)
     attachments = GenericRelation(
         "attachments.Attachment", content_type_field="host_type", object_id_field="object_id"
     )

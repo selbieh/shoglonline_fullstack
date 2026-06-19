@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 
 type Ticket = {
   id: number;
@@ -45,13 +46,13 @@ export default function SupportPage() {
       setTickets(t.results);
       setTypes(ty.results.filter((x) => !x.is_dispute)); // disputes are opened from a contract
     } catch {
-      router.replace("/signin");
+      router.replace(signinHereHref());
     }
   }, [router]);
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
@@ -89,7 +90,7 @@ export default function SupportPage() {
       {showForm && (
         <section className="card mt-4 space-y-3">
           <select
-            className="w-full rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="w-full field"
             value={typeId}
             onChange={(e) => setTypeId(Number(e.target.value) || "")}
           >
@@ -99,13 +100,13 @@ export default function SupportPage() {
             ))}
           </select>
           <input
-            className="w-full rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="w-full field"
             placeholder="العنوان"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
           <textarea
-            className="w-full rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="w-full field"
             rows={4}
             placeholder="اشرح مشكلتك…"
             value={message}

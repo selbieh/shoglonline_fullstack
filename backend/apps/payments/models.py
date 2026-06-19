@@ -158,3 +158,35 @@ class PaymentMethod(models.Model):
     def __str__(self) -> str:
         tail = f" ••••{self.last4}" if self.last4 else ""
         return f"{self.provider}:{self.type}{tail}"
+
+
+class PayoutMethod(models.Model):
+    """A saved destination for receiving earnings (استلام الأرباح, ppt slide-38). Multi-rail:
+    PayPal & bank transfer are international; e-wallet, bank card & Instapay are Egypt-only.
+    Rail-specific fields (IBAN, wallet number, instapay link, …) live in `details` (JSON)."""
+
+    class Kind(models.TextChoices):
+        PAYPAL = "paypal", "PayPal"
+        BANK_TRANSFER = "bank_transfer", "Bank transfer"
+        E_WALLET = "e_wallet", "E-wallet"
+        BANK_CARD = "bank_card", "Bank card"
+        INSTAPAY = "instapay", "Instapay"
+
+    # rails restricted to a single country; others are international.
+    EGYPT_ONLY = {"e_wallet", "bank_card", "instapay"}
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="payout_methods"
+    )
+    kind = models.CharField(max_length=14, choices=Kind.choices)
+    label = models.CharField(max_length=80, blank=True)        # nickname (اسم مستعار)
+    country = models.CharField(max_length=2, blank=True)       # ISO-2; "EG" for Egypt-only rails
+    details = models.JSONField(default=dict)                   # rail-specific (no PANs)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-is_default", "-created_at"]
+
+    def __str__(self) -> str:
+        return f"payout:{self.kind}:{self.user_id}"

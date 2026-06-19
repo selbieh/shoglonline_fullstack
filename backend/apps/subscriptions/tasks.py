@@ -2,13 +2,14 @@
 import logging
 
 from celery import shared_task
+from django.conf import settings
 from django.core.mail import send_mail
 
 from apps.core.services import get_setting
 
 logger = logging.getLogger(__name__)
 
-FRONTEND_URL = "http://localhost:3000"  # TODO: env-driven in production settings
+FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
 
 
 @shared_task(bind=True, max_retries=3, retry_backoff=True)

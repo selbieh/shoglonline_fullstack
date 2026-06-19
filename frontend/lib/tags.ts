@@ -1,21 +1,21 @@
-// Soft multi-colour tones for skill / category pills. Deterministic per label so a
-// given skill keeps the same colour across every card it appears on.
-// NOTE: keep these as complete class strings — Tailwind scans this file (lib/**) and
-// only generates classes it can see literally.
-const TAG_TONES = [
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-800",
-  "bg-sky-100 text-sky-700",
-  "bg-violet-100 text-violet-700",
-  "bg-rose-100 text-rose-700",
-  "bg-teal-100 text-teal-700",
-  "bg-indigo-100 text-indigo-700",
-  "bg-fuchsia-100 text-fuchsia-700",
+// Calm, on-brand pill tones for skill / category labels — periwinkle / lavender /
+// light-blue family only (matches Sho8l PDF), NOT a rainbow. Deterministic per label so a
+// given skill keeps the same tone across every card it appears on.
+// NOTE: keep these as complete class strings — Tailwind scans this file (lib/**) and only
+// generates classes it can see literally (tokens: tint / accent-sky / primary).
+const BRAND_TONES = [
+  "bg-tint text-primary-dark",
+  "bg-accent-sky text-primary-deep",
+  "bg-primary/10 text-primary-dark",
 ];
 
-/** Pick a stable soft tone (bg + text classes) for a label via a small string hash. */
-export function tagTone(seed: string): string {
+function hashSeed(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return TAG_TONES[h % TAG_TONES.length];
+  return h;
+}
+
+/** Pick a stable on-brand tone (bg + text classes) for a label via a small string hash. */
+export function tagTone(seed: string): string {
+  return BRAND_TONES[hashSeed(seed) % BRAND_TONES.length];
 }

@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
+import StatusTabs from "@/components/StatusTabs";
+import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
+import DashboardShell from "@/components/DashboardShell";
 
 type Service = { id: number; title: string; slug: string; base_price: string; status: string };
-type Category = { id: number; name_ar: string };
 type Incoming = {
   id: number;
   service_title: string;
@@ -24,60 +27,39 @@ const ST_LABEL: Record<string, string> = {
   rejected: "مرفوضة",
 };
 
+const ST_FILTERS = [
+  { value: "", label: "الكل" },
+  ...Object.keys(ST_LABEL).map((value) => ({ value, label: ST_LABEL[value] })),
+];
+
 export default function MyServicesPage() {
   const router = useRouter();
   const [services, setServices] = useState<Service[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [status, setStatus] = useState("");
   const [incoming, setIncoming] = useState<Incoming[]>([]);
-  const [cats, setCats] = useState<Category[]>([]);
-  const [show, setShow] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", category: "", base_price: "", delivery_days: "5" });
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [s, inc] = await Promise.all([
-        api<{ results: Service[] }>("/me/services"),
+        api<{ results: Service[]; status_counts?: Record<string, number> }>(`/me/services${status ? `?status=${status}` : ""}`),
         api<{ results: Incoming[] }>("/me/service-requests?status=pending"),
       ]);
       setServices(s.results);
+      if (s.status_counts) setCounts(s.status_counts);
       setIncoming(inc.results);
     } catch {
-      router.replace("/signin");
+      router.replace(signinHereHref());
     }
-  }, [router]);
+  }, [router, status]);
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
-    api<Category[] | { results: Category[] }>("/categories")
-      .then((d) => setCats(Array.isArray(d) ? d : d.results))
-      .catch(() => undefined);
   }, [load, router]);
-
-  async function create() {
-    if (!form.title || !form.category || !form.base_price) return;
-    setBusy(true);
-    try {
-      await api("/me/services", {
-        method: "POST",
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description,
-          category: Number(form.category),
-          base_price: form.base_price,
-          delivery_days: Number(form.delivery_days),
-        }),
-      });
-      setShow(false);
-      setForm({ title: "", description: "", category: "", base_price: "", delivery_days: "5" });
-      await load();
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function action(id: number, act: string) {
     await api(`/me/services/${id}/${act}`, { method: "POST" }).catch(() => undefined);
@@ -95,37 +77,26 @@ export default function MyServicesPage() {
     await load();
   }
 
+  // per-row action menu (ppt slide-17). Owner edit page (slide-20) is a follow-up → معاينة links
+  // to the public detail for now.
+  const rowActions = (s: Service): RowAction[] => [
+    { label: "لوحة الخدمة", href: `/me/services/${s.id}` },
+    { label: "معاينة", href: `/services/${s.slug}` },
+    { label: "نشر", hidden: !(s.status === "draft" || s.status === "rejected"), onSelect: () => action(s.id, "publish") },
+    { label: "إيقاف مؤقت", hidden: s.status !== "live", onSelect: () => action(s.id, "pause") },
+    { label: "استئناف", hidden: s.status !== "paused", onSelect: () => action(s.id, "resume") },
+    { label: "أرشفة", danger: true, hidden: s.status === "archived", onSelect: () => action(s.id, "archive") },
+  ];
+
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">خدماتي</h1>
-        <a href="/services" className="text-sm text-primary-dark">تصفّح الخدمات ←</a>
+    <DashboardShell active="services" title="خدماتي المصغرة"
+      subtitle="إدارة ومتابعة جميع خدماتك المصغرة المنشورة والتأكد من أدائها."
+      headerActions={<a href="/me/services/new" className="btn-primary">+ إضافة خدمة جديدة</a>}>
+
+      {/* status filter tabs with per-status counts */}
+      <div className="mt-5">
+        <StatusTabs tabs={ST_FILTERS} active={status} counts={counts} onChange={setStatus} />
       </div>
-
-      <button className="btn-primary mt-5" onClick={() => setShow((v) => !v)}>
-        {show ? "إلغاء" : "+ خدمة جديدة"}
-      </button>
-
-      {show && (
-        <section className="card mt-4 space-y-3">
-          <input className="w-full rounded-m border border-line-strong px-3 py-2 text-sm" placeholder="عنوان الخدمة"
-            value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <textarea className="w-full rounded-m border border-line-strong px-3 py-2 text-sm" rows={3} placeholder="الوصف"
-            value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <div className="flex flex-wrap gap-2">
-            <select className="rounded-m border border-line-strong px-3 py-2 text-sm"
-              value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-              <option value="">الفئة…</option>
-              {cats.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
-            </select>
-            <input className="w-28 rounded-m border border-line-strong px-3 py-2 text-sm" dir="ltr" placeholder="السعر"
-              value={form.base_price} onChange={(e) => setForm({ ...form, base_price: e.target.value })} />
-            <input className="w-28 rounded-m border border-line-strong px-3 py-2 text-sm" dir="ltr" placeholder="أيام التسليم"
-              value={form.delivery_days} onChange={(e) => setForm({ ...form, delivery_days: e.target.value })} />
-          </div>
-          <button className="btn-primary" disabled={busy} onClick={create}>نشر الخدمة</button>
-        </section>
-      )}
 
       {incoming.length > 0 && (
         <section className="card mt-6">
@@ -154,22 +125,15 @@ export default function MyServicesPage() {
         ) : (
           services.map((s) => (
             <div key={s.id} className="card flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-bold">{s.title}</p>
+              <a href={`/me/services/${s.id}`} className="min-w-0 flex-1">
+                <p className="truncate font-bold transition hover:text-primary-dark">{s.title}</p>
                 <p className="mt-0.5 text-xs text-sub">{ST_LABEL[s.status]} · <span dir="ltr">${s.base_price}</span></p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-sm">
-                {s.status === "live" && <button className="btn-secondary" onClick={() => action(s.id, "pause")}>إيقاف</button>}
-                {s.status === "paused" && <button className="btn-secondary" onClick={() => action(s.id, "resume")}>استئناف</button>}
-                {(s.status === "draft" || s.status === "rejected") && (
-                  <button className="btn-primary" onClick={() => action(s.id, "publish")}>نشر</button>
-                )}
-                {s.status === "live" && <a className="btn-secondary" href={`/services/${s.slug}`}>عرض</a>}
-              </div>
+              </a>
+              <RowActionMenu actions={rowActions(s)} />
             </div>
           ))
         )}
       </section>
-    </main>
+    </DashboardShell>
   );
 }

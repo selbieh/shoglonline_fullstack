@@ -1,8 +1,10 @@
 """Google SSO verification + account provisioning (FR-AUTH-1..6) plus the account
 lifecycle services — freeze ripple (BR-23 / FR-ADM-5) and deletion (BR-2/3 / FR-PROF-7)."""
 import logging
+import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -383,5 +385,127 @@ def delete_account(user: User, *, reason: str = "", note: str = "", ip=None) -> 
         actor=user, action="account.deleted", model="User", object_id=str(user.pk),
         before={"status": before_status}, after={"status": user.status, "reason": reason, "note": note},
         ip=ip,
+    )
+    return user
+
+
+# --------------------------------------------------------------- phone OTP (ppt slide-08)
+OTP_TTL = 300          # seconds a code stays valid
+OTP_RESEND_GAP = 60    # seconds the user must wait between sends
+OTP_MAX_ATTEMPTS = 5
+
+
+def _otp_key(user) -> str:
+    return f"phone_otp:{user.pk}"
+
+
+def _send_sms(phone: str, message: str) -> None:
+    """Pluggable SMS sender. Dev stub logs the message; wire a provider in production (SEC)."""
+    logger.info("SMS to %s: %s", phone, message)
+
+
+def _phone_verification_enabled() -> bool:
+    return bool(get_setting("profiles.phone_verification", False))
+
+
+def request_phone_otp(user, phone: str) -> dict:
+    """Generate + 'send' a phone verification code (cache-backed, rate-limited).
+
+    Gated by the `profiles.phone_verification` operator flag (off by default)."""
+    if not _phone_verification_enabled():
+        raise ValidationError({"code": "phone_verification_disabled", "message_ar": "التحقق عبر الجوال غير مُفعّل حاليًا"})
+    digits = "".join(ch for ch in str(phone) if ch.isdigit())
+    if len(digits) < 8:
+        raise ValidationError({"code": "invalid_phone", "message_ar": "رقم الجوال غير صالح"})
+    if cache.get(f"phone_otp_gap:{user.pk}"):
+        raise ValidationError({"code": "otp_too_soon", "message_ar": "انتظر قليلًا قبل إعادة الإرسال"})
+    code = f"{secrets.randbelow(10000):04d}"
+    cache.set(_otp_key(user), {"code": code, "phone": str(phone)[:20], "attempts": 0}, OTP_TTL)
+    cache.set(f"phone_otp_gap:{user.pk}", 1, OTP_RESEND_GAP)
+    _send_sms(str(phone), f"رمز التحقق الخاص بك في شغل أونلاين: {code}")
+    out = {"sent": True}
+    if settings.DEBUG:
+        out["debug_code"] = code  # dev convenience only — never returned in production
+    return out
+
+
+def verify_phone_otp(user, code: str) -> User:
+    """Confirm the code and mark the phone verified (FR-PROF / ppt slide-08)."""
+    data = cache.get(_otp_key(user))
+    if not data:
+        raise ValidationError({"code": "otp_expired", "message_ar": "انتهت صلاحية الرمز، أعد الإرسال"})
+    if data.get("attempts", 0) >= OTP_MAX_ATTEMPTS:
+        cache.delete(_otp_key(user))
+        raise ValidationError({"code": "otp_locked", "message_ar": "محاولات كثيرة، أعد إرسال الرمز"})
+    if str(code).strip() != data["code"]:
+        data["attempts"] = data.get("attempts", 0) + 1
+        cache.set(_otp_key(user), data, OTP_TTL)
+        raise ValidationError({"code": "otp_mismatch", "message_ar": "الرمز غير صحيح"})
+    user.phone = data["phone"]
+    user.phone_verified = True
+    user.save(update_fields=["phone", "phone_verified"])
+    cache.delete(_otp_key(user))
+    cache.delete(f"phone_otp_gap:{user.pk}")
+    AuditLog.objects.create(
+        actor=user, action="phone.verified", model="User", object_id=str(user.pk),
+        after={"phone_verified": True},
+    )
+    return user
+
+
+# --------------------------------------------------------------- email change (ppt slide-31)
+EMAIL_CHANGE_TTL = 900   # 15 min token validity
+EMAIL_CHANGE_GAP = 60    # seconds between requests
+
+
+def _email_change_key(user) -> str:
+    return f"email_change:{user.pk}"
+
+
+def _send_email(to_email: str, subject: str, body: str) -> None:
+    """Pluggable email sender. Dev stub logs the message; wire a provider in production (SEC)."""
+    logger.info("Email to %s | %s | %s", to_email, subject, body)
+
+
+def request_email_change(user, new_email: str) -> dict:
+    """Start an email change: cache a confirm token + the pending address, then 'send' the link.
+    The address only switches after confirm_email_change (re-verification), so a typo can't lock
+    the user out (FR-AUTH / ppt slide-31)."""
+    new_email = str(new_email).strip().lower()
+    if "@" not in new_email or "." not in new_email.rsplit("@", 1)[-1]:
+        raise ValidationError({"code": "invalid_email", "message_ar": "البريد الإلكتروني غير صالح"})
+    if new_email == (user.email or "").lower():
+        raise ValidationError({"code": "same_email", "message_ar": "هذا هو بريدك الحالي بالفعل"})
+    if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
+        raise ValidationError({"code": "email_taken", "message_ar": "هذا البريد مستخدم في حساب آخر"})
+    if cache.get(f"email_change_gap:{user.pk}"):
+        raise ValidationError({"code": "too_soon", "message_ar": "انتظر قليلًا قبل إعادة المحاولة"})
+    token = secrets.token_urlsafe(24)
+    cache.set(_email_change_key(user), {"token": token, "email": new_email}, EMAIL_CHANGE_TTL)
+    cache.set(f"email_change_gap:{user.pk}", 1, EMAIL_CHANGE_GAP)
+    _send_email(new_email, "تأكيد تغيير البريد الإلكتروني", f"رمز تأكيد تغيير بريدك في شغل أونلاين: {token}")
+    out = {"sent": True}
+    if settings.DEBUG:
+        out["debug_token"] = token  # dev convenience only — never returned in production
+    return out
+
+
+def confirm_email_change(user, token: str) -> User:
+    """Confirm the pending email change with the emailed token."""
+    data = cache.get(_email_change_key(user))
+    if not data:
+        raise ValidationError({"code": "token_expired", "message_ar": "انتهت صلاحية الطلب، أعد المحاولة"})
+    if str(token).strip() != data["token"]:
+        raise ValidationError({"code": "token_mismatch", "message_ar": "رمز التأكيد غير صحيح"})
+    if User.objects.filter(email__iexact=data["email"]).exclude(pk=user.pk).exists():
+        raise ValidationError({"code": "email_taken", "message_ar": "هذا البريد مستخدم في حساب آخر"})
+    old = user.email
+    user.email = data["email"]
+    user.save(update_fields=["email"])
+    cache.delete(_email_change_key(user))
+    cache.delete(f"email_change_gap:{user.pk}")
+    AuditLog.objects.create(
+        actor=user, action="email.changed", model="User", object_id=str(user.pk),
+        before={"email": old}, after={"email": user.email},
     )
     return user

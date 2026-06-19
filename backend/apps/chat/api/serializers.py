@@ -27,19 +27,39 @@ class ConversationSerializer(serializers.ModelSerializer):
     other = serializers.SerializerMethodField()
     unread = serializers.SerializerMethodField()
     read_only = serializers.SerializerMethodField()
+    context = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = ["id", "context_type", "status", "read_only", "other", "unread",
-                  "last_message_snippet", "last_message_at", "created_at"]
+                  "context", "last_message_snippet", "last_message_at", "created_at"]
 
     def get_other(self, obj) -> dict:
         user = self.context["request"].user
         o = obj.other(user)
-        return {"id": o.id, "name": (f"{o.first_name} {o.last_name}".strip() or o.email), "email": o.email}
+        return {
+            "id": o.id,
+            "name": (f"{o.first_name} {o.last_name}".strip() or o.email),
+            "email": o.email,
+            "avatar": getattr(o, "avatar_url", "") or "",
+        }
 
     def get_unread(self, obj) -> int:
         return services.unread_count(obj, self.context["request"].user)
 
     def get_read_only(self, obj) -> bool:
         return obj.status == Conversation.Status.READ_ONLY
+
+    def get_context(self, obj):
+        """Header deep-link to the originating service/job/contract — powers «عرض الخدمة»
+        (and «عرض الوظيفة» / «عرض العقد»). Returns None for plain/direct conversations."""
+        if obj.context_type == Conversation.Context.PROPOSAL and obj.job_id:
+            return {"label": "عرض الوظيفة", "title": obj.job.title, "href": f"/jobs/{obj.job.slug}"}
+        if obj.context_type == Conversation.Context.CONTRACT and obj.contract_id:
+            c = obj.contract
+            if c.service_id:
+                return {"label": "عرض الخدمة", "title": c.service.title, "href": f"/services/{c.service.slug}"}
+            if c.job_id:
+                return {"label": "عرض الوظيفة", "title": c.job.title, "href": f"/jobs/{c.job.slug}"}
+            return {"label": "عرض العقد", "title": c.title, "href": f"/contracts/{c.id}"}
+        return None

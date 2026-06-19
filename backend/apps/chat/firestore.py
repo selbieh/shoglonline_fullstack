@@ -30,6 +30,16 @@ def _doc(conversation):
     return firebase.db().collection("conversations").document(str(conversation.pk))
 
 
+def _message_files(message) -> list:
+    """Attachment metadata the recipient renders inline (id + kind + name + size). We deliberately
+    do NOT include the scoped download URL — it's a per-request absolute path and each party fetches
+    /uploads/{id} with their own JWT (see FR-CHAT-4, attachments access control)."""
+    return [
+        {"id": a.id, "kind": a.kind, "name": a.original_name, "size": a.size}
+        for a in message.attachments.filter(is_deleted=False)
+    ]
+
+
 def mirror_conversation(conversation) -> None:
     """Upsert the conversation doc the clients read (participants gate access via rules)."""
     if firebase.is_stub():
@@ -60,7 +70,7 @@ def mirror_message(message) -> None:
     conv_ref.collection("messages").document(str(message.pk)).set({
         "sender": str(message.sender_id),
         "body": message.body,
-        "files": message.files,
+        "files": _message_files(message),  # linked attachments (voice/image/video/file), FR-CHAT-4
         "createdAt": message.created_at,
         "pgId": message.pk,
     })
@@ -79,3 +89,17 @@ def mirror_status(conversation) -> None:
         logger.info("[firestore-stub] conversations/%s → status=%s", conversation.pk, conversation.status)
         return
     _doc(conversation).set({"status": conversation.status}, merge=True)
+
+
+def mirror_read(conversation, user, read_at) -> None:
+    """Mirror a participant's read cursor into the conversation doc as `reads.<uid>` so the OTHER
+    party's listener can render ✓✓ (read) in real time (read receipts, FR-CHAT-1).
+
+    Admin-SDK write — clients never write the conversation doc (security rules forbid it). We pass a
+    REAL timestamp (the same value written to ConversationMember.last_read_at), not the Firestore
+    SERVER_TIMESTAMP sentinel, which is fragile inside a merged map. `merge=True` deep-merges the
+    single `reads.<uid>` key without clobbering the other party's entry."""
+    if firebase.is_stub():
+        logger.info("[firestore-stub] conversations/%s reads[%s]=%s", conversation.pk, user.id, read_at)
+        return
+    _doc(conversation).set({"reads": {str(user.id): read_at}}, merge=True)

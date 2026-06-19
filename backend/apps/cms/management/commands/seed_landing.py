@@ -13,8 +13,8 @@ SECTIONS = [
         "key": "hero", "kind": "hero", "order": 0,
         "heading": "وظّف أفضل المستقلين أو ابدأ عملك التالي — بثقة",
         "subheading": "حساب واحد للوضعين، مدفوعات محمية بالضمان، ودخول عبر جوجل بنقرة. تصفّح الآن بدون تسجيل.",
-        "cta_primary_label": "💼 تصفّح الوظائف", "cta_primary_link": "/jobs",
-        "cta_secondary_label": "🛍 تصفّح الخدمات", "cta_secondary_link": "/services",
+        "cta_primary_label": "تصفّح الوظائف", "cta_primary_link": "/jobs",
+        "cta_secondary_label": "تصفّح الخدمات", "cta_secondary_link": "/services",
         "cards": [],
     },
     {

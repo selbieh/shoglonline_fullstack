@@ -6,13 +6,15 @@ from django.db import models, transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-from .models import PaymentMethod, Transaction, Wallet, WithdrawalRequest
+from .models import PaymentMethod, PayoutMethod, Transaction, Wallet, WithdrawalRequest
 
 ERR = {
     "funds": {"code": "insufficient_funds", "message_ar": "الرصيد المتاح غير كافٍ — اشحن محفظتك"},
     "min": {"code": "below_minimum", "message_ar": "المبلغ أقل من الحد الأدنى"},
     "pan": {"code": "pan_forbidden", "message_ar": "لا تُرسل رقم البطاقة — استخدم رمز البوابة فقط"},
     "token": {"code": "token_required", "message_ar": "رمز البوابة مطلوب"},
+    "payout_kind": {"code": "invalid_payout_kind", "message_ar": "وسيلة استلام غير معروفة"},
+    "payout_details": {"code": "payout_details_required", "message_ar": "أكمل بيانات وسيلة الاستلام"},
 }
 
 # PCI SAQ-A: a raw PAN must never reach our servers. We refuse any field that smells like card data
@@ -219,3 +221,36 @@ def purchase_bid_plan(user, plan) -> Transaction:
     )
     BidLedger.objects.create(user=user, delta=plan.bids_count, reason=BidLedger.Reason.PURCHASE, plan=plan)
     return row
+
+
+# ------------------------------------------------------------- payout methods (ppt slide-38)
+def add_payout_method(user, data: dict) -> PayoutMethod:
+    """Save a payout destination. `details` holds the rail-specific fields (IBAN, wallet number,
+    instapay link, …); Egypt-only rails are pinned to country EG. The first method is default."""
+    kind = str(data.get("kind") or "").strip()
+    if kind not in PayoutMethod.Kind.values:
+        raise ValidationError(ERR["payout_kind"])
+    details = data.get("details")
+    if not isinstance(details, dict) or not details:
+        raise ValidationError(ERR["payout_details"])
+    country = str(data.get("country") or "").upper()[:2]
+    if kind in PayoutMethod.EGYPT_ONLY:
+        country = "EG"
+    method = PayoutMethod.objects.create(
+        user=user,
+        kind=kind,
+        label=(data.get("label") or "")[:80],
+        country=country,
+        details=details,
+    )
+    if data.get("is_default") or not PayoutMethod.objects.filter(user=user).exclude(pk=method.pk).exists():
+        set_default_payout_method(user, method)
+    return method
+
+
+@transaction.atomic
+def set_default_payout_method(user, method: PayoutMethod) -> None:
+    PayoutMethod.objects.filter(user=user).exclude(pk=method.pk).update(is_default=False)
+    if not method.is_default:
+        method.is_default = True
+        method.save(update_fields=["is_default"])

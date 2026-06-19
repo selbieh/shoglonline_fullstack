@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { API_URL } from "@/lib/api";
-import { isRealtime, sendViaFirestore, subscribeToMessages } from "@/lib/firebaseChat";
+import { isRealtime, sendViaFirestore, subscribeToConversation, subscribeToMessages } from "@/lib/firebaseChat";
 import { server } from "@/test/msw/server";
 
 // When the backend runs with FIRESTORE_STUB (dev), /chat/token reports stub:true and the
@@ -17,6 +17,7 @@ describe("firebaseChat dev fallback", () => {
 
     expect(await isRealtime()).toBe(false);
     expect(await subscribeToMessages(1, () => {})).toBeNull();
+    expect(await subscribeToConversation(1, () => {})).toBeNull();
     expect(await sendViaFirestore(1, "hi")).toBe(false);
   });
 });

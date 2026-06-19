@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
 import { apiError } from "@/lib/errors";
 import ReviewsSection from "@/components/ReviewsSection";
@@ -76,7 +77,7 @@ export default function ContractDetailPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
@@ -116,9 +117,12 @@ export default function ContractDetailPage() {
 
   if (!c) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
 
+  const submissions = c.submissions ?? [];
+  const update_requests = c.update_requests ?? [];
+  const events = c.events ?? [];
   const isEmployer = c.my_role === "employer";
-  const openSub = c.submissions.find((s) => s.status === "open");
-  const pendingUpdate = c.update_requests.find((u) => u.status === "pending" || u.status === "pending_funding");
+  const openSub = submissions.find((s) => s.status === "open");
+  const pendingUpdate = update_requests.find((u) => u.status === "pending" || u.status === "pending_funding");
   const canDeliver = c.my_role === "worker" && (c.status === "active" || c.status === "delivered");
   const canReviewSub = isEmployer && c.status === "delivered" && openSub;
   const canChangeTerms = c.status === "active" || c.status === "delivered";
@@ -198,7 +202,7 @@ export default function ContractDetailPage() {
         <section className="card mt-4">
           <h2 className="font-bold">تسليم العمل</h2>
           <textarea
-            className="mt-2 w-full rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="mt-2 w-full field"
             rows={3}
             placeholder="ملاحظات التسليم (روابط الملفات، شرح، إلخ)"
             value={notes}
@@ -285,9 +289,9 @@ export default function ContractDetailPage() {
               <div>
                 <h2 className="font-bold">طلب تعديل الشروط</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <input className="w-36 rounded-m border border-line-strong px-3 py-2 text-sm" dir="ltr"
+                  <input className="w-36 field" dir="ltr"
                     placeholder="ميزانية جديدة" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
-                  <input type="date" className="rounded-m border border-line-strong px-3 py-2 text-sm"
+                  <input type="date" className="field"
                     value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
                   <button className="btn-secondary" disabled={busy || (!newBudget && !newDeadline)}
                     onClick={() => act(`/contracts/${id}/update-requests`,
@@ -328,11 +332,11 @@ export default function ContractDetailPage() {
       )}
 
       {/* submissions history */}
-      {c.submissions.length > 0 && (
+      {submissions.length > 0 && (
         <section className="card mt-4">
           <h2 className="font-bold">سجل التسليمات</h2>
           <ul className="mt-2 space-y-2">
-            {c.submissions.map((s) => (
+            {submissions.map((s) => (
               <li key={s.id} className="rounded-m bg-bg p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-sub">{new Date(s.created_at).toLocaleString("ar")}</span>
@@ -352,11 +356,11 @@ export default function ContractDetailPage() {
       {c.status === "completed" && <ReviewsSection contractId={id} />}
 
       {/* timeline */}
-      {c.events.length > 0 && (
+      {events.length > 0 && (
         <section className="card mt-4">
           <h2 className="font-bold">سجل العقد</h2>
           <ul className="mt-2 space-y-1 text-xs text-sub">
-            {c.events.map((e) => (
+            {events.map((e) => (
               <li key={e.id} className="flex justify-between gap-3">
                 <span>{e.detail || e.kind}</span>
                 <span>{new Date(e.created_at).toLocaleDateString("ar")}</span>

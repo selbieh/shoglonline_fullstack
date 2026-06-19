@@ -6,9 +6,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .. import services
-from ..models import BuyingRequest, Service, ServiceFavorite
+from ..models import BuyingRequest, Favorite, Service, ServiceFavorite
 from .serializers import (
     BuyingRequestSerializer,
+    OwnerServiceDetailSerializer,
     ServiceDetailSerializer,
     ServiceListSerializer,
     ServiceWriteSerializer,
@@ -21,7 +22,7 @@ class PublicServiceListView(ListAPIView):
     permission_classes = [AllowAny]
     authentication_classes: list = []
     serializer_class = ServiceListSerializer
-    filterset_fields = ["subcategory"]  # category handled below (descendant-aware, id or slug)
+    filterset_fields = ["subcategory", "worker"]  # category handled below; worker = profile services grid (slide-18)
     search_fields = ["title", "description", "category__name_ar"]
     ordering_fields = ["published_at", "base_price", "favorites_count"]
     ordering = ["-published_at"]
@@ -48,10 +49,14 @@ class PublicServiceDetailView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, slug):
+        from django.db.models import F
+
         service = get_object_or_404(
             Service.objects.select_related("category", "worker").prefetch_related("addons"),
             slug=slug,
         )
+        # count the visit for the owner analytics panel (ppt slide-20)
+        Service.objects.filter(pk=service.pk).update(views_count=F("views_count") + 1)
         return Response(ServiceDetailSerializer(service, context={"request": request}).data)
 
 
@@ -59,12 +64,28 @@ class MyServicesView(ListCreateAPIView):
     """GET/POST /me/services — worker-side management (FR-SVC)."""
 
     permission_classes = [IsAuthenticated]
+    filterset_fields = ["status"]
 
     def get_serializer_class(self):
         return ServiceWriteSerializer if self.request.method == "POST" else ServiceListSerializer
 
     def get_queryset(self):
         return Service.objects.filter(worker=self.request.user).select_related("category")
+
+    def list(self, request, *args, **kwargs):
+        # per-status counts for the filter tabs (ppt slide-17).
+        from django.db.models import Count
+
+        response = super().list(request, *args, **kwargs)
+        counts = dict(
+            Service.objects.filter(worker=request.user)
+            .values("status").order_by().annotate(n=Count("id"))
+            .values_list("status", "n")
+        )
+        counts["all"] = sum(counts.values())
+        if isinstance(response.data, dict):
+            response.data["status_counts"] = counts
+        return response
 
     def perform_create(self, serializer):
         service = serializer.save(worker=self.request.user)
@@ -87,7 +108,7 @@ class MyServiceDetailView(RetrieveUpdateAPIView):
         return Service.objects.filter(worker=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
-        return Response(ServiceDetailSerializer(self.get_object(), context={"request": request}).data)
+        return Response(OwnerServiceDetailSerializer(self.get_object(), context={"request": request}).data)
 
 
 class ServiceActionView(APIView):
@@ -112,11 +133,39 @@ class ServiceActionView(APIView):
 
 
 class FavoritesView(APIView):
+    """GET /me/favorites[?kind=service|job|freelancer|portfolio] — the saved items for one tab
+    (ppt slide-43). Services use the dedicated ServiceFavorite (denormalized count); the other
+    kinds come from the generic Favorite. PUT/DELETE /me/favorites/<service_id> toggles a service
+    (back-compat); generic kinds toggle via GenericFavoriteView."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        favs = ServiceFavorite.objects.filter(user=request.user).select_related("service__category")
-        return Response(ServiceListSerializer([f.service for f in favs], many=True).data)
+        kind = request.query_params.get("kind", "service")
+        if kind == "service":
+            favs = ServiceFavorite.objects.filter(user=request.user).select_related("service__category")
+            return Response(ServiceListSerializer([f.service for f in favs], many=True).data)
+
+        ids = list(Favorite.objects.filter(user=request.user, kind=kind).values_list("object_id", flat=True))
+        if not ids:
+            return Response([])
+        if kind == "job":
+            from apps.jobs.api.serializers import JobListSerializer
+            from apps.jobs.models import Job
+            qs = Job.objects.filter(pk__in=ids).select_related("category")
+            return Response(JobListSerializer(qs, many=True, context={"request": request}).data)
+        if kind == "freelancer":
+            from apps.profiles.api.serializers import PublicWorkerCardSerializer
+            from apps.profiles.models import WorkerProfile
+            qs = (WorkerProfile.objects.filter(user_id__in=ids)
+                  .select_related("user").prefetch_related("skills__skill", "portfolio__attachments", "user__addresses"))
+            return Response(PublicWorkerCardSerializer(qs, many=True, context={"request": request}).data)
+        if kind == "portfolio":
+            from apps.profiles.api.serializers import PortfolioItemSerializer
+            from apps.profiles.models import PortfolioItem
+            qs = PortfolioItem.objects.filter(pk__in=ids).select_related("profile").prefetch_related("attachments")
+            return Response(PortfolioItemSerializer(qs, many=True, context={"request": request}).data)
+        return Response([])
 
     def put(self, request, service_id=None):
         service = get_object_or_404(Service, pk=service_id)
@@ -126,6 +175,23 @@ class FavoritesView(APIView):
     def delete(self, request, service_id=None):
         service = get_object_or_404(Service, pk=service_id)
         services.toggle_favorite(request.user, service, False)
+        return Response(status=204)
+
+
+class GenericFavoriteView(APIView):
+    """PUT/DELETE /me/favorites/<kind>/<object_id> — toggle a job / freelancer / portfolio favorite."""
+
+    permission_classes = [IsAuthenticated]
+    KINDS = {"job", "freelancer", "portfolio"}
+
+    def put(self, request, kind, object_id):
+        if kind not in self.KINDS:
+            return Response({"detail": "invalid kind"}, status=status.HTTP_400_BAD_REQUEST)
+        Favorite.objects.get_or_create(user=request.user, kind=kind, object_id=object_id)
+        return Response(status=204)
+
+    def delete(self, request, kind, object_id):
+        Favorite.objects.filter(user=request.user, kind=kind, object_id=object_id).delete()
         return Response(status=204)
 
 

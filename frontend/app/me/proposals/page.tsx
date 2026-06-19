@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { timeAgo } from "@/lib/format";
 import {
@@ -11,16 +12,19 @@ import {
   type Paginated,
   type Proposal,
 } from "@/lib/types";
+import StatusTabs from "@/components/StatusTabs";
+import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
+import DashboardShell from "@/components/DashboardShell";
 
 /** Soft badge tone per proposal status — mirrors the status palette used across the app. */
 const STATUS_TONE: Record<string, string> = {
-  pending_approval: "bg-amber-100 text-amber-700",
-  submitted: "bg-sky-100 text-sky-700",
-  viewed: "bg-indigo-100 text-indigo-700",
-  accepted: "bg-emerald-100 text-emerald-700",
-  rejected: "bg-rose-100 text-rose-700",
-  cancelled: "bg-slate-100 text-slate-600",
-  withdrawn: "bg-slate-100 text-slate-600",
+  pending_approval: "bg-warn-t text-warn",
+  submitted: "bg-tint text-primary-dark",
+  viewed: "bg-accent-sky text-primary-deep",
+  accepted: "bg-success-t text-success",
+  rejected: "bg-danger-t text-danger",
+  cancelled: "bg-line/50 text-sub",
+  withdrawn: "bg-line/50 text-sub",
 };
 
 /** Filter tabs: "all" + every known status, in workflow order. */
@@ -32,22 +36,26 @@ const FILTERS: { value: string; label: string }[] = [
 export default function MyProposalsPage() {
   const router = useRouter();
   const [proposals, setProposals] = useState<Proposal[] | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [status, setStatus] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async (s: string) => {
     setProposals(null);
-    const res = await api<Paginated<Proposal>>(`/me/proposals${s ? `?status=${s}` : ""}`);
+    const res = await api<Paginated<Proposal> & { status_counts?: Record<string, number> }>(
+      `/me/proposals${s ? `?status=${s}` : ""}`,
+    );
     setProposals(res.results);
+    if (res.status_counts) setCounts(res.status_counts);
   }, []);
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
-    load(status).catch(() => router.replace("/signin"));
+    load(status).catch(() => router.replace(signinHereHref()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
@@ -66,30 +74,28 @@ export default function MyProposalsPage() {
     }
   }
 
-  return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">عروضي المقدّمة</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
-      </div>
-      <p className="mt-1 text-sm text-sub">
-        تابع حالة العروض التي قدّمتها على الوظائف. يمكنك إلغاء العرض ما لم يُشاهده صاحب العمل.
-      </p>
+  // per-row action menu (ppt slide-16). Edit-offer is hidden until its PATCH endpoint exists.
+  const rowActions = (p: Proposal): RowAction[] => [
+    { label: "عرض المشروع", href: `/jobs/${p.job_slug}` },
+    { label: "تعديل العرض", hidden: true },
+    {
+      label: "سحب العرض",
+      danger: true,
+      hidden: !PROPOSAL_CANCELLABLE.includes(p.status),
+      disabled: busyId === p.id,
+      onSelect: () => cancel(p),
+    },
+    { label: "مراسلة صاحب العمل", href: "/messages" },
+    { label: "الإبلاغ عن مشكلة", href: "/support" },
+  ];
 
-      {/* status filter tabs */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value || "all"}
-            type="button"
-            onClick={() => setStatus(f.value)}
-            className={`rounded-full px-3.5 py-1.5 text-sm transition ${
-              status === f.value ? "bg-primary text-white" : "bg-tint text-primary-dark hover:bg-primary/10"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+  return (
+    <DashboardShell active="proposals" title="عروضي"
+      subtitle="إدارة ومتابعة جميع العروض التي قدّمتها على مشاريع أصحاب الأعمال.">
+
+      {/* status filter tabs with per-status counts */}
+      <div className="mt-6">
+        <StatusTabs tabs={FILTERS} active={status} counts={counts} onChange={setStatus} />
       </div>
 
       {msg && (
@@ -128,9 +134,12 @@ export default function MyProposalsPage() {
                     {timeAgo(p.created_at) && <span>{timeAgo(p.created_at)}</span>}
                   </div>
                 </div>
-                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${STATUS_TONE[p.status] ?? "bg-tint text-primary-dark"}`}>
-                  {PROPOSAL_STATUS_LABEL[p.status] ?? p.status}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${STATUS_TONE[p.status] ?? "bg-tint text-primary-dark"}`}>
+                    {PROPOSAL_STATUS_LABEL[p.status] ?? p.status}
+                  </span>
+                  <RowActionMenu actions={rowActions(p)} />
+                </div>
               </div>
 
               {p.description && <p className="mt-3 line-clamp-2 text-sm leading-6 text-sub">{p.description}</p>}
@@ -138,23 +147,10 @@ export default function MyProposalsPage() {
               {p.reject_reason && (
                 <p className="mt-3 rounded-m bg-warn-t p-2.5 text-xs text-warn">سبب الرفض: {p.reject_reason}</p>
               )}
-
-              {PROPOSAL_CANCELLABLE.includes(p.status) && (
-                <div className="mt-4 flex justify-end border-t border-line/70 pt-3">
-                  <button
-                    type="button"
-                    className="text-sm text-danger hover:underline disabled:opacity-50"
-                    disabled={busyId === p.id}
-                    onClick={() => cancel(p)}
-                  >
-                    {busyId === p.id ? "جارٍ الإلغاء…" : "إلغاء العرض"}
-                  </button>
-                </div>
-              )}
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </DashboardShell>
   );
 }

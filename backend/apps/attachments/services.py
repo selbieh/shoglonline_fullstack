@@ -30,6 +30,22 @@ def _is_sniffable(mime: str) -> bool:
     return mime.startswith(_SNIFFABLE_PREFIXES) or mime in _SNIFFABLE_EXACT
 
 
+# WebM/Ogg audio and video share a container (Matroska/Ogg) and therefore the same magic bytes, so
+# a voice note recorded by MediaRecorder (audio/webm on Chrome) sniffs as video/webm. When the
+# client claims an audio/* type and the detected container is the SAME family, we trust the audio
+# claim — a voice note, not a disguised upload. (A genuinely disguised file, e.g. a PNG named
+# audio/webm, sniffs as image/png — a different family — and is still caught below.)
+_CONTAINER_FAMILY = {
+    "audio/webm": "webm", "video/webm": "webm",
+    "audio/ogg": "ogg", "video/ogg": "ogg",
+}
+
+
+def _same_container_family(claimed: str, detected: str) -> bool:
+    fam = _CONTAINER_FAMILY.get(claimed)
+    return fam is not None and fam == _CONTAINER_FAMILY.get(detected)
+
+
 def _detect_mime(uploaded_file) -> str | None:
     """Magic-byte sniff (first 262 bytes). Returns the detected MIME or None if unidentifiable."""
     import filetype  # noqa: PLC0415
@@ -86,7 +102,9 @@ def create_attachment(owner, uploaded_file) -> Attachment:
     # disguised → reject. Non-sniffable types (text, office docs) fall back to the claimed type.
     claimed = (uploaded_file.content_type or "application/octet-stream").split(";")[0].strip().lower()
     detected = _detect_mime(uploaded_file)
-    if detected:
+    if detected and claimed.startswith("audio/") and _same_container_family(claimed, detected):
+        content_type = claimed  # MediaRecorder voice note: webm/ogg audio sniffs as video — trust it
+    elif detected:
         content_type = detected
     elif _is_sniffable(claimed):
         raise ValidationError(ERR["blocked"])  # claims an identifiable type but bytes say otherwise
@@ -149,7 +167,7 @@ def _host_allows(host, user) -> bool:
     """Explicit, auditable per-host authorization. Unknown host types → deny."""
     from apps.chat.models import Message  # noqa: PLC0415 (avoid import cycle)
     from apps.contracts.models import Submission  # noqa: PLC0415
-    from apps.profiles.models import IDVerification  # noqa: PLC0415
+    from apps.profiles.models import IDVerification, PortfolioItem  # noqa: PLC0415
     from apps.tickets.models import Ticket  # noqa: PLC0415
 
     if isinstance(host, Message):
@@ -160,4 +178,6 @@ def _host_allows(host, user) -> bool:
         return host.user_id == user.id or bool(user.is_staff)
     if isinstance(host, IDVerification):  # owner uploads; staff review the ID file (FR-PROF-6)
         return host.user_id == user.id or bool(user.is_staff)
+    if isinstance(host, PortfolioItem):  # owner manages their own gallery; public read via its own view
+        return host.profile.user_id == user.id
     return False

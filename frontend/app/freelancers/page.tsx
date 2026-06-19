@@ -1,13 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { EXPERTISE_LABEL, type Freelancer, type Paginated } from "@/lib/types";
 import { tagTone } from "@/lib/tags";
-import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, SearchIcon, SparklesIcon, StarIcon } from "@/components/icons";
+import Avatar from "@/components/Avatar";
+import FavoriteButton from "@/components/FavoriteButton";
+import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
+import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, ShareIcon, StarIcon } from "@/components/icons";
 
 const EXPERTISE_OPTIONS = ["entry", "intermediate", "expert"] as const;
+
+/** Availability pill copy/colour for the card identity meta (mirrors the profile hero). */
+const AVAIL: Record<string, { t: string; cls: string }> = {
+  available_now: { t: "متاح للعمل", cls: "text-success" },
+  available_soon: { t: "متاح قريبًا", cls: "text-warn" },
+  unavailable: { t: "غير متاح", cls: "text-sub" },
+};
 
 /** Public freelancer directory (FR-PROF). Works for visitors too. */
 export default function FreelancersPage() {
@@ -68,7 +78,7 @@ export default function FreelancersPage() {
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
           <div>
             <span className="glass animate-fade-up mb-3 inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.7)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
               دليل المستقلين
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">المستقلون</h1>
@@ -125,22 +135,25 @@ export default function FreelancersPage() {
           {/* loading skeletons */}
           {loading && (
             <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="card-modern animate-pulse p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="h-16 w-16 shrink-0 rounded-full bg-line sm:h-20 sm:w-20" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="card animate-pulse">
+                  <div className="flex items-start gap-3.5">
+                    <div className="h-16 w-16 shrink-0 rounded-full bg-line" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-5 w-1/2 rounded bg-line" />
-                      <div className="h-3 w-1/3 rounded bg-line" />
-                      <div className="h-5 w-20 rounded-full bg-line" />
-                      <div className="mt-1 flex gap-1.5">
-                        <div className="h-6 w-16 rounded-full bg-line" />
-                        <div className="h-6 w-12 rounded-full bg-line" />
-                        <div className="h-6 w-14 rounded-full bg-line" />
-                      </div>
+                      <div className="h-4 w-1/3 rounded bg-line" />
+                      <div className="h-3 w-1/4 rounded bg-line" />
+                      <div className="h-3 w-1/2 rounded bg-line" />
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-line/70 pt-3.5">
+                  <div className="mt-3 grid grid-cols-2 gap-4 rounded-m bg-bg px-4 py-3 sm:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <div key={j} className="space-y-1.5">
+                        <div className="h-3 w-16 rounded bg-line" />
+                        <div className="h-4 w-12 rounded bg-line" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-line pt-3.5">
                     <div className="h-6 w-24 rounded bg-line" />
                     <div className="h-8 w-28 rounded-full bg-line" />
                   </div>
@@ -159,93 +172,11 @@ export default function FreelancersPage() {
             </div>
           )}
 
-          {/* results */}
+          {/* results — wide profile list cards (matches the design) */}
           {!loading && !error && count > 0 && (
             <div className="space-y-4">
               {data!.results.map((f) => (
-                <Link
-                  key={f.id}
-                  href={`/freelancers/${f.id}`}
-                  className="card-modern group block p-5"
-                >
-                  <div className="flex items-start gap-4">
-                    {/* avatar with gradient ring + verified badge */}
-                    <div className="relative shrink-0">
-                      <div className="rounded-full bg-gradient-to-br from-primary to-primary-deep p-0.5 shadow-soft">
-                        {f.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={f.avatar_url}
-                            alt={f.name}
-                            className="h-16 w-16 rounded-full object-cover ring-2 ring-white sm:h-20 sm:w-20"
-                          />
-                        ) : (
-                          <span className="bg-hero grid h-16 w-16 place-content-center rounded-full text-2xl font-extrabold text-white ring-2 ring-white sm:h-20 sm:w-20">
-                            {f.name.charAt(0)}
-                          </span>
-                        )}
-                        {f.is_verified && (
-                          <span
-                            className="absolute -bottom-1 -start-1 grid h-6 w-6 place-content-center rounded-full bg-white text-[18px] text-success ring-2 ring-white"
-                            title="موثّق"
-                          >
-                            <BadgeCheckIcon />
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1 text-lg font-bold group-hover:text-primary-dark">
-                        <span className="truncate">{f.name}</span>
-                        {f.is_verified && <BadgeCheckIcon className="shrink-0 text-[16px] text-success" />}
-                      </p>
-                      <p className="truncate text-sm text-sub">{f.bio_title || "مستقل على شغل أونلاين"}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {Number(f.rating_count) > 0 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-warn-t px-2 py-0.5 text-xs font-bold text-warn">
-                            <StarIcon filled className="text-[12px]" /> {Number(f.rating_avg).toFixed(1)}
-                            <span className="font-normal text-sub">({f.rating_count.toLocaleString("ar-EG")})</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-                            <SparklesIcon className="text-[12px]" /> جديد
-                          </span>
-                        )}
-                        {f.expertise_level && (
-                          <span className="tag-soft bg-tint text-primary-dark">{EXPERTISE_LABEL[f.expertise_level]}</span>
-                        )}
-                      </div>
-
-                      {f.skills.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {f.skills.slice(0, 6).map((s) => (
-                            <span key={s} className={`tag-soft ${tagTone(s)}`}>{s}</span>
-                          ))}
-                          {f.skills.length > 6 && (
-                            <span className="tag-soft bg-bg text-sub">+{(f.skills.length - 6).toLocaleString("ar-EG")}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/70 pt-3.5">
-                    {f.hourly_rate ? (
-                      <span className="inline-flex items-baseline gap-1.5">
-                        <span className="text-[11px] text-sub">السعر/الساعة</span>
-                        <span className="text-xl font-extrabold text-primary"><span dir="ltr">{f.hourly_rate}</span></span>
-                        <span className="text-xs font-medium text-sub">د.ك</span>
-                      </span>
-                    ) : (
-                      <span className="text-sm text-sub">السعر عند الطلب</span>
-                    )}
-                    <span className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
-                      عرض الملف
-                      <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
-                    </span>
-                  </div>
-                </Link>
+                <FreelancerCard key={f.id} f={f} />
               ))}
             </div>
           )}
@@ -308,5 +239,109 @@ export default function FreelancersPage() {
         </aside>
       </div>
     </main>
+  );
+}
+
+/** Wide profile-style list card (matches the profile hero): identity (avatar + name + title)
+    top-right with share / save / report actions top-left, a short description and skills, a
+    horizontal stats strip (rating · portfolio · expertise) and an hourly-rate footer. The whole
+    card links to the public profile; «عرض الملف» is the card's CTA. */
+function FreelancerCard({ f }: { f: Freelancer }) {
+  const profileUrl = `/freelancers/${f.id}`;
+  const location = [f.city, f.country].filter(Boolean).join(" - ");
+  const avail = f.availability ? AVAIL[f.availability] : undefined;
+  const rated = Number(f.rating_count) > 0;
+  const onShare = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = typeof window !== "undefined" ? `${window.location.origin}${profileUrl}` : profileUrl;
+    if (typeof navigator !== "undefined" && navigator.share) navigator.share({ url }).catch(() => {});
+    else navigator?.clipboard?.writeText(url).catch(() => {});
+  };
+  const stop = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  return (
+    <Link
+      href={profileUrl}
+      className="card group block text-right transition hover:border-primary/40 hover:shadow-soft-lg"
+    >
+      {/* header: identity (right) + actions (left) */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="relative shrink-0">
+            <Avatar name={f.name} src={f.avatar_url} className="h-16 w-16" textClassName="text-xl" />
+            {f.availability === "available_now" && (
+              <span className="absolute bottom-0.5 left-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-success" title="متاح الآن" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-base font-bold leading-tight text-ink">
+              <span className="truncate">{f.name}</span>
+              {f.is_verified && <BadgeCheckIcon className="shrink-0 text-[16px] text-primary" />}
+            </p>
+            <p className="mt-1 truncate font-bold text-primary-dark">{f.bio_title || "مستقل على شغل أونلاين"}</p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
+              {location && (
+                <span className="inline-flex items-center gap-1"><MapPinIcon className="text-[13px] text-primary" /> {location}</span>
+              )}
+              {avail && (
+                <span className={`inline-flex items-center gap-1 ${avail.cls}`}><ClockIcon className="text-[13px]" /> {avail.t}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <button type="button" onClick={onShare} title="مشاركة" aria-label="مشاركة"
+            className="grid h-9 w-9 place-content-center rounded-full text-[18px] text-sub transition hover:bg-tint hover:text-primary">
+            <ShareIcon />
+          </button>
+          <FavoriteButton kind="freelancer" id={f.id}
+            className="grid h-9 w-9 place-content-center rounded-full text-[18px] text-sub transition hover:bg-tint hover:text-danger" />
+          <button type="button" onClick={stop} title="إبلاغ" aria-label="إبلاغ"
+            className="grid h-9 w-9 place-content-center rounded-full border border-transparent text-[18px] text-sub transition hover:border-danger/30 hover:bg-danger-t hover:text-danger">
+            <AlertIcon />
+          </button>
+        </div>
+      </div>
+
+      {/* description */}
+      {f.overview && (
+        <p className="mt-3 text-sm leading-relaxed text-sub line-clamp-2">{f.overview}</p>
+      )}
+
+      {/* skills */}
+      {f.skills.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {f.skills.slice(0, 5).map((s) => (
+            <span key={s} className={`tag-soft ${tagTone(s)}`}>{s}</span>
+          ))}
+          {f.skills.length > 5 && (
+            <span className="tag-soft bg-bg text-sub">+{(f.skills.length - 5).toLocaleString("ar-EG")}</span>
+          )}
+        </div>
+      )}
+
+      {/* stats strip: rating · portfolio · services · experience (mirrors the profile hero) */}
+      <ListingStats cols={4}>
+        <ListingStat icon={<StarIcon filled />} label="التقييم العام"
+          value={rated
+            ? <span dir="ltr">{Number(f.rating_avg).toFixed(1)} <span className="text-xs font-normal text-sub">({f.rating_count.toLocaleString("ar-EG")})</span></span>
+            : "جديد"} />
+        <ListingStat icon={<GridIcon />} label="أعمال المعرض" value={Number(f.portfolio_count ?? 0).toLocaleString("ar-EG")} />
+        <ListingStat icon={<BriefcaseIcon />} label="الخدمات" value={Number(f.services_count ?? 0).toLocaleString("ar-EG")} />
+        <ListingStat icon={<ClockIcon />} label="سنوات الخبرة"
+          value={f.years_experience != null ? f.years_experience.toLocaleString("ar-EG") : "—"} />
+      </ListingStats>
+
+      {/* footer: hourly rate + view-profile CTA */}
+      <ListingFooter priceLabel="سعر الساعة" priceValue={f.hourly_rate ? `$${f.hourly_rate}` : "عند الطلب"}>
+        <span className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
+          عرض الملف
+          <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
+        </span>
+      </ListingFooter>
+    </Link>
   );
 }

@@ -28,10 +28,13 @@ class Service(models.Model):
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     delivery_days = models.PositiveSmallIntegerField(default=7)
     cover_image = models.URLField(blank=True)
+    keywords = models.JSONField(default=list, blank=True)   # ppt slide-19: كلمات مفتاحية (list[str])
+    what_you_get = models.TextField(blank=True)             # ppt slide-19: ماذا سيحصل عليه المشتري
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     frozen_prev_status = models.CharField(max_length=16, blank=True, default="")  # restore target on unfreeze (BR-23)
     reject_reason = models.TextField(blank=True)
     favorites_count = models.PositiveIntegerField(default=0)  # denorm
+    views_count = models.PositiveIntegerField(default=0)      # ppt slide-20 analytics (denorm)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -63,6 +66,29 @@ class ServiceFavorite(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["user", "service"], name="uniq_service_favorite")]
+
+
+class Favorite(models.Model):
+    """Generic 'save for later' for non-service entities (jobs, freelancers, portfolio works) —
+    ppt slide-43. Services keep their dedicated ServiceFavorite (denormalized favorites_count);
+    this stores a (kind, object_id) reference so the favourites page can show all four tabs."""
+
+    class Kind(models.TextChoices):
+        JOB = "job", "Job"
+        FREELANCER = "freelancer", "Freelancer"
+        PORTFOLIO = "portfolio", "Portfolio"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="favorites")
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    object_id = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "kind", "object_id"], name="uniq_favorite_user_kind_obj"),
+        ]
+        indexes = [models.Index(fields=["user", "kind"])]
 
 
 class BuyingRequest(models.Model):

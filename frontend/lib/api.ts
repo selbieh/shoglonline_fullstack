@@ -5,6 +5,8 @@
  * Before production launch, move the session to HTTP-only secure cookies issued by
  * the backend (the SRS-preferred approach) — tracked as a Phase-3 hardening task.
  */
+import { signinHereHref } from "./nav";
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 const ACCESS_KEY = "sh_access";
@@ -59,7 +61,8 @@ export async function api<T = unknown>(
   }
   if (res.status === 401) {
     tokens.clear();
-    if (typeof window !== "undefined") window.location.href = "/signin";
+    // bounce to sign-in, remembering the current page so login returns the user here
+    if (typeof window !== "undefined") window.location.href = signinHereHref();
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -100,9 +103,11 @@ export async function uploadFile(file: File, retry = true): Promise<Attachment> 
 export type Me = {
   id: number;
   email: string;
+  email_verified?: boolean;
   first_name: string;
   last_name: string;
   avatar_url: string;
+  phone_verified?: boolean;
   active_mode: "find_job" | "find_worker" | "";
   status: string;
 };

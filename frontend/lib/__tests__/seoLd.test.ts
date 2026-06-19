@@ -15,7 +15,7 @@ const baseJob: Job = {
 const baseFreelancer: FreelancerDetail = {
   id: 7, name: "سعيد", avatar_url: "", bio_title: "مطوّر", expertise_level: "expert", hourly_rate: "20",
   rating_avg: "4.5", rating_count: 12, is_verified: true, overview: "نبذة",
-  skills: [{ skill_id: 1, name: "بايثون", efficiency: "advanced" }], languages: [], educations: [], employments: [],
+  skills: [{ skill_id: 1, name: "بايثون", efficiency: "advanced" }], languages: [], educations: [], employments: [], portfolio: [],
 };
 
 describe("JobPosting JSON-LD", () => {

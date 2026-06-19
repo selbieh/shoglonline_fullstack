@@ -8,11 +8,15 @@ class GoogleLoginSerializer(serializers.Serializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
+    # Email is verified at Google SSO time (FR-AUTH) — surfaced for the verification chip.
+    email_verified = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             "id",
             "email",
+            "email_verified",
             "first_name",
             "last_name",
             "avatar_url",
@@ -23,6 +27,21 @@ class MeSerializer(serializers.ModelSerializer):
             "date_joined",
         ]
         read_only_fields = ["id", "email", "phone_verified", "status", "date_joined"]
+
+    def get_email_verified(self, obj) -> bool:
+        return bool(obj.google_sub) or bool(obj.email)
+
+
+class PhoneOTPRequestSerializer(serializers.Serializer):
+    """Body for POST /auth/phone/request-otp (ppt slide-08)."""
+
+    phone = serializers.CharField(max_length=20)
+
+
+class PhoneOTPVerifySerializer(serializers.Serializer):
+    """Body for POST /auth/phone/verify-otp (ppt slide-08)."""
+
+    code = serializers.CharField(min_length=4, max_length=6)
 
 
 class ModeSerializer(serializers.Serializer):

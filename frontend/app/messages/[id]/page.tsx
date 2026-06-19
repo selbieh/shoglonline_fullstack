@@ -2,33 +2,57 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { api, tokens } from "@/lib/api";
-import { apiError } from "@/lib/errors";
-import { sendViaFirestore, subscribeToMessages } from "@/lib/firebaseChat";
-import { LockIcon } from "@/components/icons";
 
-type Msg = { id: number | string; body: string; files: unknown[]; sender?: number; mine: boolean; created_at: string };
-type Conv = {
-  id: number;
-  read_only: boolean;
-  other: { id: number; name: string; email: string };
+import { api, tokens, uploadFile } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
+import { apiError } from "@/lib/errors";
+import { sendViaFirestore, subscribeToConversation, subscribeToMessages } from "@/lib/firebaseChat";
+import { LockIcon } from "@/components/icons";
+import ThreadHeader from "@/components/chat/ThreadHeader";
+import MessageBubble from "@/components/chat/MessageBubble";
+import MessageComposer from "@/components/chat/MessageComposer";
+import type { Conversation } from "@/components/chat/types";
+import type { ChatAttachment, ChatMessage } from "@/lib/chatFormat";
+
+type RestMsg = {
+  id: number | string;
+  body: string;
+  attachments: { id: number; kind: string; original_name: string; size: number }[];
+  mine: boolean;
+  created_at: string;
 };
+
+function normalizeRest(m: RestMsg): ChatMessage {
+  return {
+    id: m.id,
+    body: m.body,
+    mine: m.mine,
+    created_at: m.created_at,
+    attachments: (m.attachments || []).map((a) => ({
+      id: a.id,
+      kind: a.kind as ChatAttachment["kind"],
+      name: a.original_name,
+      size: a.size,
+    })),
+  };
+}
 
 export default function ThreadPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const [conv, setConv] = useState<Conv | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [conv, setConv] = useState<Conversation | null>(null);
+  const [msgs, setMsgs] = useState<ChatMessage[]>([]);
+  const [reads, setReads] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const liveRef = useRef(false); // true once Firestore is streaming (so REST reloads don't fight it)
+  const lastSeen = useRef<string | number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ conversation: Conv; messages: Msg[] }>(`/conversations/${id}/messages`);
+      const res = await api<{ conversation: Conversation; messages: RestMsg[] }>(`/conversations/${id}/messages`);
       setConv(res.conversation);
-      setMsgs(res.messages);
+      if (!liveRef.current) setMsgs(res.messages.map(normalizeRest));
     } catch {
       router.replace("/messages");
     }
@@ -36,103 +60,111 @@ export default function ThreadPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     let active = true;
-    let unsub: (() => void) | null = null;
+    let unsubMsgs: (() => void) | null = null;
+    let unsubConv: (() => void) | null = null;
     let poll: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
-      await load(); // conversation metadata (read-only, names) + initial messages via REST
-      // Heavy path: stream messages straight from Firestore. Falls back to polling when
-      // Firebase isn't configured (dev / FIRESTORE_STUB) — subscribeToMessages returns null.
-      unsub = await subscribeToMessages(id, (live) => {
-        if (active) setMsgs(live);
+      await load(); // metadata (read-only, names, context) + initial messages via REST
+      // Heavy path: stream messages + read receipts from Firestore. Falls back to polling when
+      // Firebase isn't configured (dev / FIRESTORE_STUB) — the subscribe fns return null.
+      unsubMsgs = await subscribeToMessages(id, (live) => {
+        if (!active) return;
+        liveRef.current = true;
+        setMsgs(live.map((m) => ({ id: m.id, body: m.body, mine: m.mine, created_at: m.created_at, attachments: m.attachments })));
       });
-      if (!unsub && active) poll = setInterval(load, 8000);
+      unsubConv = await subscribeToConversation(id, (info) => {
+        if (active) setReads(info.reads);
+      });
+      if (!unsubMsgs && active) poll = setInterval(load, 8000);
     })();
 
     return () => {
       active = false;
-      unsub?.();
+      unsubMsgs?.();
+      unsubConv?.();
       if (poll) clearInterval(poll);
     };
   }, [id, load, router]);
 
+  // Scroll to the newest message; re-mark read when a fresh not-mine message lands while focused
+  // (so the other party's ✓✓ updates live — the initial GET already marked read on open).
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs]);
+    const last = msgs[msgs.length - 1];
+    if (last && !last.mine && last.id !== lastSeen.current) {
+      lastSeen.current = last.id;
+      api(`/conversations/${id}/read`, { method: "POST" }).catch(() => {});
+    }
+  }, [msgs, id]);
 
-  async function send() {
-    if (!body.trim()) return;
-    setBusy(true);
+  async function sendText(text: string) {
     setErr("");
-    const text = body;
     try {
-      // Heavy path: write straight to Firestore (the listener echoes it back in real time).
-      // If Firebase isn't available, fall back to the REST endpoint + reload.
+      // Plain text → fast client-write path; REST fallback when Firestore is unavailable.
       const sentLive = await sendViaFirestore(id, text);
       if (!sentLive) {
         await api(`/conversations/${id}/messages`, { method: "POST", body: JSON.stringify({ body: text }) });
         await load();
       }
-      setBody("");
     } catch (e) {
       setErr(apiError(e).message_ar);
-    } finally {
-      setBusy(false);
     }
   }
 
-  if (!conv) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  async function sendFile(file: File) {
+    setErr("");
+    try {
+      // Attachments ALWAYS go via REST so the backend links them synchronously and mirrors the
+      // message (with attachment metadata) to Firestore — avoids the download-before-linked race.
+      const att = await uploadFile(file);
+      await api(`/conversations/${id}/messages`, { method: "POST", body: JSON.stringify({ attachment_ids: [att.id] }) });
+      if (!liveRef.current) await load();
+    } catch (e) {
+      setErr(apiError(e).message_ar);
+    }
+  }
+
+  if (!conv) {
+    return <div className="grid h-full w-full place-content-center rounded-l border border-line bg-white text-sub">جارٍ التحميل…</div>;
+  }
+
+  const otherRead = reads[String(conv.other.id)] ? new Date(reads[String(conv.other.id)]).getTime() : 0;
 
   return (
-    <main className="mx-auto flex h-screen max-w-3xl flex-col px-4 py-4">
-      <header className="flex items-center justify-between border-b border-line pb-3">
-        <a href="/messages" className="text-sm text-primary-dark">← الرسائل</a>
-        <span className="font-bold">{conv.other.name}</span>
-      </header>
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-l border border-line bg-white">
+      <ThreadHeader conv={conv} />
 
-      <div className="flex-1 space-y-2 overflow-y-auto py-4">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-bg p-4">
+        <div className="mx-auto max-w-md rounded-m bg-tint/60 px-3 py-2 text-center text-[11px] leading-relaxed text-primary-dark">
+          إن لم تُقرأ رسالتك خلال ١٠ دقائق نُرسل للطرف الآخر بريدًا تلقائيًا برابط المحادثة — مرة واحدة لكل رسالة.
+        </div>
         {msgs.length === 0 && <p className="mt-10 text-center text-sub">ابدأ المحادثة بإرسال أول رسالة</p>}
         {msgs.map((m) => (
-          <div key={m.id} className={`flex ${m.mine ? "justify-start" : "justify-end"}`}>
-            <div
-              className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                m.mine ? "bg-primary text-white" : "bg-bg text-primary-deep"
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{m.body}</p>
-              <p className={`mt-1 text-[10px] ${m.mine ? "text-white/70" : "text-sub"}`}>
-                {new Date(m.created_at).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </div>
-          </div>
+          <MessageBubble
+            key={m.id}
+            m={m}
+            otherName={conv.other.name}
+            otherAvatar={conv.other.avatar}
+            readByOther={m.mine && otherRead > 0 && new Date(m.created_at).getTime() <= otherRead}
+          />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {err && <p className="rounded-m bg-warn-t p-2 text-sm text-warn">{err}</p>}
+      {err && <p className="border-t border-line bg-warn-t p-2 text-center text-sm text-warn">{err}</p>}
 
       {conv.read_only ? (
-        <div className="flex items-center justify-center gap-1.5 rounded-m bg-bg p-3 text-center text-sm text-sub">
+        <div className="flex items-center justify-center gap-1.5 border-t border-line bg-bg p-4 text-center text-sm text-sub">
           <LockIcon className="shrink-0 text-[15px]" /> هذه المحادثة للقراءة فقط (انتهت فترة الضمان أو انتهى سياقها)
         </div>
       ) : (
-        <div className="flex gap-2 border-t border-line pt-3">
-          <input
-            className="flex-1 rounded-m border border-line-strong px-3 py-2 text-sm"
-            placeholder="اكتب رسالة…"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !busy && send()}
-          />
-          <button className="btn-primary" disabled={busy || !body.trim()} onClick={send}>
-            إرسال
-          </button>
-        </div>
+        <MessageComposer onSendText={sendText} onSendFile={sendFile} />
       )}
-    </main>
+    </div>
   );
 }

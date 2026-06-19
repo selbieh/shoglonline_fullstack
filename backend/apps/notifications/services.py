@@ -6,6 +6,7 @@ signals/services call notify() for side-effect fan-out only (SRS §23).
 """
 import logging
 
+from django.conf import settings
 from django.core.mail import send_mail
 
 from apps.core.services import get_setting
@@ -15,7 +16,7 @@ from .models import Notification, NotificationPreference
 
 logger = logging.getLogger(__name__)
 
-FRONTEND_URL = "http://localhost:3000"  # TODO: env-driven in production
+FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
 
 # The admin-allowed, user-suppressible categories (FR-PROF-9). Only these kinds consult a
 # preference; every other kind is transactional and is ALWAYS delivered.

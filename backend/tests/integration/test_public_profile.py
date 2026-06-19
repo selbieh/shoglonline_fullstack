@@ -42,3 +42,24 @@ def test_city_blank_when_no_address():
     WorkerProfileFactory(user=worker, visibility=WorkerProfile.Visibility.ONLINE)
     data = APIClient().get(f"/api/v1/freelancers/{worker.id}").json()
     assert data["city"] == ""
+
+
+def test_public_profile_never_leaks_contact():
+    """ppt slides 01/25: the public profile must contain NO external contact method. The private
+    contact collected at onboarding (slide-02) is stored but must never be serialized publicly,
+    and the email must never leak."""
+    worker = UserFactory(email="secret@example.com")
+    profile = WorkerProfileFactory(user=worker, visibility=WorkerProfile.Visibility.ONLINE)
+    WorkerProfile.objects.filter(pk=profile.pk).update(
+        private_contact_channel="whatsapp", private_contact_value="+96650000000"
+    )
+
+    data = APIClient().get(f"/api/v1/freelancers/{worker.id}").json()
+
+    assert "private_contact_channel" not in data
+    assert "private_contact_value" not in data
+    assert "email" not in data
+    # belt-and-suspenders: the raw values appear nowhere in the serialized payload
+    blob = str(data)
+    assert "+96650000000" not in blob
+    assert "secret@example.com" not in blob

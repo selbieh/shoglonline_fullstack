@@ -15,6 +15,7 @@ import { getAuth, signInWithCustomToken } from "firebase/auth";
 import {
   addDoc,
   collection,
+  doc,
   getFirestore,
   onSnapshot,
   orderBy,
@@ -24,16 +25,20 @@ import {
 } from "firebase/firestore";
 
 import { api } from "./api";
+import type { ChatAttachment } from "./chatFormat";
 
 type ChatConfig = { token: string; projectId: string; apiKey: string; stub: boolean };
 
 export type LiveMessage = {
   id: string;
   body: string;
-  files: unknown[];
+  attachments: ChatAttachment[];
   mine: boolean;
   created_at: string;
 };
+
+/** Conversation-doc live state: the per-user read cursors (for ✓✓) + lifecycle status. */
+export type ConvLive = { reads: Record<string, string>; status: string };
 
 type Ready = { db: Firestore; uid: string };
 
@@ -99,16 +104,37 @@ export async function subscribeToMessages(
   );
   return onSnapshot(q, (snap) => {
     const messages: LiveMessage[] = snap.docs.map((d) => {
-      const data = d.data() as { sender: string; body?: string; files?: unknown[]; createdAt?: unknown };
+      const data = d.data() as { sender: string; body?: string; files?: ChatAttachment[]; createdAt?: unknown };
       return {
         id: d.id,
         body: data.body ?? "",
-        files: data.files ?? [],
+        attachments: Array.isArray(data.files) ? data.files : [],
         mine: data.sender === chat.uid,
         created_at: toIso(data.createdAt),
       };
     });
     onMessages(messages);
+  });
+}
+
+/**
+ * Subscribe to the conversation DOCUMENT (not the messages subcollection) for the `reads` map —
+ * each participant's last-read timestamp, written by the backend `mark_read` mirror. The sender
+ * derives ✓ (sent) vs ✓✓ (read) by comparing the other party's read time to each message's time.
+ * Returns null when Firestore isn't available (receipts are a real-time-only feature).
+ */
+export async function subscribeToConversation(
+  conversationId: string | number,
+  onUpdate: (info: ConvLive) => void,
+): Promise<(() => void) | null> {
+  const chat = await getChat();
+  if (!chat) return null;
+  const ref = doc(chat.db, "conversations", String(conversationId));
+  return onSnapshot(ref, (snap) => {
+    const data = (snap.data() ?? {}) as { reads?: Record<string, unknown>; status?: string };
+    const reads: Record<string, string> = {};
+    for (const [uid, ts] of Object.entries(data.reads ?? {})) reads[uid] = toIso(ts);
+    onUpdate({ reads, status: data.status ?? "active" });
   });
 }
 

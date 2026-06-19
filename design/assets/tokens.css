@@ -1,10 +1,14 @@
 /* ShoghlOnline Design Tokens — single source of truth (maps to Tailwind/Next.js later) */
 :root {
-  /* Brand (original periwinkle identity, accessibility-refined) */
-  --c-primary: #6C70DC;
-  --c-primary-dark: #5155BE;   /* links & small text on white (AA) */
-  --c-primary-deep: #3E418F;
+  /* Brand (periwinkle identity, accessibility-refined) — theme color */
+  --c-primary: #737AC9;
+  --c-primary-dark: #565DAE;   /* links & small text on white (AA) */
+  --c-primary-deep: #424783;
   --c-tint: #E9ECFA;
+  /* Deck CTA blue — primary action buttons only */
+  --c-cta: #2B50C9; --c-cta-dark: #1F3DA6; --c-cta-deep: #16307E;
+  --c-accent: #C6E3FF;        /* PDF light-blue accent (export/*.svg) */
+  --c-accent-line: #CEDFFF;   /* soft chip border / divider */
   --c-bg: #F6F7FD;
   --c-surface: #FFFFFF;
 
@@ -22,11 +26,11 @@
   --c-success: #1B8A5A;  --c-success-t: #E3F5EC;
   --c-warn: #9A6A08;     --c-warn-t: #FCF3DD;
   --c-danger: #D93843;   --c-danger-t: #FCE9EA;
-  --c-info: #5155BE;     --c-info-t: #E9ECFA;
+  --c-info: #565DAE;     --c-info-t: #E9ECFA;
 
   /* Misc */
-  --c-footer: #6C70DC;
-  --c-star: #E8A413;
+  --c-footer: #737AC9;
+  --c-star: #FED26C;   /* brand gold (export/Frame*.svg) */
   --c-google: #4285F4;
 
   /* Radii */

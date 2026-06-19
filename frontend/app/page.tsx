@@ -1,12 +1,12 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { JsonLd, SITE_URL, serverApi } from "@/lib/seo";
-import { Blobs, HeroIllustration, Wave } from "@/components/Brand";
+import { Blobs, HeroIllustration, RatingChip, Wave } from "@/components/Brand";
 import CategoryGrid from "@/components/CategoryGrid";
+import CtaButton from "@/components/CtaButton";
 import HeroSearch from "@/components/HeroSearch";
-import SiteFooter from "@/components/SiteFooter";
 import { FeatureIcon } from "@/components/FeatureIcon";
-import { BoltIcon, ChatIcon, CheckIcon, ShieldIcon, SparklesIcon, StarIcon } from "@/components/icons";
+import { BoltIcon, BriefcaseIcon, CheckIcon, ShieldIcon, SparklesIcon } from "@/components/icons";
 
 /* Landing page — server-rendered (SEO) from the CMS (GET /landing) and the live
    catalog (GET /categories); falls back to built-in defaults so it always renders. */
@@ -69,6 +69,25 @@ const DEFAULTS: Section[] = [
 ];
 
 
+/* CMS labels historically carried a leading emoji (e.g. "💼 تصفّح الوظائف"); strip it
+   so we can render a crisp inline line-icon instead. Safe no-op for emoji-free labels. */
+const stripLeadingEmoji = (s: string) => s.replace(/^[\p{Extended_Pictographic}️‍\s]+/u, "");
+
+/** Hero CTA — modern inline icon (jobs → briefcase, services → sparkles) + label. */
+function HeroCta({ label, link, fallback, variant }: { label: string; link: string; fallback: string; variant: "primary" | "secondary" }) {
+  const href = link || fallback;
+  const Icon = href.includes("/services") ? SparklesIcon : BriefcaseIcon;
+  const cls =
+    variant === "primary"
+      ? "btn bg-white text-primary-dark shadow-glow hover:bg-tint"
+      : "btn border border-white/70 text-white hover:bg-white/10";
+  return (
+    <Link href={href} className={cls}>
+      <Icon className="text-[18px]" /> {stripLeadingEmoji(label)}
+    </Link>
+  );
+}
+
 function Hero({ s }: { s: Section }) {
   return (
     <section className="relative overflow-hidden bg-hero bg-spotlight text-white">
@@ -77,7 +96,7 @@ function Hero({ s }: { s: Section }) {
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-28 pt-20 lg:grid-cols-2">
         <div>
           <span className="glass animate-fade-up inline-flex items-center gap-2 px-4 py-1 text-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.7)]" />
+            <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
             منصة عربية واحدة · للتوظيف والعمل الحر
           </span>
           <h1 className="animate-fade-up delay-100 mt-5 text-4xl font-extrabold leading-snug drop-shadow-sm md:text-5xl">{s.heading}</h1>
@@ -87,10 +106,10 @@ function Hero({ s }: { s: Section }) {
           </div>
           <div className="animate-fade-up delay-400 mt-6 flex flex-wrap gap-3">
             {s.cta_primary_label && (
-              <Link href={s.cta_primary_link || "/jobs"} className="btn bg-white text-primary-dark shadow-glow hover:bg-tint">{s.cta_primary_label}</Link>
+              <HeroCta label={s.cta_primary_label} link={s.cta_primary_link} fallback="/jobs" variant="primary" />
             )}
             {s.cta_secondary_label && (
-              <Link href={s.cta_secondary_link || "/services"} className="btn border border-white/70 text-white hover:bg-white/10">{s.cta_secondary_label}</Link>
+              <HeroCta label={s.cta_secondary_label} link={s.cta_secondary_link} fallback="/services" variant="secondary" />
             )}
           </div>
           <div className="animate-fade-up delay-400 mt-8 flex flex-wrap gap-3 text-sm">
@@ -107,15 +126,14 @@ function Hero({ s }: { s: Section }) {
           <div className="animate-float">
             <HeroIllustration className="w-full max-w-md drop-shadow-2xl" />
           </div>
-          {/* floating product badges — orbit the illustration for a live feel */}
-          <span className="float-badge animate-float-slow left-0 top-4">
-            <StarIcon filled className="text-[15px] text-amber-500" /> 4.9 تقييم
-          </span>
-          <span className="float-badge animate-float-delayed -bottom-3 right-0">
+          {/* floating rating chips from the brand set (export/Frame*) — orbit the
+              illustration like the PDF hero */}
+          <RatingChip n={1} className="animate-float-slow absolute left-0 top-6 w-40 sm:w-44" />
+          <RatingChip n={2} className="animate-float-delayed absolute -bottom-2 right-0 w-40 sm:w-44" />
+          <span className="float-badge animate-float bottom-24 left-2 hidden sm:flex">
             <span className="grid h-5 w-5 place-content-center rounded-full bg-success text-[12px] text-white"><CheckIcon /></span>
             تم تحرير الضمان
           </span>
-          <span className="float-badge animate-float bottom-24 left-2 hidden sm:flex"><ChatIcon className="text-[15px]" /> عرض جديد</span>
         </div>
       </div>
       <Wave />
@@ -123,20 +141,20 @@ function Hero({ s }: { s: Section }) {
   );
 }
 
-/* soft pastel icon-tile tones — rotate by index for calm, modern colour variety */
+/* on-brand icon-tile tones — periwinkle / lavender / light-blue family (matches the PDF) */
 const FEATURE_TONES = [
-  "bg-emerald-100 text-emerald-700",
-  "bg-sky-100 text-sky-700",
-  "bg-violet-100 text-violet-700",
-  "bg-amber-100 text-amber-700",
+  "bg-tint text-primary-dark",
+  "bg-accent-sky text-primary-deep",
+  "bg-primary/10 text-primary-dark",
+  "bg-tint text-primary",
 ];
 
 function StatsBand() {
   const stats = [
-    { n: "100%", t: "حماية بالضمان", icon: "🛡", color: "text-emerald-600" },
-    { n: "0", t: "كلمات مرور", icon: "🔑", color: "text-violet-600" },
-    { n: "1", t: "حساب للوضعين", icon: "🔁", color: "text-sky-600" },
-    { n: "24/7", t: "محادثات وإشعارات", icon: "💬", color: "text-amber-600" },
+    { n: "100%", t: "حماية بالضمان", icon: "🛡", color: "text-success" },
+    { n: "0", t: "كلمات مرور", icon: "🔑", color: "text-primary" },
+    { n: "1", t: "حساب للوضعين", icon: "🔁", color: "text-primary-dark" },
+    { n: "24/7", t: "محادثات وإشعارات", icon: "💬", color: "text-primary" },
   ];
   return (
     <section className="relative z-10 mx-auto mt-6 max-w-5xl px-6">
@@ -303,12 +321,7 @@ function Cta({ s }: { s: Section }) {
         <div className="glass mx-auto max-w-2xl px-8 py-12 shadow-glow">
           <h2 className="text-3xl font-extrabold drop-shadow-sm">{s.heading}</h2>
           {s.subheading && <p className="mt-3 text-tint">{s.subheading}</p>}
-          {s.cta_primary_label && (
-            <Link href={s.cta_primary_link || "/signin"} className="btn mt-8 bg-white text-lg text-primary-dark shadow-glow hover:bg-tint">
-              <span className="font-extrabold text-[#4285F4]">G</span> {s.cta_primary_label}
-            </Link>
-          )}
-          <p className="mt-4 text-xs text-tint/80">بلا كلمات مرور · بلا رسوم تسجيل · يمكنك التصفّح أولًا</p>
+          <CtaButton label={s.cta_primary_label} link={s.cta_primary_link} />
         </div>
       </div>
     </section>
@@ -370,7 +383,6 @@ export default async function Landing() {
           return null;
         })}
       </main>
-      <SiteFooter />
     </>
   );
 }

@@ -92,7 +92,7 @@ export default function PaymentMethods() {
       </ul>
 
       <div className="mt-3 flex gap-2">
-        <input className="flex-1 rounded-m border border-line-strong px-3 py-2 text-sm" dir="ltr"
+        <input className="flex-1 field" dir="auto" type="email" inputMode="email"
           placeholder="بريد PayPal (اختياري)" value={label} onChange={(e) => setLabel(e.target.value)} />
         <button className="btn-secondary" disabled={busy} onClick={addPaypal}>ربط PayPal</button>
       </div>

@@ -5,7 +5,6 @@ import random
 from decimal import Decimal
 
 import pytest
-from django.db.models import Sum
 
 from apps.contracts import services as svc
 from apps.contracts.models import Contract
@@ -49,11 +48,14 @@ def _drive(rng, c):
 
 
 def _bucket_sum(wallet, bucket):
-    return (
-        Transaction.objects.filter(wallet=wallet, status=Transaction.Status.SUCCEEDED, bucket=bucket)
-        .aggregate(s=Sum("amount"))["s"]
-        or Decimal("0")
-    )
+    # Sum in Python with Decimal rather than via the DB's SUM(): SQLite has no native
+    # decimal type, so Django's Sum() over a DecimalField coerces through float and drifts
+    # (e.g. 24.9899999999999). Postgres keeps it exact, but the repo's default `make test`
+    # backend is in-memory sqlite — summing here keeps this invariant exact on every backend.
+    amounts = Transaction.objects.filter(
+        wallet=wallet, status=Transaction.Status.SUCCEEDED, bucket=bucket
+    ).values_list("amount", flat=True)
+    return sum(amounts, Decimal("0"))
 
 
 @pytest.mark.parametrize("seed", [1, 7, 42, 99, 2024])

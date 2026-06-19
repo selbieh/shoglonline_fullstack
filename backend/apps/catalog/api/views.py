@@ -40,4 +40,5 @@ class SkillListView(ListAPIView):
     serializer_class = SkillSerializer
     filterset_fields = ["subcategory"]
     search_fields = ["name_ar"]
+    pagination_class = None  # return a bare array (mirrors CategoryListView) — consumers expect a list
     queryset = Skill.objects.filter(is_active=True)

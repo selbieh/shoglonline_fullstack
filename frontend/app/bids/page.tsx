@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 
@@ -42,13 +43,13 @@ export default function BidsPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     fetchPublicSettings().then((s) => {
       const on = bidsEnabled(s);
       setEnabled(on);
-      if (on) load().catch(() => router.replace("/signin"));
+      if (on) load().catch(() => router.replace(signinHereHref()));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

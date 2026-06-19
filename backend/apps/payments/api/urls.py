@@ -10,5 +10,7 @@ urlpatterns = [
     path("me/withdrawals", views.MyWithdrawalsView.as_view(), name="my-withdrawals"),
     path("me/payment-methods", views.MyPaymentMethodsView.as_view(), name="my-payment-methods"),
     path("me/payment-methods/<int:pk>", views.PaymentMethodDetailView.as_view(), name="payment-method-detail"),
+    path("me/payout-methods", views.MyPayoutMethodsView.as_view(), name="my-payout-methods"),
+    path("me/payout-methods/<int:pk>", views.PayoutMethodDetailView.as_view(), name="payout-method-detail"),
     path("bid-plans/<int:pk>/purchase", views.PurchaseBidPlanView.as_view(), name="bid-plan-purchase"),
 ]

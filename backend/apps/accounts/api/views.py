@@ -10,12 +10,22 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.core.models import AuditLog
 
 from ..models import User
-from ..services import account_deletion_blockers, authenticate_google_user, delete_account
+from ..services import (
+    account_deletion_blockers,
+    authenticate_google_user,
+    confirm_email_change,
+    delete_account,
+    request_email_change,
+    request_phone_otp,
+    verify_phone_otp,
+)
 from .serializers import (
     DeleteAccountSerializer,
     GoogleLoginSerializer,
     MeSerializer,
     ModeSerializer,
+    PhoneOTPRequestSerializer,
+    PhoneOTPVerifySerializer,
 )
 
 
@@ -132,3 +142,41 @@ class ModeView(APIView):
         request.user.active_mode = serializer.validated_data["mode"]
         request.user.save(update_fields=["active_mode"])
         return Response({"active_mode": request.user.active_mode})
+
+
+class PhoneOTPRequestView(APIView):
+    """POST /api/v1/auth/phone/request-otp — send a phone verification code (ppt slide-08)."""
+
+    throttle_scope = "auth"  # SEC-5
+
+    def post(self, request):
+        serializer = PhoneOTPRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(request_phone_otp(request.user, serializer.validated_data["phone"]))
+
+
+class PhoneOTPVerifyView(APIView):
+    """POST /api/v1/auth/phone/verify-otp — confirm the code, mark the phone verified."""
+
+    def post(self, request):
+        serializer = PhoneOTPVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = verify_phone_otp(request.user, serializer.validated_data["code"])
+        return Response(MeSerializer(user).data)
+
+
+class EmailChangeRequestView(APIView):
+    """POST /api/v1/auth/me/email/request-change — start an email change (ppt slide-31)."""
+
+    throttle_scope = "auth"  # SEC-5
+
+    def post(self, request):
+        return Response(request_email_change(request.user, request.data.get("email", "")))
+
+
+class EmailChangeConfirmView(APIView):
+    """POST /api/v1/auth/me/email/confirm — confirm the change with the emailed token."""
+
+    def post(self, request):
+        user = confirm_email_change(request.user, request.data.get("token", ""))
+        return Response(MeSerializer(user).data)

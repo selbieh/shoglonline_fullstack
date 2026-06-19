@@ -1,5 +1,5 @@
 /* Reusable brand SVG art & decorations (server-safe — pure SVG, no hooks).
-   Palette: #6C70DC / #5155BE / #3E418F / tint #E9ECFA. */
+   Palette: #737AC9 / #565DAE / #424783 / tint #E9ECFA. */
 
 /** Decorative gradient blobs for hero/section backgrounds. Place inside a
     relative + overflow-hidden parent; pointer-events-none so it never blocks UI. */
@@ -23,60 +23,77 @@ export function Wave({ fill = "#F6F7FD", className = "" }: { fill?: string; clas
   );
 }
 
-/** Rich marketplace hero illustration. */
+/** Marketplace hero illustration — the official `export/` freelancer character
+    (`public/brand/illustration-freelancer.svg`). Decorative. */
 export function HeroIllustration({ className = "" }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <svg viewBox="0 0 480 380" className={className} role="img"
-      aria-label="منصة العمل الحر" fill="none">
-      <defs>
-        <linearGradient id="bAvatar" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#A6ABE9" /><stop offset="1" stopColor="#5155BE" />
-        </linearGradient>
-        <linearGradient id="bCard" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#EEF0FB" />
-        </linearGradient>
-        <filter id="bShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#3E418F" floodOpacity="0.25" />
-        </filter>
-      </defs>
+    <img
+      src="/brand/illustration-freelancer.svg"
+      alt=""
+      aria-hidden
+      className={className}
+    />
+  );
+}
 
-      {/* halo */}
-      <circle cx="250" cy="180" r="170" fill="#ffffff" opacity="0.06" />
-      <circle cx="250" cy="180" r="120" fill="#ffffff" opacity="0.06" />
+/** A floating rating/review chip from the `export/` set (Frame 20–23). `n` ∈ 1..4.
+    Position it with absolute utilities from the parent (see the landing hero). */
+export function RatingChip({ n = 1, className = "" }: { n?: 1 | 2 | 3 | 4; className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return (
+    <img
+      src={`/brand/rating-chip-${n}.svg`}
+      alt=""
+      aria-hidden
+      className={`drop-shadow-lg ${className}`}
+    />
+  );
+}
 
-      {/* main job card */}
-      <g filter="url(#bShadow)">
-        <rect x="70" y="60" width="250" height="170" rx="20" fill="url(#bCard)" />
-        <rect x="94" y="90" width="44" height="44" rx="12" fill="#E9ECFA" />
-        <path d="M104 112h24M104 122h24" stroke="#6C70DC" strokeWidth="3" strokeLinecap="round" />
-        <rect x="150" y="92" width="120" height="13" rx="6" fill="#3E418F" />
-        <rect x="150" y="114" width="86" height="9" rx="4" fill="#B9BED9" />
-        <rect x="94" y="150" width="200" height="8" rx="4" fill="#DADDEC" />
-        <rect x="94" y="166" width="170" height="8" rx="4" fill="#DADDEC" />
-        <rect x="94" y="192" width="74" height="24" rx="12" fill="#E3F5EC" />
-        <path d="M108 204h6m12 0h18" stroke="#1B8A5A" strokeWidth="3" strokeLinecap="round" />
-        <rect x="182" y="192" width="60" height="24" rx="12" fill="#E9ECFA" />
+/** Sign-in panel line-art: a reviews window (star ratings) + a key, matching the client PDF. */
+export function SigninArt({ className = "" }: { className?: string }) {
+  const ink = "#2A2D45";
+  return (
+    <svg viewBox="0 0 440 380" className={className} role="img" aria-label="تسجيل دخول آمن" fill="none">
+      {/* back card */}
+      <rect x="150" y="78" width="150" height="210" rx="16" fill="#EEF0FB" stroke={ink} strokeWidth="4" />
+      {[120, 150, 180, 210, 240].map((y) => (
+        <rect key={y} x="168" y={y} width="36" height="12" rx="6" fill="#DADDEC" />
+      ))}
+
+      {/* front browser window */}
+      <g>
+        <rect x="40" y="100" width="220" height="200" rx="16" fill="#FFFFFF" stroke={ink} strokeWidth="4" />
+        <path d="M40 130a16 16 0 0 1 16-16h188a16 16 0 0 1 16 16v8H40z" fill="#E9ECFA" stroke={ink} strokeWidth="4" />
+        <circle cx="64" cy="124" r="4" fill={ink} />
+        <circle cx="80" cy="124" r="4" fill={ink} />
+        <circle cx="96" cy="124" r="4" fill={ink} />
+
+        {/* three review rows, each with 5 stars + text lines */}
+        {[160, 210, 260].map((y) => (
+          <g key={y}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <path
+                key={i}
+                d={`M${200 - i * 18} ${y}l3.2 6.5 7.2 1-5.2 5.1 1.2 7.1-6.4-3.4-6.4 3.4 1.2-7.1-5.2-5.1 7.2-1z`}
+                fill="#FED26C"
+              />
+            ))}
+            <rect x="60" y={y + 2} width="64" height="10" rx="5" fill="#C9CEE6" />
+            <rect x="60" y={y + 20} width="40" height="8" rx="4" fill="#DADDEC" />
+          </g>
+        ))}
       </g>
 
-      {/* worker avatar bubble */}
-      <g filter="url(#bShadow)">
-        <circle cx="360" cy="150" r="58" fill="url(#bAvatar)" />
-        <circle cx="360" cy="132" r="19" fill="#fff" />
-        <path d="M332 178c0-16 12-27 28-27s28 11 28 27" fill="#fff" />
+      {/* key */}
+      <g transform="translate(196 250)">
+        <circle cx="34" cy="34" r="30" fill="#737AC9" stroke={ink} strokeWidth="4" />
+        <circle cx="34" cy="34" r="12" fill="#FFFFFF" stroke={ink} strokeWidth="4" />
+        <path d="M58 46l46 46" stroke={ink} strokeWidth="12" strokeLinecap="round" />
+        <path d="M58 46l46 46" stroke="#737AC9" strokeWidth="6" strokeLinecap="round" />
+        <path d="M86 74l14-14M98 86l12-12" stroke={ink} strokeWidth="9" strokeLinecap="round" />
       </g>
-
-      {/* escrow / wallet chip */}
-      <g filter="url(#bShadow)">
-        <rect x="150" y="262" width="190" height="80" rx="18" fill="#3E418F" />
-        <rect x="174" y="286" width="96" height="10" rx="5" fill="#888EE2" />
-        <rect x="174" y="306" width="66" height="16" rx="8" fill="#fff" />
-        <circle cx="306" cy="306" r="18" fill="#1B8A5A" />
-        <path d="M299 306l5 5 9-10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      </g>
-
-      {/* sparkles */}
-      <path d="M408 250l5 14 14 5-14 5-5 14-5-14-14-5 14-5z" fill="#fff" opacity="0.5" />
-      <circle cx="96" cy="276" r="7" fill="#fff" opacity="0.5" />
     </svg>
   );
 }

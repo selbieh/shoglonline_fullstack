@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
-import { tagTone } from "@/lib/tags";
-import { AlertIcon, ArrowLeftIcon, ClockIcon, HeartIcon, SearchIcon, SparklesIcon } from "@/components/icons";
+import { AlertIcon, ArrowLeftIcon, BriefcaseIcon, ClockIcon, HeartIcon, SearchIcon, SparklesIcon } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 
 type Service = {
   id: number;
@@ -98,7 +98,7 @@ export default function ServicesPage() {
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
           <div>
             <span className="glass animate-fade-up mb-3 inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.7)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
               سوق الخدمات الجاهزة
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">الخدمات الخاصة</h1>
@@ -223,51 +223,38 @@ export default function ServicesPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h3 className="text-lg font-bold leading-snug transition group-hover:text-primary-dark">
-                              {s.title}
-                            </h3>
-                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-sub">
-                              <span className="font-medium text-ink/75">{s.worker_name}</span>
-                              {posted && (
-                                <>
-                                  <span aria-hidden className="text-line-strong">•</span>
-                                  <span className="inline-flex items-center gap-1"><ClockIcon className="text-[13px]" /> {posted}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-sub">
-                            <HeartIcon className="text-[14px] text-rose-400" /> {s.favorites_count.toLocaleString("ar-EG")}
-                          </span>
+                        <h3 className="text-lg font-bold leading-snug transition group-hover:text-primary-dark">
+                          {s.title}
+                        </h3>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-sub">
+                          <span className="font-medium text-ink/75">{s.worker_name}</span>
+                          {posted && (
+                            <>
+                              <span aria-hidden className="text-line-strong">•</span>
+                              <span className="inline-flex items-center gap-1"><ClockIcon className="text-[13px]" /> {posted}</span>
+                            </>
+                          )}
                         </div>
-                        {s.category_name && (
-                          <div className="mt-2.5">
-                            <span className={`tag-soft ${tagTone(s.category_name)}`}>{s.category_name}</span>
-                          </div>
-                        )}
                         {s.description && (
                           <p className="mt-3 line-clamp-2 text-sm leading-6 text-sub">{s.description}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/70 pt-3.5">
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <span className="inline-flex items-baseline gap-1.5">
-                          <span className="text-[11px] text-sub">يبدأ من</span>
-                          <span className="text-xl font-extrabold text-primary" dir="ltr">${s.base_price}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-tint px-3 py-1 text-xs font-semibold text-primary-dark">
-                          <ClockIcon className="text-[14px]" /> {s.delivery_days.toLocaleString("ar-EG")} يوم
-                        </span>
-                      </div>
+                    {/* stats strip: delivery · category · favorites */}
+                    <ListingStats>
+                      <ListingStat icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("ar-EG")} يوم`} />
+                      <ListingStat icon={<BriefcaseIcon />} label="الفئة" value={s.category_name || "—"} />
+                      <ListingStat icon={<HeartIcon />} label="المفضلة" value={s.favorites_count.toLocaleString("ar-EG")} />
+                    </ListingStats>
+
+                    {/* footer: starting price + order CTA */}
+                    <ListingFooter priceLabel="يبدأ من" priceValue={`$${s.base_price}`}>
                       <span className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
                         اطلب الخدمة
                         <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
                       </span>
-                    </div>
+                    </ListingFooter>
                   </Link>
                   );
                 })}

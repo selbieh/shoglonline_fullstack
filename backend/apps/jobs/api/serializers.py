@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.core.contact_guard import validate_no_contact
+
 from ..models import Invitation, Job, Proposal, ScreeningQuestion
 
 
@@ -63,6 +65,12 @@ class JobCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"budget_min": "الحد الأدنى أكبر من الأعلى"})
         return attrs
 
+    def validate_title(self, v):
+        return validate_no_contact(v)
+
+    def validate_description(self, v):
+        return validate_no_contact(v)
+
     def create(self, validated_data):
         questions = validated_data.pop("screening_questions", [])
         skill_ids = validated_data.pop("skill_ids", [])
@@ -106,6 +114,9 @@ class ProposalCreateSerializer(serializers.Serializer):
     delivery_days = serializers.IntegerField(min_value=1, max_value=365)
     description = serializers.CharField()
     answers = serializers.DictField(child=serializers.CharField(allow_blank=True), required=False, default=dict)
+
+    def validate_description(self, v):
+        return validate_no_contact(v)
 
 
 class InvitationSerializer(serializers.ModelSerializer):

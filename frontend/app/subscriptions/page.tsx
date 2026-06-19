@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import type { Category } from "@/lib/types";
 
 type Sub = { id: number; category: number; category_name: string; subcategory: number | null };
@@ -16,7 +17,7 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     Promise.all([api<Category[]>("/categories"), api<Sub[]>("/me/category-subscriptions")])
@@ -24,7 +25,7 @@ export default function SubscriptionsPage() {
         setCats(c);
         setSubscribed(new Set(subs.filter((s) => s.subcategory === null).map((s) => s.category)));
       })
-      .catch(() => router.replace("/signin"));
+      .catch(() => router.replace(signinHereHref()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -34,7 +34,7 @@ from apps.cms.models import FAQItem
 from apps.contracts.models import Contract, ContractEvent, Submission, UpdateRequest
 from apps.core.models import AuditLog, SettingChangeLog
 from apps.core.services import get_setting
-from apps.gigs.models import BuyingRequest, Service, ServiceAddon, ServiceFavorite
+from apps.gigs.models import BuyingRequest, Favorite, Service, ServiceAddon, ServiceFavorite
 from apps.invoices.models import InvoiceLine, InvoiceRequest
 from apps.jobs.models import (
     Invitation,
@@ -45,12 +45,14 @@ from apps.jobs.models import (
     WatchlistItem,
 )
 from apps.notifications.models import Notification
-from apps.payments.models import Transaction, WithdrawalRequest
+from apps.payments.models import PayoutMethod, Transaction, WithdrawalRequest
 from apps.payments.services import get_platform_wallet, get_wallet, post
 from apps.profiles.models import (
     Address,
+    Certificate,
     Education,
     Employment,
+    IDVerification,
     PortfolioItem,
     WorkerLanguage,
     WorkerSkill,
@@ -181,6 +183,8 @@ class Command(BaseCommand):
         self._worker_details(workers, skills)
         self._employer_details(employers)
         self._wallets_and_bids(workers, employers)
+        self._payouts(workers)
+        self._id_verification(workers)
 
         jobs = self._jobs(employers, workers)
         proposals = self._proposals(jobs, workers)
@@ -189,6 +193,7 @@ class Command(BaseCommand):
 
         services = self._services(workers)
         self._favorites(services, employers)
+        self._generic_favorites(workers, employers, jobs, services)
         buying_requests = self._buying_requests(services, employers)
 
         contracts = self._contracts(proposals, buying_requests)
@@ -289,6 +294,16 @@ class Command(BaseCommand):
             "worker5": ["flutter", "react-native", "swift"],
             "worker6": ["ar-en-translation", "article-writing"],
         }
+        # ppt slide-02/03/07: enriched profile per worker (display name, field+specialization,
+        # years, availability, weekly hours, client notes, intro video, a certificate).
+        extra = {
+            "worker1": {"name": "أحمد المطيري", "cat": "programming-tech", "sub": "programming-tech-web-development", "years": 6, "avail": "available_now", "hours": 35, "notes": "متاح للمشاريع طويلة الأمد.", "video": "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "cert": ("شهادة Django للمحترفين", "Udemy", 2021)},
+            "worker2": {"name": "سارة العنزي", "cat": "design-creative", "sub": "design-creative-graphic-design", "years": 5, "avail": "available_now", "hours": 30, "notes": "أهتم بالتفاصيل والهوية المتكاملة.", "video": "", "cert": ("Adobe Certified Professional", "Adobe", 2020)},
+            "worker3": {"name": "منى الخالدي", "cat": "writing-translation", "sub": "writing-translation-content-writing", "years": 4, "avail": "available_soon", "hours": 25, "notes": "محتوى عربي أصيل ومحسّن للسيو.", "video": "", "cert": ("شهادة تسويق المحتوى", "HubSpot", 2022)},
+            "worker4": {"name": "خالد الرشيد", "cat": "digital-marketing", "sub": None, "years": 7, "avail": "available_now", "hours": 40, "notes": "خبير سيو وحملات مدفوعة.", "video": "", "cert": ("Google Ads Certified", "Google", 2023)},
+            "worker5": {"name": "فهد العتيبي", "cat": "programming-tech", "sub": "programming-tech-mobile-apps", "years": 5, "avail": "available_soon", "hours": 30, "notes": "تطبيقات موبايل عالية الأداء.", "video": "", "cert": ("Flutter Bootcamp", "Coursera", 2022)},
+            "worker6": {"name": "نورة السالم", "cat": "writing-translation", "sub": "writing-translation-translation", "years": 8, "avail": "available_now", "hours": 20, "notes": "ترجمة دقيقة مع مراجعة لغوية.", "video": "", "cert": ("شهادة الترجمة المعتمدة", "ATA", 2019)},
+        }
         for key, user in workers.items():
             wp = WorkerProfile.objects.get(user=user)
             title, overview, level, rate = WORKER_PROFILE[key]
@@ -297,7 +312,24 @@ class Command(BaseCommand):
             wp.expertise_level = level
             wp.hourly_rate = D(rate)
             wp.visibility = WorkerProfile.Visibility.ONLINE
+            ex = extra.get(key)
+            if ex:
+                wp.display_name = ex["name"]
+                wp.main_category = Category.objects.filter(slug=ex["cat"]).first()
+                wp.specialization = Category.objects.filter(slug=ex["sub"]).first() if ex["sub"] else None
+                wp.years_experience = ex["years"]
+                wp.availability = ex["avail"]
+                wp.weekly_hours = ex["hours"]
+                wp.client_notes = ex["notes"]
+                wp.intro_video = ex["video"]
             wp.save()
+
+            if ex and not wp.certificates.exists():
+                cname, issuer, year = ex["cert"]
+                Certificate.objects.create(
+                    profile=wp, name=cname, issuer=issuer, cert_type="شهادة احترافية",
+                    issued_year=year, skills=skill_map.get(key, [])[:2],
+                )
 
             for slug in skill_map.get(key, []):
                 if slug in skills:
@@ -327,6 +359,10 @@ class Command(BaseCommand):
                 PortfolioItem.objects.create(
                     profile=wp, title=f"مشروع نموذجي — {title}",
                     description="نموذج من أعمالي السابقة يوضّح جودة التنفيذ والالتزام بالمواعيد.",
+                    project_type=title, project_link="https://example.com",
+                    duration_value=2, duration_unit="month",
+                    skills=skill_map.get(key, [])[:3], completed_at="2023-06-01",
+                    ownership_confirmed=True,
                 )
             if not user.addresses.exists():
                 Address.objects.create(user=user, country="الكويت", city="مدينة الكويت",
@@ -337,6 +373,10 @@ class Command(BaseCommand):
         for key, user in employers.items():
             ep = EmployerProfile.objects.get(user=user)
             ep.company_name = EMPLOYER_COMPANY[key]
+            ep.field = "تجارة إلكترونية"
+            ep.country = "الكويت"
+            ep.city = "مدينة الكويت"
+            ep.timezone = "Asia/Kuwait"
             ep.save()
             if not user.addresses.exists():
                 Address.objects.create(user=user, country="الكويت", city="حولي",
@@ -528,6 +568,8 @@ class Command(BaseCommand):
                     "category": self._cat(cat), "subcategory": self._cat(sub) if sub else None,
                     "base_price": D(price), "delivery_days": days, "status": status,
                     "published_at": NOW if status == Service.Status.LIVE else None,
+                    "keywords": title.split()[:4],
+                    "what_you_get": "ملفات العمل النهائية + جولتا تعديل مجانيتان + تسليم ضمن المدة المحددة + دعم بعد التسليم.",
                 },
             )
             if created:
@@ -551,6 +593,47 @@ class Command(BaseCommand):
             if created:
                 service.favorites_count = service.favorites.count()
                 service.save(update_fields=["favorites_count"])
+
+    def _payouts(self, workers):
+        """A default PayPal payout method per worker (ppt slides 38–42)."""
+        for user in workers.values():
+            PayoutMethod.objects.get_or_create(
+                user=user, kind=PayoutMethod.Kind.PAYPAL,
+                defaults={"label": "PayPal الأساسي", "details": {"email": user.email}, "is_default": True},
+            )
+
+    def _id_verification(self, workers):
+        """Seed ID verification — some approved, one pending (ppt slide-08)."""
+        statuses = {
+            "worker1": IDVerification.Status.APPROVED,
+            "worker2": IDVerification.Status.APPROVED,
+            "worker3": IDVerification.Status.PENDING,
+        }
+        for key, status in statuses.items():
+            user = workers.get(key)
+            if user:
+                IDVerification.objects.update_or_create(
+                    user=user,
+                    defaults={"status": status, "doc_type": "national_id", "consent": True},
+                )
+                if status == IDVerification.Status.APPROVED:
+                    # mirror the admin-approval side effect so the «موثّق» badge shows in the UI
+                    from apps.profiles.models import WorkerProfile
+                    WorkerProfile.objects.filter(user=user).update(is_verified=True)
+
+    def _generic_favorites(self, workers, employers, jobs, services):
+        """Polymorphic favourites (ppt slide-43): jobs, freelancers, portfolio works."""
+        for job_key in ("job-web", "job-logo"):
+            job = jobs.get(job_key)
+            if job:
+                Favorite.objects.get_or_create(user=workers["worker1"], kind="job", object_id=job.id)
+        for w_key in ("worker2", "worker5"):  # object_id = the freelancer's USER id
+            w = workers.get(w_key)
+            if w:
+                Favorite.objects.get_or_create(user=employers["employer1"], kind="freelancer", object_id=w.id)
+        item = PortfolioItem.objects.filter(profile__user=workers["worker3"]).first()
+        if item:
+            Favorite.objects.get_or_create(user=workers["worker2"], kind="portfolio", object_id=item.id)
 
     def _buying_requests(self, services, employers):
         # service_key, employer, qty, status

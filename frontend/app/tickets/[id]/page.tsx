@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { LockIcon } from "@/components/icons";
 
 type Reply = { id: number; message: string; is_staff: boolean; created_at: string };
@@ -40,7 +41,7 @@ export default function TicketThreadPage() {
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
@@ -94,7 +95,7 @@ export default function TicketThreadPage() {
       ) : (
         <div className="mt-6 flex gap-2">
           <input
-            className="flex-1 rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="flex-1 field"
             placeholder="اكتب ردًا…"
             value={body}
             onChange={(e) => setBody(e.target.value)}

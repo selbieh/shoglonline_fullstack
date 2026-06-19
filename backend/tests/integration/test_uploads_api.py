@@ -72,6 +72,26 @@ def test_disguised_file_rejected_by_magic_bytes():
     assert res.json()["code"] == "file_type_blocked"
 
 
+def test_webm_voice_note_classified_as_audio(mocker):
+    """MediaRecorder voice notes are webm containers whose magic bytes sniff as video/webm. When the
+    client claims audio/*, trust it so the voice note classifies as AUDIO, not VIDEO (FR-CHAT-4)."""
+    mocker.patch("apps.attachments.services._detect_mime", return_value="video/webm")
+    res = upload(UserFactory(), name="voice.webm", content_type="audio/webm")
+    assert res.status_code == 201, res.content
+    body = res.json()
+    assert body["kind"] == "audio"
+    assert body["content_type"] == "audio/webm"
+
+
+def test_disguised_audio_webm_classified_by_real_bytes(mocker):
+    # claims audio/webm but the bytes are a PNG (a different container family) → the audio claim is
+    # NOT blindly trusted; it's classified by what the sniffer actually found.
+    mocker.patch("apps.attachments.services._detect_mime", return_value="image/png")
+    res = upload(UserFactory(), name="fake.webm", content_type="audio/webm")
+    assert res.status_code == 201, res.content
+    assert res.json()["kind"] == "image"
+
+
 def test_kill_switch_disables_uploads():
     set_setting("uploads.enabled", False)
     res = upload(UserFactory())

@@ -110,7 +110,7 @@ export default function ReviewsSection({ contractId }: { contractId: string | nu
             <Stars value={rating} onPick={setRating} />
           </div>
           <textarea
-            className="mt-2 w-full rounded-m border border-line-strong px-3 py-2 text-sm"
+            className="mt-2 w-full field"
             rows={2}
             placeholder="تعليق (اختياري)"
             value={comment}

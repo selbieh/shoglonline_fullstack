@@ -18,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: lastmod ? new Date(lastmod) : new Date(),
   });
 
-  const staticUrls = ["/", "/jobs", "/services", "/faq"].map((p) => url(p));
+  const staticUrls = ["/", "/jobs", "/services", "/gallery", "/faq"].map((p) => url(p));
   const categoryUrls = (cats ?? []).map((c) => url(`/jobs?category=${c.slug}`));
   const jobUrls = (jobs?.results ?? []).map((j) => url(`/jobs/${j.slug}`, j.published_at));
   const serviceUrls = (services?.results ?? []).map((s) => url(`/services/${s.slug}`, s.published_at));

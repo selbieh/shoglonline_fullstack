@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { BellIcon } from "@/components/icons";
 
 type Sub = { id: number; category: number; category_name: string; subcategory: number | null };
@@ -62,7 +63,11 @@ export default function SubscribeCategoryButton({
       <div className="flex items-start gap-2.5 rounded-m bg-tint p-4 text-sm text-primary-dark">
         <BellIcon className="mt-0.5 shrink-0 text-[18px] text-primary" />
         <span>
-          <a href="/signin" className="font-bold underline">سجّل الدخول</a> لتشترك في «{categoryName}» ويصلك بريد فور نشر وظيفة جديدة.
+          <a
+            href="/signin"
+            onClick={(e) => { e.preventDefault(); window.location.href = signinHereHref(); }}
+            className="font-bold underline"
+          >سجّل الدخول</a> لتشترك في «{categoryName}» ويصلك بريد فور نشر وظيفة جديدة.
         </span>
       </div>
     );

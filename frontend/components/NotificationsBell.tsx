@@ -66,7 +66,7 @@ export default function NotificationsBell() {
     <div className="relative" ref={ref}>
       <button
         onClick={toggle}
-        className="relative grid h-9 w-9 place-content-center rounded-full text-[20px] text-rose-500 transition hover:bg-rose-50"
+        className="relative grid h-9 w-9 place-content-center rounded-full text-[20px] text-sub transition hover:bg-tint hover:text-primary"
         aria-label="الإشعارات"
       >
         <BellIcon />

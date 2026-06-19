@@ -11,13 +11,20 @@ from apps.bids.models import BidPlan
 from apps.core.services import get_setting
 
 from .. import paypal, services
-from ..models import PaymentMethod, Transaction, WithdrawalRequest
+from ..models import PaymentMethod, PayoutMethod, Transaction, WithdrawalRequest
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    # Stable, human-readable receipt code derived from the immutable pk (ppt slide-37) — no extra
+    # column/backfill needed; every ledger row is uniquely referenceable.
+    reference = serializers.SerializerMethodField()
+
     class Meta:
         model = Transaction
-        fields = ["id", "type", "bucket", "amount", "status", "gateway", "note", "created_at"]
+        fields = ["id", "type", "bucket", "amount", "status", "gateway", "gateway_ref", "note", "reference", "created_at"]
+
+    def get_reference(self, obj) -> str:
+        return f"TRX-{obj.pk:08d}"
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
@@ -60,6 +67,48 @@ class PaymentMethodDetailView(APIView):
 
     def delete(self, request, pk):
         method = get_object_or_404(PaymentMethod, pk=pk, user=request.user)
+        method.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PayoutMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PayoutMethod
+        fields = ["id", "kind", "label", "country", "details", "is_default", "created_at"]
+
+
+class MyPayoutMethodsView(APIView):
+    """GET list · POST add a payout destination (استلام الأرباح, ppt slide-38)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        methods = PayoutMethod.objects.filter(user=request.user)
+        return Response(PayoutMethodSerializer(methods, many=True).data)
+
+    def post(self, request):
+        method = services.add_payout_method(request.user, request.data)
+        return Response(PayoutMethodSerializer(method).data, status=status.HTTP_201_CREATED)
+
+
+class PayoutMethodDetailView(APIView):
+    """PATCH (set default / rename) · DELETE a saved payout method."""
+
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["patch", "delete"]
+
+    def patch(self, request, pk):
+        method = get_object_or_404(PayoutMethod, pk=pk, user=request.user)
+        if "label" in request.data:
+            method.label = str(request.data["label"])[:80]
+            method.save(update_fields=["label"])
+        if request.data.get("is_default"):
+            services.set_default_payout_method(request.user, method)
+        method.refresh_from_db()
+        return Response(PayoutMethodSerializer(method).data)
+
+    def delete(self, request, pk):
+        method = get_object_or_404(PayoutMethod, pk=pk, user=request.user)
         method.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

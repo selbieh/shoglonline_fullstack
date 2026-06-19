@@ -186,6 +186,22 @@ class MyProposalsView(ListAPIView):
     def get_queryset(self):
         return Proposal.objects.filter(worker=self.request.user).select_related("job")
 
+    def list(self, request, *args, **kwargs):
+        # full per-status breakdown for the filter tabs (ppt slide-15) — independent of the
+        # active status filter applied to the page.
+        from django.db.models import Count
+
+        response = super().list(request, *args, **kwargs)
+        counts = dict(
+            Proposal.objects.filter(worker=request.user)
+            .values("status").order_by().annotate(n=Count("id"))
+            .values_list("status", "n")
+        )
+        counts["all"] = sum(counts.values())
+        if isinstance(response.data, dict):
+            response.data["status_counts"] = counts
+        return response
+
 
 class CancelProposalView(APIView):
     def post(self, request, pk):

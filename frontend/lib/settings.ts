@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
  */
 export type PublicSettings = {
   "bids.enabled"?: boolean;
+  "profiles.phone_verification"?: boolean;
   [key: string]: unknown;
 };
 
@@ -46,6 +47,11 @@ export function resetPublicSettingsCache(): void {
 /** True unless the flag is explicitly false (default-on / fail-open). */
 export function bidsEnabled(settings: PublicSettings): boolean {
   return settings["bids.enabled"] !== false;
+}
+
+/** Phone/SMS OTP verification — OFF by default; operator enables via backend config. */
+export function phoneVerifyEnabled(settings: PublicSettings): boolean {
+  return settings["profiles.phone_verification"] === true;
 }
 
 /** Reactive accessor for client components. */

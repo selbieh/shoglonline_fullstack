@@ -17,8 +17,9 @@ ERR = {
 
 
 @transaction.atomic
-def submit_id_verification(user, attachment_ids) -> IDVerification:
-    """Create/replace the user's verification request (resets a rejected one to pending)."""
+def submit_id_verification(user, attachment_ids, doc_type="", consent=False) -> IDVerification:
+    """Create/replace the user's verification request (resets a rejected one to pending).
+    `attachment_ids` may carry several files (front / back / selfie — ppt slide-08)."""
     from apps.accounts.services import assert_active  # noqa: PLC0415 (avoid import cycle)
     from apps.attachments.services import attach  # noqa: PLC0415
 
@@ -29,10 +30,12 @@ def submit_id_verification(user, attachment_ids) -> IDVerification:
 
     idv, _ = IDVerification.objects.get_or_create(user=user)
     idv.status = IDVerification.Status.PENDING
+    idv.doc_type = doc_type or idv.doc_type
+    idv.consent = bool(consent)
     idv.reject_reason = ""
     idv.reviewed_by = None
     idv.reviewed_at = None
-    idv.save(update_fields=["status", "reject_reason", "reviewed_by", "reviewed_at"])
+    idv.save(update_fields=["status", "doc_type", "consent", "reject_reason", "reviewed_by", "reviewed_at"])
 
     # On re-submission, retire the previously-attached ID file(s) so a reviewer only ever sees the
     # current upload (soft-delete keeps the old row for audit/orphan-sweep).

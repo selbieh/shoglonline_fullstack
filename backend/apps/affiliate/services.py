@@ -5,6 +5,7 @@ from datetime import timedelta
 from decimal import ROUND_HALF_EVEN, Decimal
 from urllib.parse import quote
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.utils.text import slugify
@@ -17,7 +18,7 @@ from apps.payments.models import Transaction
 from .models import AffiliateClick, AffiliateCommission, AffiliateProfile, CommissionRule, Referral
 
 CENT = Decimal("0.01")
-FRONTEND_URL = "http://localhost:3000"  # TODO: env-driven in production
+FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
 
 # user-editable slug: 3–40 chars, lowercase alnum + internal dashes, no leading/trailing dash
 _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$")

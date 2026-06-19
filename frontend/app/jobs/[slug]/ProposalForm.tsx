@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import type { Job } from "@/lib/types";
+import ContactHint from "@/components/ContactHint";
 import { TicketIcon } from "@/components/icons";
 
 /** Interactive proposal form (client island) — the surrounding job content is SSR. */
@@ -34,7 +36,7 @@ export default function ProposalForm({ job }: { job: Job }) {
   }, []);
 
   async function submit() {
-    if (!tokens.access) return router.push("/signin");
+    if (!tokens.access) return router.push(signinHereHref());
     setBusy(true);
     setMsg(null);
     try {
@@ -69,7 +71,7 @@ export default function ProposalForm({ job }: { job: Job }) {
       <div className="rounded-m bg-tint p-4 text-center text-sm">
         <p className="font-bold text-primary-deep">سجّل الدخول لتقديم عرض</p>
         <p className="mt-1 text-sub">تصفّح الوظيفة بحرية — التقديم يتطلّب دخولًا عبر جوجل.</p>
-        <a href="/signin" className="btn-primary mt-3 inline-block">دخول عبر جوجل</a>
+        <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary mt-3 inline-block">دخول عبر جوجل</button>
       </div>
     );
   }
@@ -102,20 +104,21 @@ export default function ProposalForm({ job }: { job: Job }) {
       <div className="grid grid-cols-2 gap-3">
         <label className="text-sm font-bold">
           قيمة العرض (د.ك) *
-          <input className="mt-1 w-full rounded-m border border-line-strong px-3 py-2"
+          <input className="mt-1 w-full field"
             value={budget} onChange={(e) => setBudget(e.target.value)} />
         </label>
         <label className="text-sm font-bold">
           مدة التسليم (أيام) *
-          <input className="mt-1 w-full rounded-m border border-line-strong px-3 py-2"
+          <input className="mt-1 w-full field"
             value={days} onChange={(e) => setDays(e.target.value)} />
         </label>
       </div>
       <label className="block text-sm font-bold">
         تفاصيل العرض *
-        <textarea className="mt-1 min-h-24 w-full rounded-m border border-line-strong px-3 py-2"
+        <textarea className="mt-1 min-h-24 w-full field"
           placeholder="اشرح كيف ستنفّذ المشروع وما يميز عرضك…"
           value={description} onChange={(e) => setDescription(e.target.value)} />
+        <ContactHint text={description} />
       </label>
 
       {(job.screening_questions?.length ?? 0) > 0 && (
@@ -124,7 +127,7 @@ export default function ProposalForm({ job }: { job: Job }) {
           {job.screening_questions!.map((sq) => (
             <label key={sq.id} className="block text-sm">
               {sq.question} {sq.is_required && <span className="text-danger">*</span>}
-              <input className="mt-1 w-full rounded-s border border-line px-3 py-1.5"
+              <input className="mt-1 w-full field"
                 value={answers[sq.id] ?? ""}
                 onChange={(e) => setAnswers({ ...answers, [sq.id]: e.target.value })} />
             </label>

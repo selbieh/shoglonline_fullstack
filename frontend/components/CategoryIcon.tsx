@@ -1,6 +1,7 @@
 /* Resolve a catalog category to a modern line-icon by its top-level slug, replacing
    the legacy emoji icons. Falls back to a neutral grid icon for unknown slugs. */
 import type { SVGProps } from "react";
+import { tagTone } from "@/lib/tags";
 import {
   BarChartIcon, CodeIcon, CompassIcon, GridIcon, HeadsetIcon, MegaphoneIcon, MicIcon,
   PaletteIcon, PenIcon,
@@ -30,20 +31,10 @@ export function CategoryIcon({
   return <Icon {...props} />;
 }
 
-// Curated soft tone (bg + icon colour) per top-level category — calm, not rainbow.
-const TONE_BY_SLUG: Record<string, string> = {
-  "programming-tech": "bg-sky-100 text-sky-700",
-  "design-creative": "bg-violet-100 text-violet-700",
-  "writing-translation": "bg-amber-100 text-amber-700",
-  "digital-marketing": "bg-rose-100 text-rose-700",
-  "sales-support": "bg-teal-100 text-teal-700",
-  "business-finance": "bg-emerald-100 text-emerald-700",
-  "audio-voice": "bg-fuchsia-100 text-fuchsia-700",
-  consulting: "bg-indigo-100 text-indigo-700",
-};
-
-/** Soft icon-tile colour classes for a category; falls back to the brand tint. */
+/** On-brand icon-tile colour classes for a category. Calm periwinkle/lavender/light-blue
+    family (via the shared `tagTone` set) — stable per slug; falls back to the brand tint. */
 export function categoryTone(slug?: string | null): string {
-  const key = slug ? Object.keys(TONE_BY_SLUG).find((k) => slug.startsWith(k)) : undefined;
-  return key ? TONE_BY_SLUG[key] : "bg-tint text-primary-dark";
+  // Match by top-level slug so subcategories share their parent's tone.
+  const key = slug ? Object.keys(BY_SLUG).find((k) => slug.startsWith(k)) : undefined;
+  return key ? tagTone(key) : "bg-tint text-primary-dark";
 }

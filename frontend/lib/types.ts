@@ -27,6 +27,10 @@ export type ScreeningQuestion = {
   is_required: boolean;
 };
 
+export type PortfolioMediaType = "image" | "video" | "link";
+
+export type PortfolioPreview = { media_type: PortfolioMediaType; thumb: string; title: string };
+
 export type Freelancer = {
   id: number;
   name: string;
@@ -38,6 +42,63 @@ export type Freelancer = {
   rating_count: number;
   is_verified: boolean;
   skills: string[];
+  portfolio_preview?: PortfolioPreview[];
+  portfolio_count?: number;
+  /** Count of the worker's published services (directory card «الخدمات» stat). */
+  services_count?: number;
+  /** Years of experience (directory card «سنوات الخبرة» stat). */
+  years_experience?: number | null;
+  /** Short bio for the directory card description (added to the public list serializer). */
+  overview?: string;
+  /** Location line for the card meta row, e.g. "القاهرة - مصر" (optional). */
+  city?: string;
+  country?: string;
+  /** ppt slide-07 availability state (for a "متاح للعمل" pill). */
+  availability?: "available_now" | "available_soon" | "unavailable";
+};
+
+export type PortfolioItem = {
+  id: number;
+  title: string;
+  description: string;
+  media_type: PortfolioMediaType;
+  url: string;
+  cover_url: string;
+  image_url: string; // resolved public URL for an uploaded image ("" if none)
+  order?: number;
+  created_at?: string;
+  // ppt slides 05/23 project fields (optional until the add-portfolio UI lands).
+  project_type?: string;
+  project_link?: string;
+  duration_value?: number | null;
+  duration_unit?: "day" | "month" | "";
+  skills?: string[];
+  completed_at?: string | null;
+  ownership_confirmed?: boolean;
+};
+
+/** The owning freelancer's discipline, attached to each gallery tile (drives the category facet/badge). */
+export type GalleryCategory = { id: number; name: string; slug: string };
+
+/** A single tile in the global works gallery (معرض الأعمال) — `/freelancers/portfolio`. Carries
+    just enough of the owning freelancer to render identity + link to the slide-22 showcase. */
+export type GalleryItem = {
+  id: number;
+  title: string;
+  media_type: PortfolioMediaType;
+  thumb: string;
+  project_type?: string;
+  skills?: string[];
+  category?: GalleryCategory | null;
+  views_count?: number;
+  completed_at?: string | null;
+  created_at?: string;
+  worker_id: number;
+  worker_name: string;
+  worker_avatar?: string;
+  worker_rating?: string;
+  worker_rating_count?: number;
+  worker_verified?: boolean;
 };
 
 export type WorkerSkillDetail = { skill_id: number; name: string; efficiency: string };
@@ -60,12 +121,39 @@ export type WorkerEmployment = {
   description: string;
 };
 
+export type WorkerCertificate = {
+  id: number;
+  name: string;
+  issuer: string;
+  cert_type: string;
+  issued_year: number | null;
+  expiry_year: number | null;
+  no_expiry: boolean;
+  verification_link: string;
+  skills: string[];
+};
+export type ProfileReview = {
+  id: number;
+  rating: number;
+  comment: string;
+  author_name: string;
+  created_at: string;
+};
+
 export type FreelancerDetail = Omit<Freelancer, "skills"> & {
   overview: string;
+  cover_image?: string;
+  city?: string;
+  total_earned?: string;
+  intro_video?: string;
+  years_experience?: number | null;
   skills: WorkerSkillDetail[];
   languages: WorkerLanguage[];
   educations: WorkerEducation[];
   employments: WorkerEmployment[];
+  portfolio: PortfolioItem[];
+  certificates?: WorkerCertificate[];
+  reviews?: ProfileReview[];
 };
 
 export const EXPERTISE_LABEL: Record<string, string> = {

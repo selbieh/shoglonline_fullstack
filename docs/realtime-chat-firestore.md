@@ -19,6 +19,14 @@ This is the architecture behind Part 09, built with the "full client-side Firest
 Clients never create or rename conversations and can't read others' threads — `firestore.rules`
 forbids it; only the Admin SDK (backend) writes conversation docs.
 
+**Plain text** rides the client-write path above. **Attachments** (voice/image/video/file) do NOT:
+the client uploads to `POST /uploads`, then sends via `POST /conversations/{id}/messages` with
+`attachment_ids`. The backend links the attachments synchronously (so the recipient can download
+them the moment the message appears) and `firestore.mirror_message` writes the doc — including the
+attachment metadata in `files` — via the Admin SDK. Those docs carry `pgId` (see the sync guard
+above). **Read receipts** are mirrored the same way: `mark_read` writes `reads.<uid>` onto the
+conversation doc, and the sender's client subscribes to the doc to derive ✓ (sent) / ✓✓ (read).
+
 ## Provisioning (production)
 
 1. Create a Firebase project; enable **Firestore** and **Authentication → Custom tokens**.
@@ -42,6 +50,12 @@ exports.syncMessageToBackend = functions.firestore
   .document("conversations/{convId}/messages/{msgId}")
   .onCreate(async (snap, ctx) => {
     const m = snap.data();
+    // Skip BACKEND-originated messages. Plain text is written client-side and must sync to PG;
+    // attachment messages (voice/image/video/file) go through POST /conversations/{id}/messages,
+    // which links the attachments synchronously and then mirrors the doc here via the Admin SDK —
+    // those carry `pgId` and already live in Postgres. Re-syncing them would insert a DUPLICATE row
+    // (the original was created with firestore_id=NULL, so the idempotency key wouldn't match).
+    if (m.pgId) return;
     await fetch(`${BACKEND_URL}/api/v1/chat/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Chat-Sync-Secret": CHAT_SYNC_SECRET },
@@ -57,6 +71,8 @@ exports.syncMessageToBackend = functions.firestore
 ```
 
 `POST /chat/sync` is idempotent on `firestore_id`, so Cloud Function retries never double-persist.
+The `if (m.pgId) return;` guard is **required** — without it, every attachment message would be
+re-persisted as a duplicate (attachments ride the REST path, not the client-write path).
 
 ## Dev / test
 

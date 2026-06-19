@@ -42,6 +42,25 @@ class MyContractsView(ListAPIView):
             qs = qs.filter(worker=user)
         return qs
 
+    def list(self, request, *args, **kwargs):
+        # per-status counts for the filter tabs (ppt slide-13), scoped to the active role but
+        # independent of the active status filter.
+        from django.db.models import Count
+
+        response = super().list(request, *args, **kwargs)
+        user = request.user
+        base = Contract.objects.filter(Q(employer=user) | Q(worker=user))
+        role = request.query_params.get("role")
+        if role == "employer":
+            base = base.filter(employer=user)
+        elif role == "worker":
+            base = base.filter(worker=user)
+        counts = dict(base.values("status").order_by().annotate(n=Count("id")).values_list("status", "n"))
+        counts["all"] = sum(counts.values())
+        if isinstance(response.data, dict):
+            response.data["status_counts"] = counts
+        return response
+
 
 class ContractDetailView(APIView):
     permission_classes = [IsAuthenticated]

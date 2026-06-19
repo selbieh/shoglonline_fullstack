@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { apiError } from "@/lib/errors";
+import { signinHereHref } from "@/lib/nav";
 import { HeartIcon } from "@/components/icons";
 
 export type Addon = { id: number; title: string; price: string; extra_days: number };
@@ -30,13 +31,13 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
   const total = (Number(service.base_price) + addonsTotal) * qty;
 
   async function toggleFav() {
-    if (!tokens.access) return router.push("/signin");
+    if (!tokens.access) return router.push(signinHereHref());
     await api(`/me/favorites/${service.id}`, { method: fav ? "DELETE" : "PUT" }).catch(() => undefined);
     setFav((v) => !v);
   }
 
   async function buy() {
-    if (!tokens.access) return router.push("/signin");
+    if (!tokens.access) return router.push(signinHereHref());
     setBusy(true);
     setMsg(null);
     try {
@@ -57,7 +58,7 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
       <div className="flex justify-end">
         <button
           onClick={toggleFav}
-          className={`grid h-10 w-10 place-content-center rounded-full text-[22px] transition ${fav ? "bg-rose-50 text-rose-500" : "text-sub hover:bg-rose-50 hover:text-rose-500"}`}
+          className={`grid h-10 w-10 place-content-center rounded-full text-[22px] transition ${fav ? "bg-danger-t text-danger" : "text-sub hover:bg-danger-t hover:text-danger"}`}
           aria-label="المفضلة"
         >
           <HeartIcon filled={fav} />
@@ -95,11 +96,11 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
 
         <div className="flex items-center gap-3">
           <label className="text-sm text-sub">الكمية</label>
-          <input type="number" min={1} className="w-20 rounded-m border border-line-strong px-3 py-2 text-sm"
+          <input type="number" min={1} className="w-20 field"
             value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value)))} />
         </div>
 
-        <textarea className="w-full rounded-m border border-line-strong px-3 py-2 text-sm" rows={3}
+        <textarea className="w-full field" rows={3}
           placeholder="تفاصيل طلبك (اختياري)" value={desc} onChange={(e) => setDesc(e.target.value)} />
 
         <div className="flex items-center justify-between border-t border-line pt-3">
@@ -109,7 +110,7 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
         {authed ? (
           <button className="btn-primary w-full" disabled={busy} onClick={buy}>إرسال طلب الشراء</button>
         ) : (
-          <a href="/signin" className="btn-primary block w-full text-center">سجّل الدخول لإرسال الطلب</a>
+          <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary block w-full text-center">سجّل الدخول لإرسال الطلب</button>
         )}
         <p className="text-xs text-sub">
           يُحجز المبلغ في الضمان عند قبول المستقل ويُحرَّر بعد تسليمك وقبولك للعمل.

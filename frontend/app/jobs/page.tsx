@@ -3,15 +3,17 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, API_URL } from "@/lib/api";
+import { api, API_URL, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { timeAgo } from "@/lib/format";
 import { tagTone } from "@/lib/tags";
 import { LOCATION_LABEL, type Category, type Job, type Paginated } from "@/lib/types";
 import {
   AlertIcon, ArrowLeftIcon, BellIcon, BookmarkIcon, BriefcaseIcon, ClockIcon, MapPinIcon,
-  SearchIcon, UsersIcon, WalletIcon,
+  SearchIcon, UsersIcon,
 } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import SubscribeCategoryButton from "@/components/SubscribeCategoryButton";
 
 /** Jobs listing with filters (FR-JOB-3). Public — works for visitors too. */
@@ -105,11 +107,17 @@ function JobsInner() {
   }, [q]);
 
   async function toggleWatch(job: Job) {
-    setSaved((m) => ({ ...m, [job.id]: !m[job.id] })); // optimistic
+    const next = !saved[job.id];
+    setSaved((m) => ({ ...m, [job.id]: next })); // optimistic
+    if (!tokens.access) {
+      window.location.href = signinHereHref();
+      return;
+    }
     try {
-      await api(`/me/watchlist/${job.id}`, { method: "PUT" });
+      // unified favourites (ppt slide-43) — saved jobs appear under the favourites "الوظائف" tab
+      await api(`/me/favorites/job/${job.id}`, { method: next ? "PUT" : "DELETE" });
     } catch {
-      setSaved((m) => ({ ...m, [job.id]: !m[job.id] })); // revert on failure
+      setSaved((m) => ({ ...m, [job.id]: !next })); // revert on failure
     }
   }
 
@@ -123,7 +131,7 @@ function JobsInner() {
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
           <div>
             <span className="glass animate-fade-up mb-3 inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.7)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
               لوحة الوظائف
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">الوظائف</h1>
@@ -193,13 +201,22 @@ function JobsInner() {
                   <div className="hidden h-12 w-12 shrink-0 rounded-m bg-line sm:block" />
                   <div className="flex-1">
                     <div className="h-5 w-2/3 rounded bg-line" />
-                    <div className="mt-3 flex gap-2">
-                      <div className="h-6 w-20 rounded-full bg-line" />
-                      <div className="h-6 w-16 rounded-full bg-line" />
-                    </div>
+                    <div className="mt-2 h-3 w-1/3 rounded bg-line" />
                     <div className="mt-3 h-4 w-full rounded bg-line" />
                     <div className="mt-2 h-4 w-1/2 rounded bg-line" />
                   </div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-4 rounded-m bg-bg px-4 py-3">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <div key={j} className="space-y-1.5">
+                      <div className="h-3 w-16 rounded bg-line" />
+                      <div className="h-4 w-12 rounded bg-line" />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center justify-between border-t border-line pt-3.5">
+                  <div className="h-6 w-24 rounded bg-line" />
+                  <div className="h-8 w-28 rounded-full bg-line" />
                 </div>
               </div>
             ))}
@@ -254,14 +271,6 @@ function JobsInner() {
                         <BookmarkIcon filled={!!saved[job.id]} />
                       </button>
                     </div>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-                      <span className="chip bg-tint text-primary-dark">{job.category_name}</span>
-                      <span className="meta">
-                        <MapPinIcon className="text-[15px] text-primary/70" />
-                        {LOCATION_LABEL[job.location_type] ?? job.location_type}
-                        {job.city ? ` · ${job.city}` : ""}
-                      </span>
-                    </div>
                     {job.description && (
                       <p className="mt-3 line-clamp-2 text-sm leading-6 text-sub">{job.description}</p>
                     )}
@@ -277,22 +286,21 @@ function JobsInner() {
                     )}
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line/70 pt-3.5">
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    <span className="inline-flex items-center gap-1.5 font-bold text-ink">
-                      <WalletIcon className="text-[17px] text-success" />
-                      <span dir="ltr">{job.budget_min}–{job.budget_max}</span>
-                      <span className="text-xs font-medium text-sub">د.ك</span>
-                    </span>
-                    <span className="meta">
-                      <UsersIcon className="text-[16px]" /> {job.proposals_count.toLocaleString("ar-EG")} عروض
-                    </span>
-                  </div>
+                {/* stats strip: proposals · location · category */}
+                <ListingStats>
+                  <ListingStat icon={<UsersIcon />} label="العروض" value={job.proposals_count.toLocaleString("ar-EG")} />
+                  <ListingStat icon={<MapPinIcon />} label="الموقع"
+                    value={`${LOCATION_LABEL[job.location_type] ?? job.location_type}${job.city ? ` · ${job.city}` : ""}`} />
+                  <ListingStat icon={<BriefcaseIcon />} label="الفئة" value={job.category_name} />
+                </ListingStats>
+
+                {/* footer: budget + apply CTA */}
+                <ListingFooter priceLabel="الميزانية" priceValue={`${job.budget_min}–${job.budget_max}`} priceSuffix="د.ك">
                   <Link href={`/jobs/${job.slug}`} className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
                     قدّم عرضك
                     <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
                   </Link>
-                </div>
+                </ListingFooter>
               </article>
               );
             })}

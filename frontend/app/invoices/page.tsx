@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 
 type Invoice = {
@@ -39,19 +40,19 @@ export default function InvoicesPage() {
         api<{ results: Invoice[] }>("/me/incoming-invoices"),
         api<{ results: Contract[] }>("/me/contracts?role=worker"),
       ]);
-      setMine(m.results);
-      setIncoming(inc.results);
+      setMine(m.results ?? []);
+      setIncoming(inc.results ?? []);
       const uniq = new Map<number, string>();
-      contracts.results.forEach((c) => uniq.set(c.counterpart.id, c.counterpart.name));
+      (contracts.results ?? []).forEach((c) => uniq.set(c.counterpart.id, c.counterpart.name));
       setEmployers([...uniq].map(([id, name]) => ({ id, name })));
     } catch {
-      router.replace("/signin");
+      router.replace(signinHereHref());
     }
   }, [router]);
 
   useEffect(() => {
     if (!tokens.access) {
-      router.replace("/signin");
+      router.replace(signinHereHref());
       return;
     }
     load();
@@ -90,12 +91,12 @@ export default function InvoicesPage() {
       <section className="card mt-5 space-y-3">
         <h2 className="font-bold">طلب فاتورة فترة</h2>
         <div className="flex flex-wrap gap-2">
-          <select className="rounded-m border border-line-strong px-3 py-2 text-sm"
+          <select className="field"
             value={employerId} onChange={(e) => setEmployerId(Number(e.target.value) || "")}>
             <option value="">اختر صاحب العمل…</option>
             {employers.map((em) => <option key={em.id} value={em.id}>{em.name}</option>)}
           </select>
-          <select className="rounded-m border border-line-strong px-3 py-2 text-sm"
+          <select className="field"
             value={period} onChange={(e) => setPeriod(e.target.value)}>
             <option value="month">شهري</option>
             <option value="week">أسبوعي</option>

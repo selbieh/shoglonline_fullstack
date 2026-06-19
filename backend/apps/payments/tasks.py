@@ -38,7 +38,14 @@ def reconcile_pending_deposits() -> int:
     for tx in pending:
         try:
             status = paypal.get_order_status(tx.gateway_ref)
-            if status == "COMPLETED":
+            if status == "APPROVED":
+                # buyer approved on PayPal but the return redirect never reached us (closed tab,
+                # dropped network) — capture here so the deposit can't strand as PENDING. If the
+                # capture itself fails it stays PENDING and is retried on the next tick.
+                if paypal.capture_order(tx.gateway_ref):
+                    services.settle_pending(tx, succeeded=True)
+                    settled += 1
+            elif status == "COMPLETED":
                 services.settle_pending(tx, succeeded=True)
                 settled += 1
             elif status in ("VOIDED", "EXPIRED"):
