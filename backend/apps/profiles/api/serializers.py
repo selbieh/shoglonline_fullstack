@@ -218,6 +218,7 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
             "client_notes",
             "visibility",
             "publish_state",
+            "publish_reject_reason",
             "rating_avg",
             "rating_count",
             "total_earned",
@@ -230,7 +231,8 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
             "portfolio",
             "certificates",
         ]
-        read_only_fields = ["rating_avg", "rating_count", "total_earned", "is_verified", "publish_state"]
+        read_only_fields = ["rating_avg", "rating_count", "total_earned", "is_verified",
+                            "publish_state", "publish_reject_reason"]
 
     def validate_overview(self, v):
         return validate_no_contact(v)

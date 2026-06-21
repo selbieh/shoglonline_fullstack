@@ -156,7 +156,6 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
               ratingCount={s.worker_rating_count}
               profileHref={`/freelancers/${s.worker}`}
               profileLabel="عرض الملف الشخصي"
-              contactLabel="تواصل مع المستقل"
             />
           </aside>
         </div>

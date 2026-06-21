@@ -13,7 +13,7 @@ from .models import (
     WorkerProfile,
     WorkerSkill,
 )
-from .services import review_id_verification
+from .services import review_id_verification, review_profile_publish
 
 
 @admin.register(EmployerProfile)
@@ -56,10 +56,41 @@ class PortfolioInline(TabularInline):
 
 @admin.register(WorkerProfile)
 class WorkerProfileAdmin(ModelAdmin):
-    list_display = ("user", "bio_title", "expertise_level", "visibility", "is_verified", "rating_avg", "total_earned")
-    list_filter = ("expertise_level", "visibility", "is_verified")
+    """Profiles + the publish-review queue (rule D-1). A worker submits at ≥70% → PENDING_REVIEW;
+    the reviewer sees the completeness % and approves (→ live) or rejects (uses publish_reject_reason)."""
+
+    list_display = (
+        "user", "bio_title", "publish_state", "completeness", "expertise_level",
+        "visibility", "is_verified", "rating_avg",
+    )
+    list_filter = ("publish_state", "expertise_level", "visibility", "is_verified")
     search_fields = ("user__email", "bio_title")
+    readonly_fields = ("completeness", "publish_reviewed_by", "publish_reviewed_at")
     inlines = [SkillInline, EducationInline, EmploymentInline, LanguageInline, PortfolioInline]
+    actions = ["approve_publish", "reject_publish"]
+
+    @admin.display(description="نسبة الاكتمال")
+    def completeness(self, obj) -> str:
+        return f"{obj.completeness_pct}%"
+
+    @admin.action(description="✅ Approve publish (profile goes live)")
+    def approve_publish(self, request, queryset):
+        for profile in queryset:
+            review_profile_publish(profile, approve=True, reviewer=request.user)
+        self.message_user(request, f"نُشر {queryset.count()} ملف.")
+
+    @admin.action(description="⛔ Reject publish (uses publish_reject_reason)")
+    def reject_publish(self, request, queryset):
+        from rest_framework.exceptions import ValidationError
+        done = 0
+        for profile in queryset:
+            try:
+                review_profile_publish(profile, approve=False, reviewer=request.user,
+                                       reason=profile.publish_reject_reason or "لم يُستوفَ الحد الأدنى للنشر")
+                done += 1
+            except ValidationError:
+                continue
+        self.message_user(request, f"رُفض نشر {done} ملف.")
 
 
 @admin.register(IDVerification)

@@ -19,9 +19,11 @@ class WorkerProfile(models.Model):
         AVAILABLE_SOON = "available_soon", "Available soon"
         UNAVAILABLE = "unavailable", "Unavailable"
 
-    class PublishState(models.TextChoices):  # ppt slide-09: draft → published
+    class PublishState(models.TextChoices):  # ppt slide-09 + rule D-1: draft → pending_review → published
         DRAFT = "draft", "Draft"
+        PENDING_REVIEW = "pending_review", "Pending review"
         PUBLISHED = "published", "Published"
+        REJECTED = "rejected", "Rejected"
 
     class ContactChannel(models.TextChoices):  # ppt slide-02: وسيلة تواصل (private — never public)
         WHATSAPP = "whatsapp", "WhatsApp"
@@ -62,11 +64,19 @@ class WorkerProfile(models.Model):
     weekly_hours = models.PositiveSmallIntegerField(null=True, blank=True)
     client_notes = models.CharField(max_length=300, blank=True)
     visibility = models.CharField(max_length=8, choices=Visibility.choices, default=Visibility.ONLINE)
-    # ppt slide-09: published after the review step. Default PUBLISHED so existing/auto-created
-    # profiles stay visible; the directory filter is NOT gated on this yet (avoids hiding anyone).
+    # ppt slide-09 + rule D-1: a worker submits for review at ≥70% → PENDING_REVIEW; an admin
+    # approves → PUBLISHED (or rejects → REJECTED + reason). Default PUBLISHED so existing/
+    # auto-created profiles stay visible; the directory filter is NOT gated on this (avoids hiding
+    # anyone) — only the explicit publish endpoint now routes through review.
     publish_state = models.CharField(
-        max_length=10, choices=PublishState.choices, default=PublishState.PUBLISHED
+        max_length=20, choices=PublishState.choices, default=PublishState.PUBLISHED
     )
+    publish_reject_reason = models.CharField(max_length=300, blank=True, default="")
+    publish_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    publish_reviewed_at = models.DateTimeField(null=True, blank=True)
     visibility_changed_at = models.DateTimeField(auto_now_add=True)  # BR-16 reminder anchor
     offline_reminder_sent = models.BooleanField(default=False)  # BR-16: fire once per offline window
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0)  # denorm

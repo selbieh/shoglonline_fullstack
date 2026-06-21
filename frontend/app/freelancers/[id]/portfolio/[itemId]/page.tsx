@@ -157,7 +157,6 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
                 ratingCount={worker.rating_count}
                 profileHref={`/freelancers/${params.id}`}
                 profileLabel="عرض ملف صاحب العمل"
-                contactLabel="تواصل مع صاحب العمل"
               />
             )}
 

@@ -203,11 +203,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 # File storage (Part 03). Local filesystem by default (dev/test); production sets USE_S3=1 with
 # bucket creds to switch the default backend to an S3-compatible store (django-storages). Private
 # files are served via the scoped /uploads/<id> endpoint, never by guessing the MEDIA_URL path.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 if env.bool("USE_S3", default=False):
-    STORAGES = {
-        "default": {"BACKEND": "storages.backends.s3.S3Storage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    }
+    # Only the default (media) backend moves to S3; production.py owns the staticfiles backend
+    # (WhiteNoise manifest) and now mutates this dict in place instead of redefining it, so this
+    # S3 default survives. Previously production redefined STORAGES wholesale and silently
+    # reverted media back to the local filesystem even when USE_S3=1.
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
     AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
     AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")  # set for MinIO; blank for AWS S3
     AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="")

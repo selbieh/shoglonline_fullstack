@@ -136,7 +136,8 @@ export default function ContractDetailPage() {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">{c.title}</h1>
-        {c.status !== "pending_funding" && (
+        {/* rule D-2: chat only for a funded/active contract (hidden while pending-funding or cancelled). */}
+        {["active", "delivered", "disputed", "completed"].includes(c.status) && (
           <button className="btn-secondary gap-1.5" onClick={openChat}><ChatIcon className="text-[16px]" /> محادثة الطرف الآخر</button>
         )}
       </div>

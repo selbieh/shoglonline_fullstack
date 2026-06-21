@@ -3,7 +3,9 @@ import StarRating from "@/components/StarRating";
 import { BadgeCheckIcon, EnvelopeIcon, MapPinIcon } from "@/components/icons";
 
 /* Owner / freelancer identity card with rating + CTAs (ppt slides 20/21/22 «صاحب العمل / المستقل»).
-   Centered avatar, verified badge, location, star rating, and two actions (view profile + contact). */
+   Centered avatar, verified badge, location, star rating, and a view-profile action. The contact
+   button is OPTIONAL and only rendered when a `contactHref` is passed — per rule D-2 there is no
+   pre-contract messaging, so public service/portfolio pages omit it. */
 
 export default function OwnerCard({
   title,
@@ -15,8 +17,8 @@ export default function OwnerCard({
   ratingCount,
   profileHref,
   profileLabel,
-  contactHref = "/messages",
-  contactLabel = "تواصل مع صاحب العمل",
+  contactHref,
+  contactLabel = "تواصل",
 }: {
   title: string;
   name: string;
@@ -52,9 +54,11 @@ export default function OwnerCard({
       </div>
       <div className="mt-4 space-y-2">
         <a href={profileHref} className="btn-primary w-full">{profileLabel}</a>
-        <a href={contactHref} className="btn-secondary inline-flex w-full items-center justify-center gap-1.5">
-          <EnvelopeIcon className="text-[15px]" /> {contactLabel}
-        </a>
+        {contactHref && (
+          <a href={contactHref} className="btn-secondary inline-flex w-full items-center justify-center gap-1.5">
+            <EnvelopeIcon className="text-[15px]" /> {contactLabel}
+          </a>
+        )}
       </div>
     </div>
   );

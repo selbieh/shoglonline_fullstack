@@ -5,8 +5,10 @@ import Link from "next/link";
 import { api, tokens } from "@/lib/api";
 
 /* Profile action buttons. Renders the SELF view (تعديل/إعدادات — ppt slide-11) when the
-   signed-in user is viewing their own profile, otherwise the OTHERS view (توظيف/مراسلة —
-   slide-12). Client-side so the public profile page can stay server-rendered for SEO. */
+   signed-in user is viewing their own profile, otherwise the OTHERS view (توظيف — slide-12).
+   Per rule D-2 there is NO direct-message entry here: chat only opens once the two parties
+   share an active contract (reached via hiring). Client-side so the public profile page can
+   stay server-rendered for SEO. */
 
 export default function ProfileActions({ profileId }: { profileId: number }) {
   const [meId, setMeId] = useState<number | null>(null);
@@ -26,8 +28,7 @@ export default function ProfileActions({ profileId }: { profileId: number }) {
   }
   return (
     <div className="mt-4 flex flex-wrap gap-2">
-      <Link href="/jobs/new" className="btn-primary flex-1">توظيف المستقل</Link>
-      <Link href="/messages" className="btn-secondary flex-1">مراسلة</Link>
+      <Link href="/jobs/new" className="btn-primary w-full">توظيف المستقل</Link>
     </div>
   );
 }

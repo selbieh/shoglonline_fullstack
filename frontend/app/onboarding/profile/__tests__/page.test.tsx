@@ -92,7 +92,7 @@ describe("ProfileWizard", () => {
 
     // confirm + publish
     await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: "نشر الملف" }));
+    await user.click(screen.getByRole("button", { name: "إرسال للمراجعة" }));
 
     await waitFor(() =>
       expect(patched).toMatchObject({

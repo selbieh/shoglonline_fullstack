@@ -423,7 +423,8 @@ export default function ProfileWizard() {
   }
 
   const phoneOk = phoneVerified || me.phone_verified;
-  const primaryLabel = busy ? "جارٍ الحفظ…" : step === S_REVIEW ? "نشر الملف" : "التالي";
+  // rule D-1: publishing now submits the profile for admin review (not instant publish).
+  const primaryLabel = busy ? "جارٍ الحفظ…" : step === S_REVIEW ? "إرسال للمراجعة" : "التالي";
 
   return (
     <main dir="rtl" className="flex min-h-screen flex-col bg-bg">
@@ -863,7 +864,7 @@ export default function ProfileWizard() {
         {step === S_REVIEW && (
           <div className="mt-6 space-y-4">
             <div className="rounded-l border border-success/30 bg-success-t p-4 text-sm font-medium text-success">
-              ملفك جاهز بنسبة {pct.toLocaleString("ar-EG")}٪ — راجع التفاصيل قبل النشر
+              ملفك جاهز بنسبة {pct.toLocaleString("ar-EG")}٪ — راجعه ثم أرسله لمراجعة الإدارة قبل النشر
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <SummaryCard title="البيانات الشخصية" onEdit={() => setStep(S_PERSONAL)}>

@@ -75,6 +75,8 @@ export default function MyProposalsPage() {
   }
 
   // per-row action menu (ppt slide-16). Edit-offer is hidden until its PATCH endpoint exists.
+  // No "message owner" here — per rule D-2 chat only opens once a proposal becomes an active
+  // contract (the conversation then appears under «الرسائل» / the contract page).
   const rowActions = (p: Proposal): RowAction[] => [
     { label: "عرض المشروع", href: `/jobs/${p.job_slug}` },
     { label: "تعديل العرض", hidden: true },
@@ -85,7 +87,6 @@ export default function MyProposalsPage() {
       disabled: busyId === p.id,
       onSelect: () => cancel(p),
     },
-    { label: "مراسلة صاحب العمل", href: "/messages" },
     { label: "الإبلاغ عن مشكلة", href: "/support" },
   ];
 

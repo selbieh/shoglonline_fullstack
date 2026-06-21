@@ -28,24 +28,25 @@ class MyConversationsView(ListAPIView):
 
 
 class StartConversationView(APIView):
-    """POST /conversations {proposal_id | contract_id} — BR-11 initiation rules."""
+    """POST /conversations {contract_id} — rule D-2: chat opens only for an active contract
+    between the two parties (proposal-stage chat is no longer supported)."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.data.get("contract_id"):
-            from apps.contracts.models import Contract
-            contract = get_object_or_404(
-                Contract.objects.filter(Q(employer=request.user) | Q(worker=request.user)),
-                pk=request.data["contract_id"],
+        contract_id = request.data.get("contract_id")
+        if not contract_id:
+            return Response(
+                {"code": "contract_required",
+                 "message_ar": "تُفتح المحادثة فقط بعد وجود عقد نشِط بين الطرفين"},
+                status=400,
             )
-            conv = services.get_or_create_for_contract(contract)
-        elif request.data.get("proposal_id"):
-            from apps.jobs.models import Proposal
-            proposal = get_object_or_404(Proposal, pk=request.data["proposal_id"])
-            conv = services.start_from_proposal(request.user, proposal)
-        else:
-            return Response({"detail": "contract_id or proposal_id required"}, status=400)
+        from apps.contracts.models import Contract
+        contract = get_object_or_404(
+            Contract.objects.filter(Q(employer=request.user) | Q(worker=request.user)),
+            pk=contract_id,
+        )
+        conv = services.get_or_create_for_contract(contract)
         return Response(ConversationSerializer(conv, context={"request": request}).data, status=201)
 
 

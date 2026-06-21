@@ -20,6 +20,11 @@ ERR = {
     "cold": {"code": "cold_message_blocked", "message_ar": "لا يمكن للمستقل بدء المحادثة قبل وجود عرض أو عقد"},
     "empty": {"code": "empty_message", "message_ar": "الرسالة فارغة"},
     "report_reason": {"code": "reason_required", "message_ar": "سبب الإبلاغ إلزامي"},
+    # rule D-2: chat opens only once a funded/active contract exists between the two parties.
+    "no_active_contract": {
+        "code": "no_active_contract",
+        "message_ar": "تُفتح المحادثة فقط بعد وجود عقد نشِط بين الطرفين",
+    },
 }
 
 
@@ -49,18 +54,34 @@ def _get_or_create(user1, user2, *, context_type, contract=None, job=None) -> Co
     return conv
 
 
+def _contract_chat_allowed(contract) -> bool:
+    """A contract is 'live' enough to OPEN a chat once it's funded — Active/Delivered/Disputed.
+    Pending-Funding (unfunded) and Cancelled never open one (rule D-2)."""
+    from apps.contracts.models import Contract  # noqa: PLC0415 (avoid import cycle)
+    return contract.status in (
+        Contract.Status.ACTIVE, Contract.Status.DELIVERED, Contract.Status.DISPUTED,
+    )
+
+
 def get_or_create_for_contract(contract) -> Conversation:
-    """Both parties of a contract chat freely (BR-11)."""
+    """Both parties of a contract chat freely, but only once it's a funded/active contract
+    (rule D-2). An existing conversation is always returned so it survives into Completed/
+    warranty, where the read-only lifecycle takes over."""
+    existing = Conversation.objects.filter(
+        context_type=Conversation.Context.CONTRACT, contract=contract,
+    ).first()
+    if existing:
+        return existing
+    if not _contract_chat_allowed(contract):
+        raise ValidationError(ERR["no_active_contract"])
     return _get_or_create(contract.employer, contract.worker,
                           context_type=Conversation.Context.CONTRACT, contract=contract)
 
 
 def start_from_proposal(employer, proposal) -> Conversation:
-    """BR-11: only the employer (job owner) may open a chat with a worker who proposed."""
-    if proposal.job.employer_id != employer.id:
-        raise PermissionDenied(ERR["cold"])
-    return _get_or_create(employer, proposal.worker,
-                          context_type=Conversation.Context.PROPOSAL, job=proposal.job)
+    """Disabled by rule D-2: chat no longer opens at the proposal stage. A conversation is
+    opened automatically when the contract is funded (becomes Active)."""
+    raise PermissionDenied(ERR["no_active_contract"])
 
 
 @transaction.atomic

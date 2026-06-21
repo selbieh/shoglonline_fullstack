@@ -31,6 +31,8 @@ type Profile = {
   private_contact_channel: string;
   private_contact_value: string;
   is_verified: boolean;
+  publish_state: "draft" | "pending_review" | "published" | "rejected";
+  publish_reject_reason?: string;
   completeness_pct: number;
   skills: Skill[];
   educations: WorkerEducation[];
@@ -56,6 +58,13 @@ const CONTACT_CHANNELS = [
 ];
 const IDV_LABEL: Record<string, string> = {
   none: "لم تُرفع بعد", pending: "قيد المراجعة ⏳", approved: "موثّقة ✅", rejected: "مرفوضة ❌",
+};
+// rule D-1: publishing goes through admin review before the profile is public.
+const PUBLISH_STATE: Record<string, { label: string; cls: string }> = {
+  draft: { label: "مسودة", cls: "bg-line/60 text-sub" },
+  pending_review: { label: "بانتظار مراجعة الإدارة ⏳", cls: "bg-warn-t text-warn" },
+  published: { label: "منشور ✅", cls: "bg-success-t text-success" },
+  rejected: { label: "مرفوض ❌", cls: "bg-warn-t text-warn" },
 };
 
 const EMPTY_EMPLOYMENT: WorkerEmployment = { company: "", job_title: "", city: "", country: "", period_from: "", period_to: "", description: "" };
@@ -217,6 +226,15 @@ export default function ProfileEditPage() {
         </h1>
         <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
       </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <span className={`rounded-full px-2 py-0.5 text-xs ${(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).cls}`}>
+          {(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).label}
+        </span>
+      </div>
+      {profile.publish_state === "rejected" && profile.publish_reject_reason && (
+        <p className="mt-1 text-xs text-warn">سبب الرفض: {profile.publish_reject_reason}</p>
+      )}
 
       <div className="mt-2 h-2 w-full rounded-full bg-tint">
         <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${profile.completeness_pct}%` }} aria-label="نسبة اكتمال الملف" />

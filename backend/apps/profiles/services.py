@@ -17,6 +17,44 @@ ERR = {
 
 
 @transaction.atomic
+def review_profile_publish(profile: WorkerProfile, *, approve: bool, reviewer=None, reason: str = "") -> WorkerProfile:
+    """Admin review of a publish request (rule D-1).
+
+    approve → publish_state PUBLISHED (the profile goes live); reject → REJECTED + a required
+    reason. Writes an AuditLog entry and notifies the worker either way."""
+    from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+
+    if approve:
+        profile.publish_state = WorkerProfile.PublishState.PUBLISHED
+        profile.publish_reject_reason = ""
+    else:
+        if not (reason or "").strip():
+            raise ValidationError(ERR["reason_required"])
+        profile.publish_state = WorkerProfile.PublishState.REJECTED
+        profile.publish_reject_reason = reason
+
+    profile.publish_reviewed_by = reviewer
+    profile.publish_reviewed_at = timezone.now()
+    profile.save(update_fields=[
+        "publish_state", "publish_reject_reason", "publish_reviewed_by", "publish_reviewed_at",
+    ])
+
+    AuditLog.objects.create(
+        actor=reviewer, action="admin.profile_publish_reviewed", model="WorkerProfile",
+        object_id=str(profile.pk),
+        after={"publish_state": profile.publish_state, "reason": profile.publish_reject_reason},
+    )
+    # Publish decisions must always reach the worker (not suppressible by the marketing opt-out).
+    if approve:
+        notify(profile.user, kind="admin_broadcast", title="تم نشر ملفك",
+               body="اعتمد المشرف ملفك وأصبح ظاهرًا للعملاء.", deep_link="/me/profile", force=True)
+    else:
+        notify(profile.user, kind="admin_broadcast", title="لم يُعتمد نشر ملفك",
+               body=profile.publish_reject_reason[:200], deep_link="/me/profile", force=True)
+    return profile
+
+
+@transaction.atomic
 def submit_id_verification(user, attachment_ids, doc_type="", consent=False) -> IDVerification:
     """Create/replace the user's verification request (resets a rejected one to pending).
     `attachment_ids` may carry several files (front / back / selfie — ppt slide-08)."""

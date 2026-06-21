@@ -8,7 +8,6 @@ import type { Category, GalleryItem, Paginated, PortfolioMediaType } from "@/lib
 import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import { CategoryIcon } from "@/components/CategoryIcon";
-import { ListingStat, ListingStats } from "@/components/ListingCard";
 import {
   AlertIcon,
   ArrowLeftIcon,
@@ -235,13 +234,14 @@ function GalleryInner() {
                       <div className="h-3 w-1/3 rounded bg-line" />
                     </div>
                     <div className="mt-3 h-4 w-3/4 rounded bg-line" />
-                    <div className="mt-3 grid grid-cols-3 gap-4 rounded-m bg-bg px-4 py-3">
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <div key={j} className="space-y-1.5">
-                          <div className="h-3 w-12 rounded bg-line" />
-                          <div className="h-4 w-10 rounded bg-line" />
-                        </div>
-                      ))}
+                    <div className="mt-2 h-3 w-1/2 rounded bg-line" />
+                    <div className="mt-3 flex gap-1.5">
+                      <div className="h-5 w-16 rounded-full bg-line" />
+                      <div className="h-5 w-20 rounded-full bg-line" />
+                    </div>
+                    <div className="mt-3 flex gap-4 border-t border-line pt-3">
+                      <div className="h-3 w-10 rounded bg-line" />
+                      <div className="h-3 w-14 rounded bg-line" />
                     </div>
                     <div className="mt-3 h-9 w-full rounded-m bg-line" />
                   </div>
@@ -436,11 +436,20 @@ function GalleryThumb({ it }: { it: GalleryItem }) {
 function GalleryCard({ it }: { it: GalleryItem }) {
   const href = `/freelancers/${it.worker_id}/portfolio/${it.id}`;
   const rated = Number(it.worker_rating_count) > 0;
+  const views = Number(it.views_count ?? 0);
   return (
     <Link href={href} className="card-modern group flex flex-col overflow-hidden">
       <div className="relative aspect-video overflow-hidden bg-tint">
         <GalleryThumb it={it} />
         <MediaBadge t={it.media_type} />
+        {/* category lives on the cover where it has the full width to show in full,
+            instead of being crammed (and truncated) into the body text */}
+        {it.category?.name && (
+          <span className="absolute start-2 top-2 inline-flex max-w-[75%] items-center gap-1 rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-primary-dark shadow-sm backdrop-blur">
+            <GridIcon className="shrink-0 text-[12px]" />
+            <span className="truncate">{it.category.name}</span>
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col p-3.5">
         {/* owner identity */}
@@ -450,8 +459,8 @@ function GalleryCard({ it }: { it: GalleryItem }) {
           {it.worker_verified && <BadgeCheckIcon className="shrink-0 text-[14px] text-success" />}
         </div>
 
-        {/* title */}
-        <h3 className="mt-2 line-clamp-1 font-bold text-ink transition group-hover:text-primary-dark">{it.title}</h3>
+        {/* title — up to two lines so longer titles read in full (height reserved so cards align) */}
+        <h3 className="mt-2 line-clamp-2 min-h-[2.6rem] font-bold leading-snug text-ink transition group-hover:text-primary-dark">{it.title}</h3>
         {it.project_type && <p className="mt-0.5 line-clamp-1 text-xs text-sub">{it.project_type}</p>}
 
         {/* skills */}
@@ -463,14 +472,22 @@ function GalleryCard({ it }: { it: GalleryItem }) {
           </div>
         )}
 
-        {/* stats strip + CTA, pinned to the bottom so cards align in the grid */}
+        {/* compact meta + CTA, pinned to the bottom so cards align in the grid.
+            Short, label-free values (rating · views) — nothing here can truncate. */}
         <div className="mt-auto pt-3">
-          <ListingStats>
-            <ListingStat icon={<StarIcon filled />} label="التقييم"
-              value={rated ? <span dir="ltr">{Number(it.worker_rating).toFixed(1)}</span> : "جديد"} />
-            <ListingStat icon={<BarChartIcon />} label="المشاهدات" value={Number(it.views_count ?? 0).toLocaleString("ar-EG")} />
-            <ListingStat icon={<GridIcon />} label="الفئة" value={it.category?.name || "—"} />
-          </ListingStats>
+          <div className="flex items-center gap-4 border-t border-line pt-3 text-xs text-sub">
+            <span className="inline-flex items-center gap-1" title="التقييم">
+              <StarIcon filled className="text-[14px] text-amber-500" />
+              {rated
+                ? <span dir="ltr" className="font-bold text-ink">{Number(it.worker_rating).toFixed(1)}</span>
+                : <span className="font-medium">جديد</span>}
+            </span>
+            <span className="inline-flex items-center gap-1" title="المشاهدات">
+              <BarChartIcon className="text-[14px] text-primary" />
+              <span className="font-bold text-ink">{views.toLocaleString("ar-EG")}</span>
+              مشاهدة
+            </span>
+          </div>
           <span className="btn-primary group/btn mt-3 w-full justify-center gap-1.5 py-2 text-sm">
             عرض العمل
             <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />

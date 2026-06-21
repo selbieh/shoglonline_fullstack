@@ -45,9 +45,11 @@ class MyWorkerProfileView(RetrieveUpdateAPIView):
 
 
 class PublishProfileView(APIView):
-    """POST /api/v1/me/profile/publish — publish the profile after the review step (ppt
-    slide-09). Gated on ≥70% completeness (the deck's rule); returns 400 with the percentage
-    when the profile isn't complete enough yet."""
+    """POST /api/v1/me/profile/publish — submit the profile for admin review (rule D-1).
+
+    Gated on ≥70% completeness; returns 400 with the percentage when not complete enough.
+    A passing request moves the profile to PENDING_REVIEW — it goes live only after an admin
+    approves it (the admin sees the completeness %). The worker is NOT published immediately."""
 
     def post(self, request):
         profile, _ = WorkerProfile.objects.get_or_create(user=request.user)
@@ -60,8 +62,9 @@ class PublishProfileView(APIView):
                 },
                 status=400,
             )
-        profile.publish_state = WorkerProfile.PublishState.PUBLISHED
-        profile.save(update_fields=["publish_state"])
+        profile.publish_state = WorkerProfile.PublishState.PENDING_REVIEW
+        profile.publish_reject_reason = ""
+        profile.save(update_fields=["publish_state", "publish_reject_reason"])
         return Response(WorkerProfileSerializer(profile, context={"request": request}).data)
 
 
