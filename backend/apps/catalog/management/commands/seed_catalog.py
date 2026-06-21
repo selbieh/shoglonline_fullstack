@@ -8,9 +8,9 @@ from django.utils.text import slugify
 
 from apps.catalog.models import Category
 
-# (ar, en, icon, [ (sub_ar, sub_en), ... ])
+# (ar, en, icon, [ (sub_ar, sub_en), ... ]) — icon = a Category.ICON_CHOICES key.
 CATALOG = [
-    ("برمجة وتقنية", "Programming & Tech", "💻", [
+    ("برمجة وتقنية", "Programming & Tech", "code", [
         ("تطوير الويب", "Web Development"),
         ("تطبيقات الموبايل", "Mobile Apps"),
         ("الخلفية وواجهات API", "Backend & APIs"),
@@ -19,7 +19,7 @@ CATALOG = [
         ("البيانات والذكاء الاصطناعي", "Data & AI"),
         ("ووردبريس", "WordPress"),
     ]),
-    ("تصميم وإبداع", "Design & Creative", "🎨", [
+    ("تصميم وإبداع", "Design & Creative", "palette", [
         ("تصميم واجهات وتجربة المستخدم", "UI/UX Design"),
         ("تصميم جرافيك", "Graphic Design"),
         ("الشعارات والهوية", "Logo & Branding"),
@@ -27,39 +27,39 @@ CATALOG = [
         ("مونتاج الفيديو", "Video Editing"),
         ("موشن جرافيك", "Motion Graphics"),
     ]),
-    ("كتابة وترجمة", "Writing & Translation", "✍️", [
+    ("كتابة وترجمة", "Writing & Translation", "pen", [
         ("كتابة المحتوى", "Content Writing"),
         ("كتابة إعلانية", "Copywriting"),
         ("الترجمة", "Translation"),
         ("التدقيق اللغوي", "Proofreading"),
         ("الكتابة التقنية", "Technical Writing"),
     ]),
-    ("تسويق رقمي", "Digital Marketing", "📣", [
+    ("تسويق رقمي", "Digital Marketing", "megaphone", [
         ("تحسين محركات البحث", "SEO"),
         ("إدارة وسائل التواصل", "Social Media"),
         ("الإعلانات المدفوعة", "Paid Ads / PPC"),
         ("التسويق بالبريد", "Email Marketing"),
         ("التسويق عبر المؤثرين", "Influencer Marketing"),
     ]),
-    ("مبيعات ودعم", "Sales & Support", "☎️", [
+    ("مبيعات ودعم", "Sales & Support", "headset", [
         ("دعم العملاء", "Customer Support"),
         ("مساعد افتراضي", "Virtual Assistant"),
         ("توليد العملاء المحتملين", "Lead Generation"),
         ("إدخال البيانات", "Data Entry"),
     ]),
-    ("أعمال ومالية", "Business & Finance", "📊", [
+    ("أعمال ومالية", "Business & Finance", "bar-chart", [
         ("المحاسبة", "Accounting"),
         ("مسك الدفاتر", "Bookkeeping"),
         ("التحليل المالي", "Financial Analysis"),
         ("خطط العمل", "Business Plans"),
         ("إدارة المشاريع", "Project Management"),
     ]),
-    ("صوتيات", "Audio & Voice", "🎙️", [
+    ("صوتيات", "Audio & Voice", "mic", [
         ("التعليق الصوتي", "Voice Over"),
         ("مونتاج البودكاست", "Podcast Editing"),
         ("إنتاج الموسيقى", "Music Production"),
     ]),
-    ("استشارات", "Consulting", "🧭", [
+    ("استشارات", "Consulting", "compass", [
         ("استشارات قانونية", "Legal Consulting"),
         ("الموارد البشرية", "HR Consulting"),
         ("التطوير المهني", "Career Coaching"),

@@ -6,6 +6,7 @@ import { API_URL } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import { AlertIcon, ArrowLeftIcon, BriefcaseIcon, ClockIcon, HeartIcon, SearchIcon, SparklesIcon } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryFilter from "@/components/CategoryFilter";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 
 type Service = {
@@ -22,10 +23,16 @@ type Service = {
   created_at?: string;
 };
 type Category = { id: number; slug: string; name_ar: string; icon: string; children: Category[] };
+type ServicePage = { count?: number; next?: string | null; results?: Service[] };
+
+const PAGE = 12; // load-more page size (server caps limit at 100)
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[] | null>(null);
+  const [items, setItems] = useState<Service[]>([]);
+  const [count, setCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [category, setCategory] = useState("");
@@ -37,25 +44,38 @@ export default function ServicesPage() {
   const activeCat = categories.find((c) => String(c.id) === category);
   const activeSub = subcats.find((c) => String(c.id) === subcategory);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const params = new URLSearchParams({ ordering });
-      if (category) params.set("category", category);
-      if (subcategory) params.set("subcategory", subcategory);
-      if (q) params.set("search", q);
-      const res = await fetch(`${API_URL}/services?${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { results?: Service[] };
-      setServices(Array.isArray(data?.results) ? data.results : []);
-    } catch {
-      setError(true);
-      setServices([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [category, subcategory, q, ordering]);
+  // Paginated fetch — offset 0 replaces the list; a positive offset appends the next page.
+  const load = useCallback(
+    async (offset: number) => {
+      const append = offset > 0;
+      append ? setLoadingMore(true) : setLoading(true);
+      setError(false);
+      try {
+        const params = new URLSearchParams({ ordering, limit: String(PAGE), offset: String(offset) });
+        if (category) params.set("category", category);
+        if (subcategory) params.set("subcategory", subcategory);
+        if (q) params.set("search", q);
+        const res = await fetch(`${API_URL}/services?${params}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as ServicePage;
+        const results = Array.isArray(data?.results) ? data.results : [];
+        setItems((prev) => (append ? [...prev, ...results] : results));
+        setCount(data?.count ?? 0);
+        setHasMore(Boolean(data?.next));
+      } catch {
+        setError(true);
+        if (!append) {
+          setItems([]);
+          setCount(0);
+          setHasMore(false);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [category, subcategory, q, ordering],
+  );
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
@@ -63,7 +83,7 @@ export default function ServicesPage() {
       .catch(() => undefined);
   }, []);
   useEffect(() => {
-    load();
+    load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, subcategory, ordering]);
   // Live search: debounced auto-apply (consistent with the category/sort filters).
@@ -73,7 +93,7 @@ export default function ServicesPage() {
       qMounted.current = true;
       return;
     }
-    const t = setTimeout(load, 350);
+    const t = setTimeout(() => load(0), 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
@@ -88,8 +108,6 @@ export default function ServicesPage() {
     setQ("");
   }
 
-  const count = services?.length ?? 0;
-
   return (
     <main className="min-h-screen bg-bg">
       {/* gradient header band */}
@@ -103,7 +121,7 @@ export default function ServicesPage() {
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">الخدمات الخاصة</h1>
             <p className="animate-fade-up delay-200 mt-2 text-tint">
-              {loading ? "جارٍ التحميل…" : "خدمات جاهزة بسعر ثابت — اطلبها واشترِها مباشرة."}
+              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("ar-EG")} خدمة جاهزة بسعر ثابت — اطلبها واشترِها مباشرة.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -190,16 +208,14 @@ export default function ServicesPage() {
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-warn-t text-[26px] text-warn"><AlertIcon /></div>
               <p className="mt-3 font-bold">تعذّر تحميل الخدمات</p>
               <p className="text-sm text-sub">تحقّق من اتصالك ثم حاول مجددًا</p>
-              <button onClick={load} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+              <button onClick={() => load(0)} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
             </div>
           )}
 
           {/* results */}
-          {!loading && !error && count > 0 && (
-            <>
-              <p className="text-sm text-sub">{count.toLocaleString("ar-EG")} خدمة</p>
-              <div className="space-y-4">
-                {services!.map((s) => {
+          {!loading && !error && items.length > 0 && (
+            <div className="space-y-4">
+              {items.map((s) => {
                   const posted = timeAgo(s.created_at);
                   return (
                   <Link
@@ -250,7 +266,7 @@ export default function ServicesPage() {
 
                     {/* footer: starting price + order CTA */}
                     <ListingFooter priceLabel="يبدأ من" priceValue={`$${s.base_price}`}>
-                      <span className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
+                      <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
                         اطلب الخدمة
                         <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
                       </span>
@@ -258,12 +274,22 @@ export default function ServicesPage() {
                   </Link>
                   );
                 })}
-              </div>
-            </>
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => load(items.length)}
+                    disabled={loadingMore}
+                    className="btn-secondary text-sm disabled:opacity-60"
+                  >
+                    {loadingMore ? "جارٍ التحميل…" : "عرض المزيد من الخدمات"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* empty state */}
-          {!loading && !error && count === 0 && (
+          {!loading && !error && items.length === 0 && (
             <div className="card py-14 text-center text-sub">
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-tint text-[26px] text-primary"><SearchIcon /></div>
               <p className="mt-3 font-bold">لا خدمات تطابق بحثك</p>
@@ -291,46 +317,33 @@ export default function ServicesPage() {
                 placeholder="ابحث عن خدمة…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load()}
+                onKeyDown={(e) => e.key === "Enter" && load(0)}
               />
               <button
                 type="button"
-                onClick={load}
+                onClick={() => load(0)}
                 aria-label="بحث"
                 className="absolute inset-y-0 end-2 my-auto grid h-7 w-7 place-content-center text-[18px] text-sub transition hover:text-primary"
               >
                 <SearchIcon />
               </button>
             </div>
-            <div className="space-y-1 text-sm">
-              <p className="mb-1 text-xs font-medium text-sub">الفئة</p>
-              <label className={`filter-row ${category === "" ? "filter-row-active" : ""}`}>
-                <input type="radio" name="scat" className="accent-primary" checked={category === ""} onChange={() => pickCategory("")} />
-                كل الفئات
-              </label>
-              {categories.map((c) => (
-                <label key={c.id} className={`filter-row ${category === String(c.id) ? "filter-row-active" : ""}`}>
-                  <input type="radio" name="scat" className="accent-primary" checked={category === String(c.id)}
-                    onChange={() => pickCategory(String(c.id))} />
-                  <CategoryIcon slug={c.slug} className="text-[18px] text-primary" /> {c.name_ar}
-                </label>
-              ))}
-            </div>
-            {subcats.length > 0 && (
-              <div>
-                <p className="mb-1 text-xs font-medium text-sub">التخصص الفرعي</p>
-                <select
-                  className="field"
-                  value={subcategory}
-                  onChange={(e) => setSubcategory(e.target.value)}
-                >
-                  <option value="">كل التخصصات</option>
-                  {subcats.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name_ar}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <CategoryFilter
+              categories={categories}
+              selectedId={subcategory || category}
+              onSelect={(sel) => {
+                if (!sel) {
+                  setCategory("");
+                  setSubcategory("");
+                } else if (sel.parentId) {
+                  setCategory(sel.parentId);
+                  setSubcategory(sel.id);
+                } else {
+                  setCategory(sel.id);
+                  setSubcategory("");
+                }
+              }}
+            />
           </div>
         </aside>
       </div>

@@ -41,8 +41,10 @@ class ContractEventInline(TabularInline):
 class ContractAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "title", "employer", "worker", "budget", "status",
                     "deadline", "is_overdue", "warranty_ends_at")
-    list_filter = ("status",)
-    search_fields = ("title", "employer__email", "worker__email")
+    list_filter = ("status", "funds_released", "created_at")
+    search_fields = ("title", "employer__email", "worker__email", "dispute_ticket_ref")
+    list_select_related = ("employer", "worker", "job", "service")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in Contract._meta.fields]
     export_fields = ("id", "title", "employer", "worker", "budget", "commission_amount",
                      "worker_earning", "status", "deadline", "completed_at", "created_at")
@@ -105,8 +107,10 @@ class ContractAdmin(ExportCsvMixin, ModelAdmin):
 @admin.register(Submission)
 class SubmissionAdmin(ModelAdmin):
     list_display = ("id", "contract", "status", "created_at", "decided_at")
-    list_filter = ("status",)
+    list_filter = ("status", "created_at")
     search_fields = ("contract__title",)
+    list_select_related = ("contract",)
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in Submission._meta.fields]
 
     def has_add_permission(self, request):
@@ -116,7 +120,10 @@ class SubmissionAdmin(ModelAdmin):
 @admin.register(UpdateRequest)
 class UpdateRequestAdmin(ModelAdmin):
     list_display = ("id", "contract", "status", "new_budget", "new_deadline", "requested_by", "created_at")
-    list_filter = ("status",)
+    list_filter = ("status", "created_at")
+    search_fields = ("contract__title", "requested_by__email")
+    list_select_related = ("contract", "requested_by")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in UpdateRequest._meta.fields]
 
     def has_add_permission(self, request):

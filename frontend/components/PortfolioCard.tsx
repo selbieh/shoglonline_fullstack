@@ -24,7 +24,7 @@ export default function PortfolioCard({ item, href }: { item: PortfolioCardData;
       </div>
       <div className="p-3.5">
         <p className="truncate text-sm font-bold text-ink">{item.title}</p>
-        <a href={href} className="mt-2 inline-flex w-full items-center justify-center rounded-m bg-tint px-3 py-1.5 text-xs font-bold text-primary-dark transition hover:bg-primary hover:text-white">
+        <a href={href} className="mt-2 inline-flex w-full items-center justify-center rounded-m border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-primary-dark">
           عرض المشروع
         </a>
       </div>

@@ -33,6 +33,10 @@ body {
   .btn-secondary {
     @apply btn bg-tint text-primary-dark;
   }
+  /* card-grid "view" CTA — faint periwinkle main, flips to white/outlined on hover */
+  .btn-soft {
+    @apply btn border border-primary bg-primary text-white transition hover:bg-white hover:text-primary-dark;
+  }
   .btn-google {
     @apply btn border border-line-strong bg-white text-ink;
   }

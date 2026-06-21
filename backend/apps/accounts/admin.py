@@ -18,9 +18,11 @@ class UserAdmin(ExportCsvMixin, DjangoUserAdmin, ModelAdmin):
     """Manage Users (FR-ADM-4): search, freeze, activate — deletion guarded by BR-2."""
 
     ordering = ["-date_joined"]
-    list_display = ("email", "first_name", "last_name", "active_mode", "status", "is_staff", "date_joined")
-    list_filter = ("status", "active_mode", "is_staff")
-    search_fields = ("email", "first_name", "last_name")
+    date_hierarchy = "date_joined"
+    list_display = ("email", "first_name", "last_name", "active_mode", "status", "phone_verified", "is_staff", "date_joined")
+    list_filter = ("status", "active_mode", "phone_verified", "is_staff", "is_superuser", "is_active")
+    search_fields = ("email", "first_name", "last_name", "phone")
+    readonly_fields = ("last_login", "date_joined")
     export_fields = ("id", "email", "first_name", "last_name", "status", "active_mode", "is_staff", "date_joined")
     actions = ["freeze_users", "activate_users", "export_as_csv"]
     fieldsets = (

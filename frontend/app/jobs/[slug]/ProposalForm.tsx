@@ -7,7 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import type { Job } from "@/lib/types";
 import ContactHint from "@/components/ContactHint";
-import { TicketIcon } from "@/components/icons";
+import { TicketIcon, ClockIcon, SendIcon, CheckIcon } from "@/components/icons";
 
 /** Interactive proposal form (client island) — the surrounding job content is SSR. */
 export default function ProposalForm({ job }: { job: Job }) {
@@ -68,20 +68,25 @@ export default function ProposalForm({ job }: { job: Job }) {
 
   if (!authed) {
     return (
-      <div className="rounded-m bg-tint p-4 text-center text-sm">
+      <div className="rounded-m border border-line bg-tint/60 p-5 text-center text-sm">
+        <span className="mx-auto mb-3 grid h-11 w-11 place-content-center rounded-full bg-white text-primary shadow-sm">
+          <SendIcon className="text-[18px]" />
+        </span>
         <p className="font-bold text-primary-deep">سجّل الدخول لتقديم عرض</p>
         <p className="mt-1 text-sub">تصفّح الوظيفة بحرية — التقديم يتطلّب دخولًا عبر جوجل.</p>
-        <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary mt-3 inline-block">دخول عبر جوجل</button>
+        <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary mt-4 w-full">دخول عبر جوجل</button>
       </div>
     );
   }
 
   if (submitted) {
     return (
-      <div className="rounded-m bg-success-t p-5 text-center text-sm">
-        <p className="text-2xl" aria-hidden>✅</p>
-        <p className="mt-2 font-bold text-success">تم إرسال عرضك بنجاح</p>
-        <p className="mt-1 text-primary-dark">
+      <div className="rounded-m border border-success/20 bg-success-t p-6 text-center text-sm">
+        <span className="mx-auto mb-3 grid h-12 w-12 place-content-center rounded-full bg-success text-white">
+          <CheckIcon className="text-[22px]" />
+        </span>
+        <p className="text-base font-bold text-success">تم إرسال عرضك بنجاح</p>
+        <p className="mt-1.5 leading-6 text-primary-dark">
           {bidsOn
             ? "خُصم عرض واحد من رصيدك. يمكنك متابعة حالة العرض وإلغاؤه ما لم يُشاهد من صفحة عروضي."
             : "يمكنك متابعة حالة العرض وإلغاؤه ما لم يُشاهد من صفحة عروضي."}
@@ -97,37 +102,46 @@ export default function ProposalForm({ job }: { job: Job }) {
   return (
     <div className="space-y-4">
       {bidsOn && bids !== null && (
-        <div className="flex items-center justify-between rounded-m bg-tint px-3 py-2 text-sm text-primary-dark">
-          <span className="inline-flex items-center gap-1.5"><TicketIcon className="text-[15px]" /> سيُخصم عرض واحد · رصيدك: <b>{bids}</b></span>
+        <div className="flex items-center justify-between gap-2 rounded-m border border-primary/15 bg-tint px-4 py-2.5 text-sm text-primary-dark">
+          <span className="inline-flex items-center gap-1.5"><TicketIcon className="text-[15px]" /> سيُخصم عرض واحد عند الإرسال</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-primary-deep">رصيدك: {bids}</span>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm font-bold">
-          قيمة العرض (د.ك) *
-          <input className="mt-1 w-full field"
-            value={budget} onChange={(e) => setBudget(e.target.value)} />
+        <label>
+          <span className="field-label">قيمة العرض <span className="text-danger">*</span></span>
+          <span className="relative block">
+            <input className="field pl-12" inputMode="decimal" placeholder="0"
+              value={budget} onChange={(e) => setBudget(e.target.value)} />
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-sub">$</span>
+          </span>
+          <span className="mt-1 block text-xs text-sub">الميزانية: ${job.budget_min}–${job.budget_max}</span>
         </label>
-        <label className="text-sm font-bold">
-          مدة التسليم (أيام) *
-          <input className="mt-1 w-full field"
-            value={days} onChange={(e) => setDays(e.target.value)} />
+        <label>
+          <span className="field-label">مدة التسليم <span className="text-danger">*</span></span>
+          <span className="relative block">
+            <input className="field pl-12" inputMode="numeric"
+              value={days} onChange={(e) => setDays(e.target.value)} />
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-sub">يوم</span>
+          </span>
+          <span className="mt-1 block text-xs text-sub">المدة المقدّرة للإنجاز</span>
         </label>
       </div>
-      <label className="block text-sm font-bold">
-        تفاصيل العرض *
-        <textarea className="mt-1 min-h-24 w-full field"
+      <label className="block">
+        <span className="field-label">تفاصيل العرض <span className="text-danger">*</span></span>
+        <textarea className="field field-area"
           placeholder="اشرح كيف ستنفّذ المشروع وما يميز عرضك…"
           value={description} onChange={(e) => setDescription(e.target.value)} />
         <ContactHint text={description} />
       </label>
 
       {(job.screening_questions?.length ?? 0) > 0 && (
-        <div className="space-y-3 rounded-m bg-bg p-3">
-          <p className="text-sm font-bold">أسئلة صاحب العمل</p>
+        <div className="space-y-3 rounded-m border border-line bg-bg p-4">
+          <p className="text-sm font-bold text-ink">أسئلة صاحب العمل</p>
           {job.screening_questions!.map((sq) => (
             <label key={sq.id} className="block text-sm">
-              {sq.question} {sq.is_required && <span className="text-danger">*</span>}
-              <input className="mt-1 w-full field"
+              <span className="mb-1 block font-medium text-ink">{sq.question} {sq.is_required && <span className="text-danger">*</span>}</span>
+              <input className="field"
                 value={answers[sq.id] ?? ""}
                 onChange={(e) => setAnswers({ ...answers, [sq.id]: e.target.value })} />
             </label>
@@ -135,8 +149,13 @@ export default function ProposalForm({ job }: { job: Job }) {
         </div>
       )}
 
-      <button className="btn-primary w-full py-3" disabled={busy} onClick={submit}>
-        {busy ? "جارٍ الإرسال…" : bidsOn ? "إرسال العرض (يُخصم ١ من رصيدك)" : "إرسال العرض"}
+      <button className="btn-gradient btn-lg w-full" disabled={busy} onClick={submit}>
+        {busy ? "جارٍ الإرسال…" : (
+          <span className="inline-flex items-center gap-2">
+            <SendIcon className="text-[16px]" />
+            {bidsOn ? "إرسال العرض (يُخصم ١ من رصيدك)" : "إرسال العرض"}
+          </span>
+        )}
       </button>
       {msg && (
         <p className={`rounded-m p-3 text-sm ${msg.ok ? "bg-success-t text-success" : "bg-warn-t text-warn"}`}>
@@ -146,9 +165,12 @@ export default function ProposalForm({ job }: { job: Job }) {
           )}
         </p>
       )}
-      <p className="text-xs text-sub">
-        يمكنك تعديل عرضك حتى يُقبل، وإلغاؤه ما لم يُشاهد
-        {bidsOn && " · إن أُغلقت الوظيفة قبل البتّ يُسترد رصيدك تلقائيًا"}
+      <p className="flex items-start gap-1.5 text-xs leading-5 text-sub">
+        <ClockIcon className="mt-0.5 shrink-0 text-[13px]" />
+        <span>
+          يمكنك تعديل عرضك حتى يُقبل، وإلغاؤه ما لم يُشاهد
+          {bidsOn && " · إن أُغلقت الوظيفة قبل البتّ يُسترد رصيدك تلقائيًا"}
+        </span>
       </p>
     </div>
   );

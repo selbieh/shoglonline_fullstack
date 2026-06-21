@@ -87,12 +87,26 @@ export default function SiteHeader() {
           <Logo priority tone={transparent ? "light" : "brand"} className="h-9 w-auto transition group-hover:scale-105" />
         </Link>
 
-        <div className={`hidden items-center gap-6 text-sm font-medium transition-colors md:flex ${transparent ? "text-white/90" : "text-sub"}`}>
-          {links.map((l) => (
-            <Link key={l.label} href={l.href} className="transition hover:opacity-70">
-              {l.label}
-            </Link>
-          ))}
+        <div className={`hidden items-center gap-7 text-sm font-medium md:flex ${transparent ? "text-white/90" : "text-sub"}`}>
+          {links.map((l) => {
+            const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+            const activeText = transparent ? "text-white" : "text-primary-dark";
+            const activeBar = transparent ? "after:bg-white" : "after:bg-primary";
+            return (
+              <Link
+                key={l.label}
+                href={l.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative py-1 transition after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:origin-center after:rounded-full after:transition-transform ${
+                  active
+                    ? `font-semibold ${activeText} after:scale-x-100 ${activeBar}`
+                    : "after:scale-x-0 after:bg-current hover:opacity-70 hover:after:scale-x-100"
+                }`}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </div>
 
         {authed ? (

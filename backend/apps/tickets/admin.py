@@ -13,6 +13,7 @@ from .models import Ticket, TicketReply, TicketType
 class TicketTypeAdmin(ModelAdmin):
     list_display = ("name_ar", "slug", "is_dispute", "is_active")
     list_filter = ("is_dispute", "is_active")
+    search_fields = ("name_ar", "slug")
     prepopulated_fields = {"slug": ("name_ar",)}
 
 
@@ -26,8 +27,10 @@ class TicketReplyInline(TabularInline):
 @admin.register(Ticket)
 class TicketAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "title", "user", "type", "status", "contract", "last_activity_at")
-    list_filter = ("status", "type")
+    list_filter = ("status", "type", "last_activity_at")
     search_fields = ("title", "user__email", "message")
+    list_select_related = ("user", "type", "contract")
+    date_hierarchy = "created_at"
     readonly_fields = ("user", "type", "contract", "job", "created_at", "solved_at", "closed_at",
                        "on_hold_at")
     export_fields = ("id", "title", "user", "type", "status", "contract", "created_at", "last_activity_at")

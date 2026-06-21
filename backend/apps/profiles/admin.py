@@ -4,6 +4,7 @@ from unfold.admin import ModelAdmin, TabularInline
 
 from .models import (
     Address,
+    Certificate,
     Education,
     EmployerProfile,
     Employment,
@@ -18,19 +19,31 @@ from .services import review_id_verification, review_profile_publish
 
 @admin.register(EmployerProfile)
 class EmployerProfileAdmin(ModelAdmin):
-    list_display = ("user", "company_name", "rating_avg", "rating_count", "total_spent")
-    search_fields = ("user__email", "company_name")
+    list_display = ("user", "company_name", "field", "country", "city", "rating_avg", "rating_count", "total_spent")
+    list_filter = ("country", "city", "field")
+    search_fields = ("user__email", "company_name", "field", "city", "country")
+    autocomplete_fields = ("user",)
+    list_select_related = ("user",)
+    readonly_fields = ("rating_avg", "rating_count", "total_spent", "created_at")
 
 
 @admin.register(Address)
 class AddressAdmin(ModelAdmin):
-    list_display = ("user", "country", "city", "is_primary")
+    list_display = ("user", "country", "city", "state", "is_primary")
     list_filter = ("country", "is_primary")
     search_fields = ("user__email", "city", "country")
+    autocomplete_fields = ("user",)
+    list_select_related = ("user",)
 
 
 class SkillInline(TabularInline):
     model = WorkerSkill
+    autocomplete_fields = ("skill",)
+    extra = 0
+
+
+class CertificateInline(TabularInline):
+    model = Certificate
     extra = 0
 
 
@@ -63,10 +76,16 @@ class WorkerProfileAdmin(ModelAdmin):
         "user", "bio_title", "publish_state", "completeness", "expertise_level",
         "visibility", "is_verified", "rating_avg",
     )
-    list_filter = ("publish_state", "expertise_level", "visibility", "is_verified")
-    search_fields = ("user__email", "bio_title")
-    readonly_fields = ("completeness", "publish_reviewed_by", "publish_reviewed_at")
-    inlines = [SkillInline, EducationInline, EmploymentInline, LanguageInline, PortfolioInline]
+    list_filter = ("publish_state", "expertise_level", "availability", "visibility",
+                   "is_verified", "offline_reminder_sent", "main_category")
+    search_fields = ("user__email", "user__first_name", "user__last_name", "display_name", "bio_title")
+    autocomplete_fields = ("user", "main_category", "specialization")
+    list_select_related = ("user", "main_category")
+    date_hierarchy = "created_at"
+    readonly_fields = ("completeness", "publish_reviewed_by", "publish_reviewed_at",
+                       "rating_avg", "rating_count", "total_earned",
+                       "visibility_changed_at", "created_at", "updated_at")
+    inlines = [SkillInline, EducationInline, EmploymentInline, LanguageInline, CertificateInline, PortfolioInline]
     actions = ["approve_publish", "reject_publish"]
 
     @admin.display(description="نسبة الاكتمال")
@@ -98,9 +117,12 @@ class IDVerificationAdmin(ModelAdmin):
     """National-ID review queue (FR-PROF-6). Approve flips the worker's is_verified badge;
     reject requires a reason (edit the field, then run the reject action)."""
 
-    list_display = ("user", "status", "reviewed_by", "created_at", "reviewed_at")
-    list_filter = ("status",)
-    search_fields = ("user__email",)
+    list_display = ("user", "status", "doc_type", "reviewed_by", "created_at", "reviewed_at")
+    list_filter = ("status", "doc_type", "consent")
+    search_fields = ("user__email", "user__first_name", "user__last_name", "reject_reason")
+    autocomplete_fields = ("user",)
+    list_select_related = ("user", "reviewed_by")
+    date_hierarchy = "created_at"
     readonly_fields = ("created_at", "reviewed_at", "reviewed_by", "id_files")
     actions = ["approve_selected", "reject_selected"]
 

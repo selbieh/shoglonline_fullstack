@@ -51,7 +51,7 @@ def fanout_job_published(self, job_id: int) -> int:
             subject=f"وظيفة جديدة في «{job.category.name_ar}»: {job.title}",
             message=(
                 f"{snippet}…\n\n"
-                f"الميزانية: {job.budget_min}–{job.budget_max} د.ك\n"
+                f"الميزانية: ${job.budget_min}–${job.budget_max}\n"
                 f"قدّم عرضك: {FRONTEND_URL}/jobs/{job.slug}\n\n"
                 "لإلغاء الاشتراك من هذه الفئة: "
                 f"{FRONTEND_URL}/notifications"

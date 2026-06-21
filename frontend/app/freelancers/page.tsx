@@ -8,9 +8,14 @@ import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import FavoriteButton from "@/components/FavoriteButton";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
+import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryFilter from "@/components/CategoryFilter";
 import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, ShareIcon, StarIcon } from "@/components/icons";
 
 const EXPERTISE_OPTIONS = ["entry", "intermediate", "expert"] as const;
+const PAGE = 12; // load-more page size (server caps limit at 100)
+
+type Category = { id: number; slug: string; name_ar: string; icon: string; children: Category[] };
 
 /** Availability pill copy/colour for the card identity meta (mirrors the profile hero). */
 const AVAIL: Record<string, { t: string; cls: string }> = {
@@ -21,36 +26,66 @@ const AVAIL: Record<string, { t: string; cls: string }> = {
 
 /** Public freelancer directory (FR-PROF). Works for visitors too. */
 export default function FreelancersPage() {
-  const [data, setData] = useState<Paginated<Freelancer> | null>(null);
+  const [items, setItems] = useState<Freelancer[]>([]);
+  const [count, setCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const [expertise, setExpertise] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [q, setQ] = useState("");
   const [ordering, setOrdering] = useState("-rating_avg");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const params = new URLSearchParams({ ordering });
-      if (expertise) params.set("expertise_level", expertise);
-      if (q) params.set("search", q);
-      const res = await fetch(`${API_URL}/freelancers?${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = (await res.json()) as Paginated<Freelancer>;
-      setData({ ...json, results: Array.isArray(json?.results) ? json.results : [] });
-    } catch {
-      setError(true);
-      setData({ count: 0, next: null, previous: null, results: [] });
-    } finally {
-      setLoading(false);
-    }
-  }, [expertise, q, ordering]);
+  const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
+  const activeCat = categories.find((c) => String(c.id) === category);
+  const activeSub = subcats.find((c) => String(c.id) === subcategory);
+
+  // Paginated fetch — offset 0 replaces the list; a positive offset appends the next page.
+  const load = useCallback(
+    async (offset: number) => {
+      const append = offset > 0;
+      append ? setLoadingMore(true) : setLoading(true);
+      setError(false);
+      try {
+        const params = new URLSearchParams({ ordering, limit: String(PAGE), offset: String(offset) });
+        if (expertise) params.set("expertise_level", expertise);
+        if (category) params.set("category", category);
+        if (subcategory) params.set("subcategory", subcategory);
+        if (q) params.set("search", q);
+        const res = await fetch(`${API_URL}/freelancers?${params}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = (await res.json()) as Paginated<Freelancer>;
+        const results = Array.isArray(json?.results) ? json.results : [];
+        setItems((prev) => (append ? [...prev, ...results] : results));
+        setCount(json?.count ?? 0);
+        setHasMore(Boolean(json?.next));
+      } catch {
+        setError(true);
+        if (!append) {
+          setItems([]);
+          setCount(0);
+          setHasMore(false);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [expertise, category, subcategory, q, ordering],
+  );
 
   useEffect(() => {
-    load();
+    fetch(`${API_URL}/categories`)
+      .then(async (r) => (r.ok ? setCategories(await r.json()) : undefined))
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expertise, ordering]);
+  }, [expertise, category, subcategory, ordering]);
   // Live search: debounced auto-apply (consistent with the jobs/services filters).
   const qMounted = useRef(false);
   useEffect(() => {
@@ -58,17 +93,23 @@ export default function FreelancersPage() {
       qMounted.current = true;
       return;
     }
-    const t = setTimeout(load, 350);
+    const t = setTimeout(() => load(0), 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
+  function pickCategory(id: string) {
+    setCategory(id);
+    setSubcategory("");
+  }
   function clearFilters() {
     setExpertise("");
+    setCategory("");
+    setSubcategory("");
     setQ("");
   }
 
-  const count = data?.count ?? 0;
+  const hasFilters = !!(expertise || activeCat || activeSub || q);
 
   return (
     <main className="min-h-screen bg-bg">
@@ -111,9 +152,21 @@ export default function FreelancersPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
         <div className="flex-1 space-y-4">
           {/* active filters bar */}
-          {(expertise || q) && (
+          {hasFilters && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
               <span className="text-sm font-bold text-ink">الفلاتر النشطة</span>
+              {activeCat && (
+                <button onClick={() => pickCategory("")} className="chip-removable" title="إزالة الفلتر">
+                  <CategoryIcon slug={activeCat.slug} className="text-[14px]" /> {activeCat.name_ar}
+                  <span className="chip-x" aria-hidden>✕</span>
+                </button>
+              )}
+              {activeSub && (
+                <button onClick={() => setSubcategory("")} className="chip-removable" title="إزالة الفلتر">
+                  {activeSub.name_ar}
+                  <span className="chip-x" aria-hidden>✕</span>
+                </button>
+              )}
               {expertise && (
                 <button onClick={() => setExpertise("")} className="chip-removable" title="إزالة الفلتر">
                   {EXPERTISE_LABEL[expertise]}
@@ -168,26 +221,37 @@ export default function FreelancersPage() {
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-warn-t text-[26px] text-warn"><AlertIcon /></div>
               <p className="mt-3 font-bold">تعذّر تحميل المستقلين</p>
               <p className="text-sm text-sub">تحقّق من اتصالك ثم حاول مجددًا</p>
-              <button onClick={load} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+              <button onClick={() => load(0)} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
             </div>
           )}
 
           {/* results — wide profile list cards (matches the design) */}
-          {!loading && !error && count > 0 && (
+          {!loading && !error && items.length > 0 && (
             <div className="space-y-4">
-              {data!.results.map((f) => (
+              {items.map((f) => (
                 <FreelancerCard key={f.id} f={f} />
               ))}
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => load(items.length)}
+                    disabled={loadingMore}
+                    className="btn-secondary text-sm disabled:opacity-60"
+                  >
+                    {loadingMore ? "جارٍ التحميل…" : "عرض المزيد من المستقلين"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {/* empty state */}
-          {!loading && !error && count === 0 && (
+          {!loading && !error && items.length === 0 && (
             <div className="card py-14 text-center text-sub">
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-tint text-[26px] text-primary"><SearchIcon /></div>
               <p className="mt-3 font-bold">لا مستقلين يطابقون بحثك</p>
               <p className="text-sm">جرّب توسيع الفلاتر أو امسحها كلها</p>
-              {(expertise || q) && (
+              {hasFilters && (
                 <button onClick={clearFilters} className="btn-secondary mt-4 text-sm">مسح الفلاتر</button>
               )}
             </div>
@@ -198,7 +262,7 @@ export default function FreelancersPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
-              {(expertise || q) && (
+              {hasFilters && (
                 <button onClick={clearFilters} className="btn-ghost" aria-label="مسح كل الفلاتر">
                   <span aria-hidden>✕</span> مسح
                 </button>
@@ -210,17 +274,35 @@ export default function FreelancersPage() {
                 placeholder="ابحث بالاسم أو المهارة…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load()}
+                onKeyDown={(e) => e.key === "Enter" && load(0)}
               />
               <button
                 type="button"
-                onClick={load}
+                onClick={() => load(0)}
                 aria-label="بحث"
                 className="absolute inset-y-0 end-2 my-auto grid h-7 w-7 place-content-center text-[18px] text-sub transition hover:text-primary"
               >
                 <SearchIcon />
               </button>
             </div>
+            <CategoryFilter
+              categories={categories}
+              selectedId={subcategory || category}
+              onSelect={(sel) => {
+                if (!sel) {
+                  setCategory("");
+                  setSubcategory("");
+                } else if (sel.parentId) {
+                  setCategory(sel.parentId);
+                  setSubcategory(sel.id);
+                } else {
+                  setCategory(sel.id);
+                  setSubcategory("");
+                }
+              }}
+              label="فئة المهارة"
+              allLabel="كل الفئات"
+            />
             <div className="space-y-1 text-sm">
               <p className="mb-1 text-xs font-medium text-sub">مستوى الخبرة</p>
               <label className={`filter-row ${expertise === "" ? "filter-row-active" : ""}`}>
@@ -337,7 +419,7 @@ function FreelancerCard({ f }: { f: Freelancer }) {
 
       {/* footer: hourly rate + view-profile CTA */}
       <ListingFooter priceLabel="سعر الساعة" priceValue={f.hourly_rate ? `$${f.hourly_rate}` : "عند الطلب"}>
-        <span className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
+        <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
           عرض الملف
           <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
         </span>

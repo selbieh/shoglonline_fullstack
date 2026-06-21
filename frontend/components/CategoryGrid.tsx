@@ -7,7 +7,7 @@ import { CategoryIcon, categoryTone } from "@/components/CategoryIcon";
 import { ArrowLeftIcon } from "@/components/icons";
 
 export type Cat = { id: number; slug: string; name_ar: string; icon: string };
-type Item = { slug?: string; title: string; link: string };
+type Item = { slug?: string; icon?: string; title: string; link: string };
 
 /**
  * Resilient category grid — modern line-icons + soft coloured tiles.
@@ -35,7 +35,7 @@ export default function CategoryGrid({
   }, [cats.length]);
 
   const items: Item[] = cats.length
-    ? cats.map((c) => ({ slug: c.slug, title: c.name_ar, link: `/jobs?category=${c.slug}` }))
+    ? cats.map((c) => ({ slug: c.slug, icon: c.icon, title: c.name_ar, link: `/jobs?category=${c.slug}` }))
     : fallback;
 
   return (
@@ -43,7 +43,7 @@ export default function CategoryGrid({
       {items.map((c, i) => (
         <Link key={i} href={c.link} className="card-modern group flex items-center gap-3 p-4">
           <span className={`icon-tile h-12 w-12 shrink-0 text-[22px] transition duration-300 group-hover:scale-105 ${categoryTone(c.slug)}`}>
-            <CategoryIcon slug={c.slug} />
+            <CategoryIcon icon={c.icon} slug={c.slug} />
           </span>
           <span className="min-w-0 flex-1 truncate font-bold text-ink transition group-hover:text-primary-deep">
             {c.title}

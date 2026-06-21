@@ -16,8 +16,10 @@ class InvoiceLineInline(TabularInline):
 @admin.register(InvoiceRequest)
 class InvoiceAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("number", "worker", "employer", "period_type", "total", "status", "created_at")
-    list_filter = ("status", "period_type")
+    list_filter = ("status", "period_type", "created_at")
     search_fields = ("number", "worker__email", "employer__email")
+    list_select_related = ("worker", "employer")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in InvoiceRequest._meta.fields]
     export_fields = ("number", "worker", "employer", "period_type", "total", "status", "created_at")
     inlines = [InvoiceLineInline]

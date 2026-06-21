@@ -11,8 +11,10 @@ from .models import Notification, NotificationPreference, ScheduledNotification
 @admin.register(Notification)
 class NotificationAdmin(ModelAdmin):
     list_display = ("id", "user", "kind", "title", "read_at", "emailed", "pushed", "created_at")
-    list_filter = ("kind", "emailed", "pushed")
+    list_filter = ("kind", "emailed", "pushed", "read_at", "created_at")
     search_fields = ("user__email", "title", "body")
+    list_select_related = ("user",)
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in Notification._meta.fields]
 
     def has_add_permission(self, request):
@@ -24,6 +26,7 @@ class NotificationPreferenceAdmin(ModelAdmin):
     list_display = ("user", "chat_unread", "job_alerts", "proposal_updates", "marketing", "updated_at")
     list_filter = ("chat_unread", "job_alerts", "proposal_updates", "marketing")
     search_fields = ("user__email",)
+    list_select_related = ("user",)
     readonly_fields = ("user", "updated_at")
 
     def has_add_permission(self, request):
@@ -36,8 +39,10 @@ class ScheduledNotificationAdmin(ModelAdmin):
     `scheduled_at` is delivered by the beat sweeper; use 'Send now' for an instant broadcast."""
 
     list_display = ("id", "title", "audience", "status", "scheduled_at", "recipients_count", "sent_at")
-    list_filter = ("status", "audience")
-    search_fields = ("title", "body")
+    list_filter = ("status", "audience", "scheduled_at")
+    search_fields = ("title", "body", "created_by__email")
+    list_select_related = ("created_by",)
+    date_hierarchy = "scheduled_at"
     actions = ["send_now", "cancel_pending"]
     fields = ("title", "body", "deep_link", "audience", "audience_user_ids", "scheduled_at",
               "status", "recipients_count", "created_by", "sent_at")

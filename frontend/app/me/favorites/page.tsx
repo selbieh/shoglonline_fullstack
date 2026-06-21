@@ -182,7 +182,7 @@ export default function MyFavoritesPage() {
                       {busyId === it.id ? "جارٍ الإزالة…" : "إزالة"}
                     </button>
                     {href && (
-                      <Link href={href} className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
+                      <Link href={href} className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
                         عرض
                         <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
                       </Link>

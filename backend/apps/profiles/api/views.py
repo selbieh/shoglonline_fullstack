@@ -268,7 +268,9 @@ class PublicWorkerListView(ListAPIView):
     ordering = ["-rating_avg", "-rating_count"]
 
     def get_queryset(self):
-        return (
+        from apps.catalog.models import Category
+
+        qs = (
             WorkerProfile.objects.filter(
                 visibility=WorkerProfile.Visibility.ONLINE,
                 user__status=User.Status.ACTIVE,
@@ -283,8 +285,31 @@ class PublicWorkerListView(ListAPIView):
                     distinct=True,
                 )
             )
-            .distinct()
         )
+        # Skill-area filter (mirrors the services discovery filter): a freelancer matches a
+        # category when it's their main field / specialization OR they hold a skill in it. A
+        # top-level «category» rolls up to include its subcategories; «subcategory» pins a branch.
+        category = self.request.query_params.get("category")
+        if category:
+            lookup = {"pk": category} if str(category).isdigit() else {"slug": category}
+            cat = Category.objects.filter(**lookup).first()
+            if cat:
+                ids = [cat.id, *cat.children.values_list("id", flat=True)]
+                qs = qs.filter(
+                    Q(main_category_id__in=ids)
+                    | Q(specialization_id__in=ids)
+                    | Q(skills__skill__subcategory_id__in=ids)
+                )
+            else:
+                qs = qs.none()
+        subcategory = self.request.query_params.get("subcategory")
+        if subcategory and str(subcategory).isdigit():
+            qs = qs.filter(
+                Q(main_category_id=subcategory)
+                | Q(specialization_id=subcategory)
+                | Q(skills__skill__subcategory_id=subcategory)
+            )
+        return qs.distinct()
 
 
 class PublicWorkerDetailView(APIView):

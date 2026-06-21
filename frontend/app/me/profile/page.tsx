@@ -317,7 +317,7 @@ export default function ProfileEditPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-bold">سعر الساعة (د.ك)
+          <label className="text-sm font-bold">سعر الساعة ($)
             <input className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
               onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value })} />
           </label>

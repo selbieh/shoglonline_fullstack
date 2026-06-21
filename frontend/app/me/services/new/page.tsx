@@ -126,7 +126,7 @@ export default function ServiceCreateWizard() {
                   {subcats.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
                 </select>
               </Field>
-              <Field label="سعر الخدمة (ر.س)">
+              <Field label="سعر الخدمة ($)">
                 <input type="number" min={0} className="field" value={form.base_price}
                   placeholder="مثال: 100" onChange={(e) => set({ base_price: e.target.value })} />
               </Field>
@@ -203,13 +203,13 @@ export default function ServiceCreateWizard() {
             <div className="card space-y-2 text-sm">
               <Row k="عنوان الخدمة" v={form.title || "—"} />
               <Row k="التصنيف" v={cats.find((c) => String(c.id) === form.category)?.name_ar || "—"} />
-              <Row k="السعر الأساسي" v={`${form.base_price || "—"} ر.س`} />
+              <Row k="السعر الأساسي" v={form.base_price ? `$${form.base_price}` : "—"} />
               <Row k="مدة التسليم" v={`${form.delivery_days} أيام`} />
               <Row k="عدد الكلمات المفتاحية" v={keywords.length.toLocaleString("ar-EG")} />
               <Row k="عدد التطويرات" v={addons.filter((a) => a.title && a.price).length.toLocaleString("ar-EG")} />
               <div className="flex items-center justify-between border-t border-line pt-2 font-bold">
                 <span>إجمالي السعر مع التطويرات</span>
-                <span dir="ltr">{total.toLocaleString("ar-EG")} ر.س</span>
+                <span dir="ltr">${total.toLocaleString("ar-EG")}</span>
               </div>
             </div>
             <p className="text-xs text-sub">سيتم إرسال الخدمة للمراجعة قبل نشرها (حسب إعدادات المنصة).</p>

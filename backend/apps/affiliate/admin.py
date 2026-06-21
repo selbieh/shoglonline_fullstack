@@ -11,7 +11,10 @@ from .models import AffiliateClick, AffiliateCommission, AffiliateProfile, Commi
 @admin.register(AffiliateClick)
 class AffiliateClickAdmin(ModelAdmin):
     list_display = ("id", "referrer", "slug", "referred_user", "ip", "created_at")
-    search_fields = ("referrer__email", "slug")
+    list_filter = ("created_at",)
+    search_fields = ("referrer__email", "referred_user__email", "slug")
+    list_select_related = ("referrer", "referred_user")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in AffiliateClick._meta.fields]
 
     def has_add_permission(self, request):
@@ -26,8 +29,13 @@ class CommissionRuleAdmin(ModelAdmin):
 
 @admin.register(AffiliateProfile)
 class AffiliateProfileAdmin(ModelAdmin):
-    list_display = ("slug", "user", "is_frozen", "total_earned")
+    list_display = ("slug", "user", "is_frozen", "total_earned", "created_at")
+    list_filter = ("is_frozen", "created_at")
     search_fields = ("slug", "user__email")
+    autocomplete_fields = ("user",)
+    list_select_related = ("user",)
+    date_hierarchy = "created_at"
+    readonly_fields = ("total_earned", "created_at")
     actions = ["freeze", "activate"]
 
     @admin.action(description="❄️ Freeze participation")
@@ -44,8 +52,10 @@ class AffiliateProfileAdmin(ModelAdmin):
 @admin.register(AffiliateCommission)
 class AffiliateCommissionAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "referrer", "referred_user", "contract", "amount", "status", "created_at")
-    list_filter = ("status",)
+    list_filter = ("status", "created_at")
     search_fields = ("referrer__email", "referred_user__email")
+    list_select_related = ("referrer", "referred_user", "contract")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in AffiliateCommission._meta.fields]
     export_fields = ("id", "referrer", "referred_user", "contract", "base_amount", "rate_pct",
                      "amount", "status", "created_at")
@@ -60,4 +70,9 @@ class AffiliateCommissionAdmin(ExportCsvMixin, ModelAdmin):
 @admin.register(Referral)
 class ReferralAdmin(ModelAdmin):
     list_display = ("referrer", "referred_user", "earning_window_end", "created_at")
+    list_filter = ("earning_window_end", "created_at")
     search_fields = ("referrer__email", "referred_user__email")
+    autocomplete_fields = ("referrer", "referred_user")
+    list_select_related = ("referrer", "referred_user")
+    date_hierarchy = "created_at"
+    readonly_fields = ("created_at",)

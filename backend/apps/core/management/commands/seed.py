@@ -10,8 +10,10 @@ Idempotent: re-running upserts by natural keys and skips append-only children wh
 parent already has rows, so nothing duplicates. Money is posted through the ledger
 service with deterministic idempotency keys, so balances stay coherent on every run.
 
-    python manage.py seed             # create / upsert all demo data
+    python manage.py seed             # create / upsert all demo data (+30 pagination rows)
     python manage.py seed --flush     # wipe transactional + demo users first, then reseed
+    python manage.py seed --bulk 60   # generate 60 extra freelancers/services/jobs (pagination)
+    python manage.py seed --bulk 0    # skip the extra pagination filler
 
 Demo accounts use the @shoghlonline.test domain and password "demo12345"
 (login locally via the Google stub, or use the admin account in /admin).
@@ -164,6 +166,12 @@ class Command(BaseCommand):
             "--flush", action="store_true",
             help="Delete transactional data and @shoghlonline.test demo users before seeding.",
         )
+        parser.add_argument(
+            "--bulk", type=int, default=30, metavar="N",
+            help="Also generate N extra freelancers (each with 2 gallery works + 1 live service) "
+                 "and N published jobs to exercise list pagination on every public page. "
+                 "Default 30; pass --bulk 0 to skip.",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -206,6 +214,10 @@ class Command(BaseCommand):
         self._tickets(workers, employers, contracts)
         self._withdrawals(contracts)
         self._audit(admin)
+
+        # Volume filler so every public listing spans multiple pages (FE + API pagination).
+        if options["bulk"]:
+            self._bulk(options["bulk"], employers)
 
         self.stdout.write(self.style.SUCCESS(
             "\n✅ تم تعبئة قاعدة البيانات ببيانات تجريبية عربية كاملة.\n"
@@ -967,6 +979,128 @@ class Command(BaseCommand):
             return  # idempotent — only ever one demo withdrawal for this worker
         if get_wallet(worker).available >= D(10):
             request_withdrawal(worker, D(10), worker.email)
+
+    # ───────────────────────────────────────────────────────── bulk pagination filler
+    # Rotating (category, subcategory, role-noun, work-noun) pools — generated rows stay realistic
+    # so the catalog facets / search filters on every listing page keep working.
+    BULK_CATS = [
+        ("programming-tech", "programming-tech-web-development", "مطوّر ويب", "موقع ويب"),
+        ("programming-tech", "programming-tech-mobile-apps", "مطوّر تطبيقات", "تطبيق موبايل"),
+        ("design-creative", "design-creative-graphic-design", "مصمّم جرافيك", "هوية بصرية"),
+        ("design-creative", "design-creative-uiux-design", "مصمّم واجهات", "واجهة تطبيق"),
+        ("writing-translation", "writing-translation-content-writing", "كاتب محتوى", "حزمة مقالات"),
+        ("writing-translation", "writing-translation-translation", "مترجم محترف", "ترجمة مستند"),
+        ("digital-marketing", "digital-marketing-seo", "أخصائي سيو", "خطة سيو"),
+        ("digital-marketing", "digital-marketing-social-media", "مدير سوشيال ميديا", "إدارة حسابات"),
+    ]
+    BULK_FIRST = ["عمر", "ليان", "سلمان", "جنى", "ماجد", "دانة", "فيصل", "رزان", "طارق", "هند",
+                  "بدر", "شهد", "ناصر", "غادة", "سعود", "لمى", "راكان", "أمل", "تركي", "وعد"]
+    BULK_LAST = ["العنزي", "الفهد", "المطيري", "الدوسري", "السبيعي", "الرشيدي", "العجمي",
+                 "الخالدي", "الهاجري", "المريخي", "الكواري", "العامري", "الزهراني", "القحطاني"]
+
+    def _bulk(self, count, employers):
+        """Generate `count` extra freelancers (each with 2 gallery works + 1 live service) and
+        `count` published jobs — pure listing volume so the public pages (freelancers / services /
+        jobs / gallery) and the API both span several pages. Standalone directory filler: no
+        contracts, wallets, bids or chat. Idempotent — keyed by email / slug, so re-runs never
+        duplicate; --flush removes them with the other demo users."""
+        from apps.profiles.models import WorkerProfile
+        emp_list = list(employers.values())
+        expertise = [WorkerProfile.ExpertiseLevel.ENTRY, WorkerProfile.ExpertiseLevel.INTERMEDIATE,
+                     WorkerProfile.ExpertiseLevel.EXPERT]
+        avail = [WorkerProfile.Availability.AVAILABLE_NOW, WorkerProfile.Availability.AVAILABLE_SOON,
+                 WorkerProfile.Availability.UNAVAILABLE]
+        workers = services = works = jobs = 0
+
+        for i in range(count):
+            n = i + 1
+            cat_slug, sub_slug, role, work = self.BULK_CATS[i % len(self.BULK_CATS)]
+            first = self.BULK_FIRST[i % len(self.BULK_FIRST)]
+            last = self.BULK_LAST[(i // len(self.BULK_FIRST)) % len(self.BULK_LAST)]
+            sub = Category.objects.filter(slug=sub_slug).first()
+
+            # ── freelancer (online + active → shows in /freelancers)
+            user = self._user(f"bulk{n}{DEMO_DOMAIN}", first, last, mode=User.Mode.FIND_JOB)
+            wp = WorkerProfile.objects.get(user=user)
+            wp.display_name = f"{first} {last}"
+            wp.bio_title = f"{role} محترف"
+            wp.overview = f"خبرة واسعة في {work} بجودة عالية والتزام بالمواعيد. أعمل عن بُعد مع عملاء في المنطقة."
+            wp.expertise_level = expertise[i % 3]
+            wp.hourly_rate = D(8 + (i % 15))
+            wp.visibility = WorkerProfile.Visibility.ONLINE
+            wp.publish_state = WorkerProfile.PublishState.PUBLISHED
+            wp.main_category = self._cat(cat_slug)
+            wp.specialization = sub
+            wp.years_experience = 1 + (i % 12)
+            wp.availability = avail[i % 3]
+            wp.weekly_hours = 10 + (i % 5) * 5
+            wp.rating_avg = D(round(3.0 + (i % 21) / 10, 2))  # spread 3.0–5.0 → sort-by-rating is testable
+            wp.rating_count = i % 40
+            wp.is_verified = (i % 3 == 0)
+            wp.save()
+            workers += 1
+            if not wp.languages.exists():
+                WorkerLanguage.objects.create(profile=wp, name="العربية",
+                                              proficiency=WorkerLanguage.Proficiency.NATIVE)
+                WorkerLanguage.objects.create(profile=wp, name="الإنجليزية",
+                                              proficiency=WorkerLanguage.Proficiency.ADVANCED)
+
+            # ── 2 gallery works each → /gallery (PAGE=24 → needs ≥48 for >1 page)
+            for j in range(2):
+                _, made = PortfolioItem.objects.get_or_create(
+                    profile=wp, title=f"{work} — نموذج {n}.{j + 1}",
+                    defaults={
+                        "description": "نموذج من أعمالي السابقة يوضّح جودة التنفيذ والالتزام بالمواعيد.",
+                        "media_type": PortfolioItem.MediaType.IMAGE,
+                        "url": f"https://picsum.photos/seed/shoghl{n}-{j}/640/420",
+                        "project_type": role, "project_link": "https://example.com",
+                        "duration_value": 1 + (i % 4), "duration_unit": PortfolioItem.DurationUnit.MONTH,
+                        "skills": [role, work], "ownership_confirmed": True, "order": j,
+                        "views_count": (i * 7 + j) % 500,
+                    },
+                )
+                works += int(made)
+
+            # ── 1 live service → /services
+            title = f"{work} احترافي #{n}"
+            _, made = Service.objects.get_or_create(
+                slug=f"{slugify(title, allow_unicode=True)}-bulk-{n}",
+                defaults={
+                    "worker": user, "title": title,
+                    "description": f"خدمة احترافية لتنفيذ {work} بأعلى جودة وضمن المدة المتفق عليها.",
+                    "category": self._cat(cat_slug), "subcategory": sub,
+                    "base_price": D(30 + (i % 20) * 5), "delivery_days": 2 + (i % 10),
+                    "status": Service.Status.LIVE, "published_at": NOW - timedelta(minutes=i),
+                    "keywords": title.split()[:4],
+                    "what_you_get": "ملفات العمل النهائية + جولتا تعديل مجانيتان + دعم بعد التسليم.",
+                },
+            )
+            services += int(made)
+
+            # ── 1 published job (cycle the existing employers) → /jobs
+            if emp_list:
+                jtitle = f"مطلوب {role} لتنفيذ {work} #{n}"
+                bmin = 80 + (i % 10) * 20
+                _, made = Job.objects.get_or_create(
+                    slug=f"{slugify(jtitle, allow_unicode=True)}-bulk-{n}",
+                    defaults={
+                        "employer": emp_list[i % len(emp_list)], "title": jtitle,
+                        "description": f"نبحث عن {role} متمكّن لتنفيذ {work}. العمل عن بُعد مع متابعة دورية.",
+                        "category": self._cat(cat_slug), "subcategory": sub,
+                        "budget_min": D(bmin), "budget_max": D(bmin + 200),
+                        "deadline": (NOW + timedelta(days=30)).date(),
+                        "location_type": Job.LocationType.REMOTE, "country": "الكويت", "city": "الكويت",
+                        "status": Job.Status.PUBLISHED,
+                        "published_at": NOW - timedelta(minutes=i),
+                        "expires_at": NOW + timedelta(days=30),
+                    },
+                )
+                jobs += int(made)
+
+        self.stdout.write(self.style.SUCCESS(
+            f"   ➕ ترقيم الصفحات: +{workers} مستقل، +{services} خدمة، "
+            f"+{works} عمل في المعرض، +{jobs} وظيفة."
+        ))
 
     # ───────────────────────────────────────────────────────── audit / settings log
     def _audit(self, admin):

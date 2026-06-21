@@ -16,11 +16,28 @@ class MessageInline(TabularInline):
     can_delete = False
 
 
+@admin.register(Message)
+class MessageAdmin(ModelAdmin):
+    """Read-only message lookup — locate a reported message by body/sender (FR-CHAT-10)."""
+
+    list_display = ("id", "conversation", "sender", "body", "unread_email_sent", "created_at")
+    list_filter = ("unread_email_sent", "created_at")
+    search_fields = ("body", "sender__email", "conversation__user_a__email", "conversation__user_b__email")
+    list_select_related = ("conversation", "sender")
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in Message._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(Conversation)
 class ConversationAdmin(ModelAdmin):
     list_display = ("id", "user_a", "user_b", "context_type", "status", "last_message_at")
-    list_filter = ("status", "context_type")
-    search_fields = ("user_a__email", "user_b__email")
+    list_filter = ("status", "context_type", "last_message_at")
+    search_fields = ("user_a__email", "user_b__email", "last_message_snippet")
+    list_select_related = ("user_a", "user_b", "contract", "job")
+    date_hierarchy = "last_message_at"
     readonly_fields = [f.name for f in Conversation._meta.fields]
     inlines = [MessageInline]
     actions = ["archive_read_only"]
@@ -40,8 +57,10 @@ class ChatReportAdmin(ModelAdmin):
     """Abuse-report review queue (FR-CHAT-10): dismiss, warn, freeze the offender, or archive."""
 
     list_display = ("id", "conversation", "reporter", "status", "resolution", "reviewed_by", "created_at")
-    list_filter = ("status",)
-    search_fields = ("conversation__user_a__email", "conversation__user_b__email", "reason")
+    list_filter = ("status", "reviewed_at", "created_at")
+    search_fields = ("conversation__user_a__email", "conversation__user_b__email", "reporter__email", "reason")
+    list_select_related = ("conversation", "message", "reporter", "reviewed_by")
+    date_hierarchy = "created_at"
     readonly_fields = [f.name for f in ChatReport._meta.fields]
     actions = ["dismiss", "warn", "freeze_offender", "archive_conversation"]
 

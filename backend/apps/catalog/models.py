@@ -3,11 +3,31 @@ from django.db import models
 
 
 class Category(models.Model):
+    # Stable line-icon keys — kept in sync with the frontend `BY_ICON` map in
+    # components/CategoryIcon.tsx. Admins pick one from a dropdown; the API
+    # returns the key and the frontend renders the matching inline SVG.
+    ICON_CHOICES = [
+        ("code", "Code / Programming"),
+        ("palette", "Palette / Design"),
+        ("pen", "Pen / Writing"),
+        ("megaphone", "Megaphone / Marketing"),
+        ("headset", "Headset / Support"),
+        ("bar-chart", "Bar chart / Business"),
+        ("mic", "Microphone / Audio"),
+        ("compass", "Compass / Consulting"),
+        ("grid", "Grid (generic)"),
+    ]
+
     name_ar = models.CharField(max_length=80)
     name_en = models.CharField(max_length=80, blank=True)  # reserved for future locales
     slug = models.SlugField(unique=True, allow_unicode=True)
     description = models.TextField(blank=True)
-    icon = models.CharField(max_length=8, blank=True)
+    icon = models.CharField(
+        max_length=32,
+        blank=True,
+        choices=ICON_CHOICES,
+        help_text="Line-icon shown on the category card (frontend renders this key).",
+    )
     parent = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.CASCADE, related_name="children"
     )

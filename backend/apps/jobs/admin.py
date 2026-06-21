@@ -5,7 +5,7 @@ from apps.core.admin_export import ExportCsvMixin
 from apps.core.models import AuditLog
 
 from . import services
-from .models import Invitation, Job, Proposal, ScreeningQuestion
+from .models import Invitation, Job, Proposal, ScreeningAnswer, ScreeningQuestion, WatchlistItem
 
 
 class ScreeningInline(TabularInline):
@@ -13,14 +13,25 @@ class ScreeningInline(TabularInline):
     extra = 0
 
 
+class AnswerInline(TabularInline):
+    model = ScreeningAnswer
+    extra = 0
+    fields = ("question", "answer")
+    readonly_fields = fields
+    can_delete = False
+
+
 @admin.register(Job)
 class JobAdmin(ExportCsvMixin, ModelAdmin):
     """Moderation queue (FR-JOB-14): approve/reject in bulk, with audit."""
 
     list_display = ("title", "employer", "category", "status", "budget_min", "budget_max",
-                    "proposals_count", "published_at", "expires_at")
-    list_filter = ("status", "category", "location_type")
-    search_fields = ("title", "description", "employer__email", "skills__name_ar")
+                    "proposals_count", "is_private", "published_at", "expires_at")
+    list_filter = ("status", "category", "location_type", "is_private", "published_at")
+    search_fields = ("title", "description", "slug", "employer__email", "skills__name_ar")
+    autocomplete_fields = ("employer", "category", "subcategory", "skills", "invited_worker", "source_job")
+    list_select_related = ("employer", "category", "subcategory")
+    readonly_fields = ("slug", "proposals_count", "frozen_prev_status", "published_at", "created_at", "updated_at")
     export_fields = ("id", "title", "employer", "category", "status", "budget_min", "budget_max",
                      "proposals_count", "is_private", "published_at", "created_at")
     inlines = [ScreeningInline]
@@ -59,8 +70,13 @@ class ProposalAdmin(ExportCsvMixin, ModelAdmin):
 
     list_display = ("id", "job", "worker", "budget", "delivery_days", "status",
                     "bid_consumed", "bid_refunded", "created_at")
-    list_filter = ("status",)
+    list_filter = ("status", "bid_consumed", "bid_refunded", "created_at")
     search_fields = ("worker__email", "job__title")
+    autocomplete_fields = ("job", "worker")
+    list_select_related = ("job", "worker")
+    readonly_fields = ("frozen_prev_status", "viewed_at", "created_at", "updated_at")
+    date_hierarchy = "created_at"
+    inlines = [AnswerInline]
     export_fields = ("id", "job", "worker", "budget", "delivery_days", "status",
                      "bid_consumed", "bid_refunded", "created_at")
     actions = ["approve_proposals", "reject_proposals", "export_as_csv"]
@@ -80,4 +96,19 @@ class ProposalAdmin(ExportCsvMixin, ModelAdmin):
 @admin.register(Invitation)
 class InvitationAdmin(ModelAdmin):
     list_display = ("job", "employer", "worker", "status", "created_at")
-    list_filter = ("status",)
+    list_filter = ("status", "created_at")
+    search_fields = ("job__title", "employer__email", "worker__email")
+    autocomplete_fields = ("job", "employer", "worker")
+    list_select_related = ("job", "employer", "worker")
+    readonly_fields = ("frozen_prev_status", "created_at")
+    date_hierarchy = "created_at"
+
+
+@admin.register(WatchlistItem)
+class WatchlistItemAdmin(ModelAdmin):
+    list_display = ("worker", "job", "created_at")
+    search_fields = ("worker__email", "job__title")
+    autocomplete_fields = ("worker", "job")
+    list_select_related = ("worker", "job")
+    date_hierarchy = "created_at"
+    readonly_fields = ("created_at",)

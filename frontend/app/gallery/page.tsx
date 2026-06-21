@@ -8,6 +8,7 @@ import type { Category, GalleryItem, Paginated, PortfolioMediaType } from "@/lib
 import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryFilter from "@/components/CategoryFilter";
 import {
   AlertIcon,
   ArrowLeftIcon,
@@ -337,27 +338,14 @@ function GalleryInner() {
 
             {/* category facet */}
             {categories.length > 0 && (
-              <div className="space-y-1 text-sm">
-                <p className="mb-1 text-xs font-medium text-sub">التصنيف</p>
-                <div className="max-h-72 space-y-1 overflow-y-auto pe-1">
-                  <label className={`filter-row ${category === "" ? "filter-row-active" : ""}`}>
-                    <input type="radio" name="cat" className="accent-primary" checked={category === ""} onChange={() => setCategory("")} />
-                    كل التصنيفات
-                  </label>
-                  {categories.map((c) => (
-                    <label key={c.id} className={`filter-row ${category === String(c.id) ? "filter-row-active" : ""}`}>
-                      <input
-                        type="radio"
-                        name="cat"
-                        className="accent-primary"
-                        checked={category === String(c.id)}
-                        onChange={() => setCategory(String(c.id))}
-                      />
-                      <CategoryIcon slug={c.slug} className="text-[18px] text-primary" /> {c.name_ar}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <CategoryFilter
+                categories={categories}
+                selectedId={category}
+                onSelect={(sel) => setCategory(sel ? sel.id : "")}
+                label="التصنيف"
+                allLabel="كل التصنيفات"
+                searchPlaceholder="ابحث عن تصنيف…"
+              />
             )}
 
             {/* skill quick-filters (from the loaded works) */}
@@ -488,7 +476,7 @@ function GalleryCard({ it }: { it: GalleryItem }) {
               مشاهدة
             </span>
           </div>
-          <span className="btn-primary group/btn mt-3 w-full justify-center gap-1.5 py-2 text-sm">
+          <span className="btn-soft group/btn mt-3 w-full justify-center gap-1.5 py-2 text-sm">
             عرض العمل
             <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
           </span>

@@ -13,19 +13,25 @@ import {
   SearchIcon, UsersIcon,
 } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CategoryFilter from "@/components/CategoryFilter";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import SubscribeCategoryButton from "@/components/SubscribeCategoryButton";
+
+const PAGE = 12; // load-more page size (server caps limit at 100)
 
 /** Jobs listing with filters (FR-JOB-3). Public — works for visitors too. */
 function JobsInner() {
   const params = useSearchParams();
-  const [jobs, setJobs] = useState<Paginated<Job> | null>(null);
+  const [items, setItems] = useState<Job[]>([]);
+  const [count, setCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [category, setCategory] = useState<string>(params.get("category") ?? ""); // preselect from URL
   const [subcategory, setSubcategory] = useState<string>(params.get("subcategory") ?? "");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(params.get("search") ?? ""); // prefill from ?search= (e.g. hero search)
   const [ordering, setOrdering] = useState("-published_at");
   const [saved, setSaved] = useState<Record<number, boolean>>({});
 
@@ -33,25 +39,38 @@ function JobsInner() {
   const activeCat = categories.find((c) => String(c.id) === category);
   const activeSub = subcats.find((c) => String(c.id) === subcategory);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const sp = new URLSearchParams({ ordering });
-      if (category) sp.set("category", category);
-      if (subcategory) sp.set("subcategory", subcategory);
-      if (q) sp.set("search", q);
-      const res = await fetch(`${API_URL}/jobs?${sp}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as Paginated<Job>;
-      setJobs({ ...data, results: Array.isArray(data?.results) ? data.results : [] });
-    } catch {
-      setError(true);
-      setJobs({ count: 0, next: null, previous: null, results: [] });
-    } finally {
-      setLoading(false);
-    }
-  }, [category, subcategory, q, ordering]);
+  // Paginated fetch — offset 0 replaces the list; a positive offset appends the next page.
+  const load = useCallback(
+    async (offset: number) => {
+      const append = offset > 0;
+      append ? setLoadingMore(true) : setLoading(true);
+      setError(false);
+      try {
+        const sp = new URLSearchParams({ ordering, limit: String(PAGE), offset: String(offset) });
+        if (category) sp.set("category", category);
+        if (subcategory) sp.set("subcategory", subcategory);
+        if (q) sp.set("search", q);
+        const res = await fetch(`${API_URL}/jobs?${sp}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as Paginated<Job>;
+        const results = Array.isArray(data?.results) ? data.results : [];
+        setItems((prev) => (append ? [...prev, ...results] : results));
+        setCount(data?.count ?? 0);
+        setHasMore(Boolean(data?.next));
+      } catch {
+        setError(true);
+        if (!append) {
+          setItems([]);
+          setCount(0);
+          setHasMore(false);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [category, subcategory, q, ordering],
+  );
 
   function pickCategory(id: string) {
     setCategory(id);
@@ -90,7 +109,7 @@ function JobsInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categories]);
   useEffect(() => {
-    load();
+    load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, subcategory, ordering]);
   // Live search: debounce the free-text query so it applies automatically like the
@@ -101,7 +120,7 @@ function JobsInner() {
       qMounted.current = true;
       return;
     }
-    const t = setTimeout(load, 350);
+    const t = setTimeout(() => load(0), 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
@@ -120,8 +139,6 @@ function JobsInner() {
       setSaved((m) => ({ ...m, [job.id]: !next })); // revert on failure
     }
   }
-
-  const count = jobs?.count ?? 0;
 
   return (
     <main className="min-h-screen bg-bg">
@@ -227,13 +244,13 @@ function JobsInner() {
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-warn-t text-[26px] text-warn"><AlertIcon /></div>
               <p className="mt-3 font-bold">تعذّر تحميل الوظائف</p>
               <p className="text-sm text-sub">تحقّق من اتصالك ثم حاول مجددًا</p>
-              <button onClick={load} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+              <button onClick={() => load(0)} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
             </div>
           )}
 
           {/* results */}
           {!loading && !error &&
-            jobs?.results.map((job) => {
+            items.map((job) => {
               const posted = timeAgo(job.published_at ?? job.created_at);
               const skills = job.skill_names ?? [];
               return (
@@ -295,8 +312,8 @@ function JobsInner() {
                 </ListingStats>
 
                 {/* footer: budget + apply CTA */}
-                <ListingFooter priceLabel="الميزانية" priceValue={`${job.budget_min}–${job.budget_max}`} priceSuffix="د.ك">
-                  <Link href={`/jobs/${job.slug}`} className="btn-primary group/btn gap-1.5 px-4 py-1.5 text-sm">
+                <ListingFooter priceLabel="الميزانية" priceValue={`$${job.budget_min}–$${job.budget_max}`}>
+                  <Link href={`/jobs/${job.slug}`} className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
                     قدّم عرضك
                     <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
                   </Link>
@@ -305,8 +322,21 @@ function JobsInner() {
               );
             })}
 
+          {/* load more */}
+          {!loading && !error && hasMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => load(items.length)}
+                disabled={loadingMore}
+                className="btn-secondary text-sm disabled:opacity-60"
+              >
+                {loadingMore ? "جارٍ التحميل…" : "عرض المزيد من الوظائف"}
+              </button>
+            </div>
+          )}
+
           {/* empty state */}
-          {!loading && !error && jobs && jobs.results.length === 0 && (
+          {!loading && !error && items.length === 0 && (
             <div className="card py-14 text-center text-sub">
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-tint text-[26px] text-primary"><SearchIcon /></div>
               <p className="mt-3 font-bold">لا توجد وظائف تطابق بحثك</p>
@@ -334,47 +364,33 @@ function JobsInner() {
                 placeholder="ابحث بعنوان الوظيفة أو المهارة…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load()}
+                onKeyDown={(e) => e.key === "Enter" && load(0)}
               />
               <button
                 type="button"
-                onClick={load}
+                onClick={() => load(0)}
                 aria-label="بحث"
                 className="absolute inset-y-0 end-2 my-auto grid h-7 w-7 place-content-center text-[18px] text-sub transition hover:text-primary"
               >
                 <SearchIcon />
               </button>
             </div>
-            <div className="space-y-1 text-sm">
-              <p className="mb-1 text-xs font-medium text-sub">الفئة</p>
-              <label className={`filter-row ${category === "" ? "filter-row-active" : ""}`}>
-                <input type="radio" name="cat" className="accent-primary" checked={category === ""} onChange={() => pickCategory("")} />
-                كل الفئات
-              </label>
-              {categories.map((c) => (
-                <label key={c.id} className={`filter-row ${category === String(c.id) ? "filter-row-active" : ""}`}>
-                  <input type="radio" name="cat" className="accent-primary" checked={category === String(c.id)}
-                    onChange={() => pickCategory(String(c.id))} />
-                  <CategoryIcon slug={c.slug} className="text-[18px] text-primary" /> {c.name_ar}
-                </label>
-              ))}
-            </div>
-
-            {subcats.length > 0 && (
-              <div>
-                <p className="mb-1 text-xs font-medium text-sub">التخصص الفرعي</p>
-                <select
-                  className="field"
-                  value={subcategory}
-                  onChange={(e) => setSubcategory(e.target.value)}
-                >
-                  <option value="">كل التخصصات</option>
-                  {subcats.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name_ar}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <CategoryFilter
+              categories={categories}
+              selectedId={subcategory || category}
+              onSelect={(sel) => {
+                if (!sel) {
+                  setCategory("");
+                  setSubcategory("");
+                } else if (sel.parentId) {
+                  setCategory(sel.parentId);
+                  setSubcategory(sel.id);
+                } else {
+                  setCategory(sel.id);
+                  setSubcategory("");
+                }
+              }}
+            />
           </div>
           {activeCat ? (
             <SubscribeCategoryButton categoryId={activeCat.id} categoryName={activeCat.name_ar} />

@@ -130,7 +130,7 @@ export default function MyProposalsPage() {
                     {p.job_title}
                   </a>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
-                    <span className="font-bold text-ink" dir="ltr">{p.budget} د.ك</span>
+                    <span className="font-bold text-ink" dir="ltr">${p.budget}</span>
                     <span>التسليم خلال {p.delivery_days.toLocaleString("ar-EG")} يوم</span>
                     {timeAgo(p.created_at) && <span>{timeAgo(p.created_at)}</span>}
                   </div>
