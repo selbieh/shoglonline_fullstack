@@ -9,6 +9,7 @@ import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
+import FavoriteButton from "@/components/FavoriteButton";
 import {
   AlertIcon,
   ArrowLeftIcon,
@@ -430,6 +431,12 @@ function GalleryCard({ it }: { it: GalleryItem }) {
       <div className="relative aspect-video overflow-hidden bg-tint">
         <GalleryThumb it={it} />
         <MediaBadge t={it.media_type} />
+        {/* save this work to favourites (kind=portfolio) — bottom corner, clear of the media/category badges */}
+        <FavoriteButton
+          kind="portfolio"
+          id={it.id}
+          className="absolute bottom-2 end-2 z-10 grid h-9 w-9 place-content-center rounded-full bg-white/90 text-danger shadow-sm ring-1 ring-line transition hover:bg-danger-t disabled:opacity-50"
+        />
         {/* category lives on the cover where it has the full width to show in full,
             instead of being crammed (and truncated) into the body text */}
         {it.category?.name && (

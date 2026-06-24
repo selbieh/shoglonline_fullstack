@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.core.models import AuditLog
+from apps.core.services import get_setting
 
 from .models import IDVerification, WorkerProfile
 
@@ -14,6 +15,21 @@ ERR = {
     "file_required": {"code": "file_required", "message_ar": "أرفق صورة الهوية الوطنية"},
     "reason_required": {"code": "reason_required", "message_ar": "سبب الرفض إلزامي"},
 }
+
+
+def submit_profile_for_publication(profile: WorkerProfile) -> WorkerProfile:
+    """Worker submit → published (profiles.auto_publish ON) or pending_review (OFF) — rule D-1.
+
+    Mirrors jobs/services.submit_for_publication: with the flag ON the profile goes live with no
+    admin review; with it OFF it waits in PENDING_REVIEW for review_profile_publish(). Callers gate
+    on completeness (≥70%) before invoking this."""
+    if get_setting("profiles.auto_publish", False):
+        profile.publish_state = WorkerProfile.PublishState.PUBLISHED
+    else:
+        profile.publish_state = WorkerProfile.PublishState.PENDING_REVIEW
+    profile.publish_reject_reason = ""
+    profile.save(update_fields=["publish_state", "publish_reject_reason"])
+    return profile
 
 
 @transaction.atomic

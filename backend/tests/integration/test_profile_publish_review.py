@@ -38,8 +38,20 @@ def test_publish_complete_goes_to_pending_review(as_user, worker):
     res = as_user(worker).post(PUBLISH, format="json")
     assert res.status_code == 200
     profile = WorkerProfile.objects.get(user=worker)
-    # NOT published yet — waits for admin approval (rule D-1).
+    # NOT published yet — waits for admin approval (rule D-1, profiles.auto_publish OFF).
     assert profile.publish_state == WorkerProfile.PublishState.PENDING_REVIEW
+
+
+def test_publish_goes_live_when_auto_publish_on(as_user, worker):
+    from apps.core.services import set_setting
+
+    set_setting("profiles.auto_publish", True)
+    _complete_profile(worker)
+    res = as_user(worker).post(PUBLISH, format="json")
+    assert res.status_code == 200
+    profile = WorkerProfile.objects.get(user=worker)
+    # auto-publish ON → live immediately, no admin review needed.
+    assert profile.publish_state == WorkerProfile.PublishState.PUBLISHED
 
 
 def test_admin_approve_publishes(worker, staff):

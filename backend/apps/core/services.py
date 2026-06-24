@@ -12,6 +12,7 @@ DEFAULTS: dict[str, tuple[object, str, str, bool]] = {
     "jobs.auto_publish": (False, "bool", "moderation", False),
     "proposals.auto_publish": (True, "bool", "moderation", False),
     "services.auto_publish": (False, "bool", "moderation", False),
+    "profiles.auto_publish": (False, "bool", "moderation", False),
     "chat.enabled": (True, "bool", "chat", True),
     "chat.unread_email_delay_minutes": (10, "int", "chat", False),
     "chat.banned_words": ([], "json", "chat", False),

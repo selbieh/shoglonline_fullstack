@@ -32,6 +32,22 @@ def test_liabilities_split_by_bucket(fund_wallet):
     assert set(kpis) >= {"wallet_available", "wallet_escrow_held", "wallet_earnings_pending"}
 
 
+def test_kpis_cover_every_user_input_content_type():
+    """The admin report must surface a count for every user-input item type — offers, jobs,
+    gallery, services, requests, reviews + the moderation queues (ID checks, chat reports)."""
+    kpis = compute_kpis()
+    assert {
+        "total_jobs", "active_jobs",
+        "total_services", "live_services",
+        "total_proposals", "open_proposals",
+        "total_buying_requests", "pending_buying_requests",
+        "total_portfolio_items",
+        "total_reviews",
+        "pending_jobs", "pending_services",
+        "pending_id_verifications", "open_chat_reports",
+    } <= set(kpis)
+
+
 def test_date_range_resizes_charts():
     assert len(_chart_data(7)["trend"]["labels"]) == 7
     assert len(_chart_data(30)["trend"]["labels"]) == 30

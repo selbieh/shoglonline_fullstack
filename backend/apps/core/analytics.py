@@ -11,11 +11,14 @@ from django.utils import timezone
 
 def compute_kpis() -> dict:
     from apps.accounts.models import User
+    from apps.chat.models import ChatReport
     from apps.contracts.models import Contract
-    from apps.gigs.models import Service
+    from apps.gigs.models import BuyingRequest, Service
     from apps.jobs.models import Job, Proposal
     from apps.payments.models import Wallet
     from apps.payments.services import get_platform_wallet
+    from apps.profiles.models import IDVerification, PortfolioItem
+    from apps.reviews.models import Review
     from apps.tickets.models import Ticket
 
     now = timezone.now()
@@ -46,8 +49,22 @@ def compute_kpis() -> dict:
         "users_with_employer_activity": Job.objects.values("employer").distinct().count(),
         "users_dual_active": dual_active,
         "active_jobs": Job.objects.filter(status=Job.Status.PUBLISHED).count(),
+        "total_jobs": Job.objects.count(),
         "live_services": Service.objects.filter(status=Service.Status.LIVE).count(),
+        "total_services": Service.objects.count(),
         "proposals_today": Proposal.objects.filter(created_at__date=today).count(),
+        # عروض المستقلين على الوظائف (worker offers/bids on jobs)
+        "total_proposals": Proposal.objects.count(),
+        "open_proposals": Proposal.objects.filter(status__in=Proposal.OPEN_STATUSES).count(),
+        # طلبات شراء الخدمات (employer purchase requests against a service)
+        "total_buying_requests": BuyingRequest.objects.count(),
+        "pending_buying_requests": BuyingRequest.objects.filter(
+            status=BuyingRequest.Status.PENDING,
+        ).count(),
+        # معرض الأعمال (public work gallery / portfolio)
+        "total_portfolio_items": PortfolioItem.objects.count(),
+        # التقييمات (reviews left after contracts)
+        "total_reviews": Review.objects.count(),
         "active_contracts": Contract.objects.filter(status__in=Contract.OPEN_STATUSES).count(),
         "gmv": gmv,
         "platform_commission": commission,
@@ -58,6 +75,10 @@ def compute_kpis() -> dict:
         "open_tickets": Ticket.objects.filter(status__in=Ticket.OPEN_STATUSES).count(),
         "pending_jobs": Job.objects.filter(status=Job.Status.PENDING_REVIEW).count(),
         "pending_services": Service.objects.filter(status=Service.Status.PENDING_REVIEW).count(),
+        "pending_id_verifications": IDVerification.objects.filter(
+            status=IDVerification.Status.PENDING,
+        ).count(),
+        "open_chat_reports": ChatReport.objects.filter(status=ChatReport.Status.OPEN).count(),
         "disputed_contracts": Contract.objects.filter(status=Contract.Status.DISPUTED).count(),
         "overdue_contracts": Contract.objects.filter(
             status=Contract.Status.ACTIVE, deadline__lt=today,
@@ -70,6 +91,10 @@ _CARDS = [
     ("users_total", "إجمالي المستخدمين"),
     ("active_jobs", "وظائف منشورة"),
     ("live_services", "خدمات منشورة"),
+    ("total_proposals", "عروض على الوظائف"),
+    ("total_buying_requests", "طلبات شراء الخدمات"),
+    ("total_portfolio_items", "أعمال في المعرض"),
+    ("total_reviews", "التقييمات"),
     ("active_contracts", "عقود جارية"),
     ("gmv", "إجمالي قيمة التعاملات (GMV)"),
     ("platform_commission", "عمولة المنصة"),
@@ -77,6 +102,10 @@ _CARDS = [
     ("wallet_earnings_pending", "أرباح معلّقة"),
     ("open_tickets", "تذاكر مفتوحة"),
     ("pending_jobs", "وظائف بانتظار المراجعة"),
+    ("pending_services", "خدمات بانتظار المراجعة"),
+    ("pending_buying_requests", "طلبات شراء معلّقة"),
+    ("pending_id_verifications", "توثيق هوية بانتظار المراجعة"),
+    ("open_chat_reports", "بلاغات محادثات مفتوحة"),
     ("disputed_contracts", "نزاعات قائمة"),
     ("overdue_contracts", "عقود متأخرة"),
 ]
@@ -87,13 +116,21 @@ _STAT_BOXES = [
     ("Total users", "users_total", "👥", "primary"),
     ("Active jobs", "active_jobs", "💼", "primary"),
     ("Live services", "live_services", "🛍", "primary"),
+    ("Job proposals", "total_proposals", "📨", "primary"),
+    ("Service requests", "total_buying_requests", "🧾", "primary"),
+    ("Portfolio items", "total_portfolio_items", "🖼", "primary"),
+    ("Reviews", "total_reviews", "⭐", "primary"),
     ("Active contracts", "active_contracts", "🤝", "primary"),
     ("GMV", "gmv", "💰", "success", "$"),
     ("Platform commission", "platform_commission", "🏦", "success", "$"),
     ("Escrow held", "wallet_escrow_held", "🛡", "warn", "$"),
     ("Earnings pending", "wallet_earnings_pending", "⏳", "warn", "$"),
     ("Open tickets", "open_tickets", "🛟", "danger"),
-    ("Pending moderation", "pending_jobs", "📝", "danger"),
+    ("Pending jobs", "pending_jobs", "📝", "danger"),
+    ("Pending services", "pending_services", "🏷", "danger"),
+    ("Pending requests", "pending_buying_requests", "📥", "danger"),
+    ("Pending ID checks", "pending_id_verifications", "🪪", "danger"),
+    ("Open chat reports", "open_chat_reports", "🚩", "danger"),
     ("Disputes", "disputed_contracts", "⚖️", "danger"),
     ("Overdue contracts", "overdue_contracts", "⏰", "danger"),
 ]
