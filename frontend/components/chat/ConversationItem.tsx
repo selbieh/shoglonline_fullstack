@@ -1,15 +1,17 @@
 import Avatar from "@/components/Avatar";
+import ChatReportButton from "@/components/ChatReportButton";
 import { LockIcon } from "@/components/icons";
 import { CTX_LABEL, relativeTime } from "@/lib/chatFormat";
 import type { Conversation } from "./types";
 
-/** One row in the conversation list: avatar, context tag, name, last-message preview, time, unread. */
+/** One row in the conversation list: avatar, context tag, name, last-message preview, time, unread.
+    A discreet report action (far end) flags the conversation to the admin chat-review queue. */
 export default function ConversationItem({ conv, active }: { conv: Conversation; active: boolean }) {
   const ctxTitle = conv.context?.title;
   return (
     <a
       href={`/messages/${conv.id}`}
-      className={`flex gap-3 border-b border-line px-4 py-3 transition ${
+      className={`group flex items-center gap-3 border-b border-line px-4 py-3 transition ${
         active ? "bg-tint" : "hover:bg-bg"
       } ${conv.read_only ? "opacity-70" : ""}`}
     >
@@ -35,6 +37,10 @@ export default function ConversationItem({ conv, active }: { conv: Conversation;
           )}
         </div>
       </div>
+      <ChatReportButton
+        conversationId={conv.id}
+        className="grid h-8 w-8 shrink-0 place-content-center rounded-full text-[15px] text-sub/70 transition hover:bg-danger-t hover:text-danger"
+      />
     </a>
   );
 }

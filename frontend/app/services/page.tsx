@@ -8,7 +8,7 @@ import { AlertIcon, ArrowLeftIcon, BriefcaseIcon, ClockIcon, HeartIcon, SearchIc
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
-import FavoriteButton from "@/components/FavoriteButton";
+import CardActions from "@/components/CardActions";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 
 type Service = {
@@ -152,7 +152,7 @@ export default function ServicesPage() {
       </section>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {(activeCat || activeSub || q) && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
@@ -225,12 +225,6 @@ export default function ServicesPage() {
                     href={`/services/${s.slug}`}
                     className="card-modern group relative block p-5"
                   >
-                    {/* save to favourites — overlaid top corner so it sits inside the card link */}
-                    <FavoriteButton
-                      kind="service"
-                      id={s.id}
-                      className="absolute end-4 top-4 z-10 grid h-9 w-9 place-content-center rounded-full bg-white/90 text-danger shadow-sm ring-1 ring-line transition hover:bg-danger-t disabled:opacity-50"
-                    />
                     <div className="flex items-start gap-4">
                       {/* cover image as a clean thumbnail, else a soft icon tile */}
                       {s.cover_image ? (
@@ -247,9 +241,18 @@ export default function ServicesPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-lg font-bold leading-snug transition group-hover:text-primary-dark pe-10">
-                          {s.title}
-                        </h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-lg font-bold leading-snug transition group-hover:text-primary-dark">
+                            {s.title}
+                          </h3>
+                          <CardActions
+                            reportKind="service"
+                            favoriteKind="service"
+                            id={s.id}
+                            shareUrl={`/services/${s.slug}`}
+                            shareTitle={s.title}
+                          />
+                        </div>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-sub">
                           <span className="font-medium text-ink/75">{s.worker_name}</span>
                           {posted && (

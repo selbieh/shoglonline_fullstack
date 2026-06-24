@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { EXPERTISE_LABEL, type Freelancer, type Paginated } from "@/lib/types";
 import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
-import FavoriteButton from "@/components/FavoriteButton";
-import ReportButton from "@/components/ReportButton";
+import CardActions from "@/components/CardActions";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
-import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, ShareIcon, StarIcon } from "@/components/icons";
+import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, StarIcon } from "@/components/icons";
 
 const EXPERTISE_OPTIONS = ["entry", "intermediate", "expert"] as const;
 const PAGE = 12; // load-more page size (server caps limit at 100)
@@ -152,7 +151,7 @@ export default function FreelancersPage() {
       </section>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {hasFilters && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
@@ -335,13 +334,6 @@ function FreelancerCard({ f }: { f: Freelancer }) {
   const location = [f.city, f.country].filter(Boolean).join(" - ");
   const avail = f.availability ? AVAIL[f.availability] : undefined;
   const rated = Number(f.rating_count) > 0;
-  const onShare = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = typeof window !== "undefined" ? `${window.location.origin}${profileUrl}` : profileUrl;
-    if (typeof navigator !== "undefined" && navigator.share) navigator.share({ url }).catch(() => {});
-    else navigator?.clipboard?.writeText(url).catch(() => {});
-  };
   return (
     <Link
       href={profileUrl}
@@ -372,15 +364,13 @@ function FreelancerCard({ f }: { f: Freelancer }) {
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button type="button" onClick={onShare} title="مشاركة" aria-label="مشاركة"
-            className="grid h-9 w-9 place-content-center rounded-full text-[18px] text-sub transition hover:bg-tint hover:text-primary">
-            <ShareIcon />
-          </button>
-          <FavoriteButton kind="freelancer" id={f.id}
-            className="grid h-9 w-9 place-content-center rounded-full text-[18px] text-sub transition hover:bg-tint hover:text-danger" />
-          <ReportButton kind="freelancer" id={f.id} />
-        </div>
+        <CardActions
+          reportKind="freelancer"
+          favoriteKind="freelancer"
+          id={f.id}
+          shareUrl={profileUrl}
+          shareTitle={f.name}
+        />
       </div>
 
       {/* description */}

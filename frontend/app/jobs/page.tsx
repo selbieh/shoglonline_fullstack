@@ -3,16 +3,16 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, API_URL, tokens } from "@/lib/api";
-import { signinHereHref } from "@/lib/nav";
+import { API_URL } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
 import { tagTone } from "@/lib/tags";
 import { LOCATION_LABEL, type Category, type Job, type Paginated } from "@/lib/types";
 import {
-  AlertIcon, ArrowLeftIcon, BellIcon, BookmarkIcon, BriefcaseIcon, ClockIcon, MapPinIcon,
+  AlertIcon, ArrowLeftIcon, BellIcon, BriefcaseIcon, ClockIcon, MapPinIcon,
   SearchIcon, UsersIcon,
 } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
+import CardActions from "@/components/CardActions";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
@@ -34,7 +34,6 @@ function JobsInner() {
   const [subcategory, setSubcategory] = useState<string>(params.get("subcategory") ?? "");
   const [q, setQ] = useState(params.get("search") ?? ""); // prefill from ?search= (e.g. hero search)
   const [ordering, setOrdering] = useState("-published_at");
-  const [saved, setSaved] = useState<Record<number, boolean>>({});
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
   const activeCat = categories.find((c) => String(c.id) === category);
@@ -126,21 +125,6 @@ function JobsInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
-  async function toggleWatch(job: Job) {
-    const next = !saved[job.id];
-    setSaved((m) => ({ ...m, [job.id]: next })); // optimistic
-    if (!tokens.access) {
-      window.location.href = signinHereHref();
-      return;
-    }
-    try {
-      // unified favourites (ppt slide-43) — saved jobs appear under the favourites "الوظائف" tab
-      await api(`/me/favorites/job/${job.id}`, { method: next ? "PUT" : "DELETE" });
-    } catch {
-      setSaved((m) => ({ ...m, [job.id]: !next })); // revert on failure
-    }
-  }
-
   return (
     <main className="min-h-screen bg-bg">
       {/* gradient header band */}
@@ -182,7 +166,7 @@ function JobsInner() {
       </section>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {(activeCat || activeSub || q) && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
@@ -279,15 +263,13 @@ function JobsInner() {
                           )}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className={`shrink-0 rounded-full p-1.5 text-[18px] transition ${saved[job.id] ? "bg-tint text-primary" : "text-sub hover:bg-tint hover:text-primary"}`}
-                        title="أضف لقائمة المتابعة"
-                        aria-pressed={!!saved[job.id]}
-                        onClick={() => toggleWatch(job)}
-                      >
-                        <BookmarkIcon filled={!!saved[job.id]} />
-                      </button>
+                      <CardActions
+                        reportKind="job"
+                        favoriteKind="job"
+                        id={job.id}
+                        shareUrl={`/jobs/${job.slug}`}
+                        shareTitle={job.title}
+                      />
                     </div>
                     {job.description && (
                       <p className="mt-3 line-clamp-2 text-sm leading-6 text-sub">{job.description}</p>

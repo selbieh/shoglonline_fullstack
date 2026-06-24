@@ -10,7 +10,7 @@ import Avatar from "@/components/Avatar";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
-import FavoriteButton from "@/components/FavoriteButton";
+import CardActions from "@/components/CardActions";
 import {
   AlertIcon,
   ArrowLeftIcon,
@@ -189,7 +189,7 @@ function GalleryInner() {
       </section>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {anyFilter && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
@@ -432,11 +432,15 @@ function GalleryCard({ it }: { it: GalleryItem }) {
       <div className="relative aspect-video overflow-hidden bg-tint">
         <GalleryThumb it={it} />
         <MediaBadge t={it.media_type} />
-        {/* save this work to favourites (kind=portfolio) — bottom corner, clear of the media/category badges */}
-        <FavoriteButton
-          kind="portfolio"
+        {/* report · save · share — overlaid on the cover, clear of the media/category badges */}
+        <CardActions
+          variant="overlay"
+          reportKind="portfolio"
+          favoriteKind="portfolio"
           id={it.id}
-          className="absolute bottom-2 end-2 z-10 grid h-9 w-9 place-content-center rounded-full bg-white/90 text-danger shadow-sm ring-1 ring-line transition hover:bg-danger-t disabled:opacity-50"
+          shareUrl={href}
+          shareTitle={it.title}
+          className="absolute bottom-2 end-2 z-10"
         />
         {/* category lives on the cover where it has the full width to show in full,
             instead of being crammed (and truncated) into the body text */}

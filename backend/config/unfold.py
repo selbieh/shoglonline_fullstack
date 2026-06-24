@@ -110,6 +110,7 @@ UNFOLD = {
                 "items": [
                     {"title": "Conversations", "icon": "forum", "link": _changelist("chat_conversation")},
                     {"title": "Chat reports", "icon": "flag", "link": _changelist("chat_chatreport")},
+                    {"title": "Content reports", "icon": "report", "link": _changelist("core_report")},
                     {"title": "Notifications", "icon": "notifications", "link": _changelist("notifications_notification")},
                     {"title": "Broadcasts", "icon": "campaign", "link": _changelist("notifications_schedulednotification")},
                     {"title": "Notification prefs", "icon": "tune", "link": _changelist("notifications_notificationpreference")},

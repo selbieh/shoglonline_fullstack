@@ -23,7 +23,7 @@ export default function FilterPanel({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <aside className="order-first w-full shrink-0 space-y-4 lg:order-none lg:sticky lg:top-6 lg:w-80 lg:self-start">
+    <aside className="order-first w-full shrink-0 space-y-4 lg:order-none lg:sticky lg:top-20 lg:w-80 lg:self-start">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
