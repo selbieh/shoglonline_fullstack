@@ -15,14 +15,14 @@ services:
     ports:
       - "5432:5432"
 
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      retries: 10
-    ports:
-      - "6379:6379"   # published so a host-run backend (bare metal) can reach it too
+  # redis:
+  #   image: redis:7-alpine
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 5s
+  #     retries: 10
+  #   ports:
+  #     - "6379:6379"   # published so a host-run backend (bare metal) can reach it too
 
   backend:
     build:

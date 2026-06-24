@@ -94,8 +94,13 @@ DATABASES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# A single namespace prefixes every Redis key this app owns (Django cache + Celery broker/result),
+# so multiple deployments can safely share one Redis instance without colliding. Defaults to "shogl".
+REDIS_PREFIX = env("REDIS_PREFIX", default="shogl")
+
 CACHES = {
-    "default": env.cache("CACHE_URL", default="locmemcache://"),
+    # KEY_PREFIX namespaces Django's own cache keys (sessions, throttles, etc.).
+    "default": {**env.cache("CACHE_URL", default="locmemcache://"), "KEY_PREFIX": REDIS_PREFIX},
 }
 
 # ---------------------------------------------------------------- auth
@@ -235,8 +240,14 @@ CELERY_TASK_DEFAULT_RETRY_DELAY = 30  # seconds between automatic retries
 CELERY_TASK_MAX_RETRIES = 5
 CELERY_RESULT_EXPIRES = 60 * 60 * 24  # bound the result backend's growth
 # Redis broker: a task unacked within this window (acks_late) is redelivered. Must exceed the longest
-# task runtime so a slow-but-alive task isn't double-dispatched.
-CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 60 * 60}
+# task runtime so a slow-but-alive task isn't double-dispatched. global_keyprefix namespaces every
+# broker key (queues, unacked, bindings) so this app can share a Redis instance with others.
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "visibility_timeout": 60 * 60,
+    "global_keyprefix": f"{REDIS_PREFIX}:",
+}
+# Same namespace for the result backend's keys (celery-task-meta-*, group results).
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {"global_keyprefix": f"{REDIS_PREFIX}:"}
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True  # ride out a broker not-yet-up at boot
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
