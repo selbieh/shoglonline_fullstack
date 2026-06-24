@@ -180,13 +180,20 @@ SPECTACULAR_SETTINGS = {
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
 }
 
-# ---------------------------------------------------------------- cors / security
-# Allow all origins by default (dev convenience). Production overrides this to False
-# and restricts to CORS_ALLOWED_ORIGINS. The API is JWT/Bearer-based (no cookies),
-# so credentials are NOT sent cross-origin — a wildcard "*" is safe here.
+# ---------------------------------------------------------------- cors / csrf
+# CORS — allow ALL origins. The API authenticates with a JWT in the Authorization header
+# (NOT cookies), so there are no credentials to leak cross-origin and a wildcard "*" is safe.
+# CORS_ALLOW_CREDENTIALS MUST stay False — browsers reject "*" together with credentials.
 CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS", default=True)
 CORS_ALLOW_CREDENTIALS = False
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
+
+# CSRF only applies to Django's session-cookie surfaces (the admin). The JWT API never uses it —
+# no DRF view uses SessionAuthentication — so API requests are never CSRF-checked. Browsers send
+# an Origin header on admin POSTs, so when the admin is reached behind a domain or HTTPS proxy
+# (browser origin != the host Django sees) you MUST list that public URL here or login fails with
+# "Origin checking failed". Set it in .env — comma-separated, scheme + port included, e.g.
+#   CSRF_TRUSTED_ORIGINS=https://admin.example.com,http://203.0.113.10:8000
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=["http://localhost:3000"])
 
 # Public base URL of the SPA — used to build absolute links inside emails, notifications and
