@@ -8,11 +8,18 @@ set -e
 # which made WhiteNoise 404 every static asset. Honour a Railway-provided value if set.
 export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-config.settings.production}"
 
-python manage.py migrate --noinput
-python manage.py seed_settings
-python manage.py seed_catalog
-python manage.py seed_landing
-# No error suppression: a failing collectstatic must be loud, not silently skipped.
-python manage.py collectstatic --noinput --clear
+# Mounted volumes (Railway/compose) attach as root:root, so the unprivileged app user cannot
+# write to STATIC_ROOT (/app/staticfiles) or MEDIA_ROOT (/app/media). We start as root, fix
+# ownership, then drop to app via gosu. Harmless no-op when nothing is mounted.
+chown -R app:app /app/staticfiles /app/media 2>/dev/null || true
 
-exec "$@"
+python="gosu app python"
+
+$python manage.py migrate --noinput
+$python manage.py seed_settings
+$python manage.py seed_catalog
+$python manage.py seed_landing
+# No error suppression: a failing collectstatic must be loud, not silently skipped.
+$python manage.py collectstatic --noinput --clear
+
+exec gosu app "$@"
