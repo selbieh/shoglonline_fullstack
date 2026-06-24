@@ -2,14 +2,10 @@
 import logging
 
 from celery import shared_task
-from django.conf import settings
-from django.core.mail import send_mail
 
 from apps.core.services import get_setting
 
 logger = logging.getLogger(__name__)
-
-FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
 
 
 @shared_task(bind=True, max_retries=3, retry_backoff=True)
@@ -41,24 +37,19 @@ def fanout_job_published(self, job_id: int) -> int:
     if job.subcategory_id:
         subs = subs.filter(subcategory__isnull=True) | subs.filter(subcategory_id=job.subcategory_id)
 
-    from apps.notifications.services import category_allows
+    from apps.notifications.services import category_allows, send_branded_email
     snippet = (job.description or "")[:140]
     sent = 0
     for sub in subs.distinct():
         if not category_allows(sub.user, "job_alerts"):  # FR-PROF-9: new-job-in-category category
             continue
-        send_mail(
+        send_branded_email(
+            to=sub.user.email,
             subject=f"وظيفة جديدة في «{job.category.name_ar}»: {job.title}",
-            message=(
-                f"{snippet}…\n\n"
-                f"الميزانية: ${job.budget_min}–${job.budget_max}\n"
-                f"قدّم عرضك: {FRONTEND_URL}/jobs/{job.slug}\n\n"
-                "لإلغاء الاشتراك من هذه الفئة: "
-                f"{FRONTEND_URL}/notifications"
-            ),
-            from_email=None,
-            recipient_list=[sub.user.email],
-            fail_silently=False,
+            body=f"{snippet}…\n\nالميزانية: ${job.budget_min}–${job.budget_max}",
+            deep_link=f"/jobs/{job.slug}",
+            cta_label="قدّم عرضك",
+            fail_silently=False,  # let the retrying task surface SMTP errors
         )
         sent += 1
     logger.info("job %s fan-out: %s emails", job_id, sent)

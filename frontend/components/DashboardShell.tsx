@@ -8,8 +8,8 @@ import { signinHereHref } from "@/lib/nav";
 import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
 import {
-  BarChartIcon, BellIcon, BriefcaseIcon, ClipboardIcon, CompassIcon, EnvelopeIcon, GearIcon,
-  GridIcon, HeadsetIcon, ShieldIcon, SparklesIcon, StarIcon, UserIcon, WalletIcon,
+  BarChartIcon, BellIcon, BriefcaseIcon, ClipboardIcon, CloseIcon, CompassIcon, EnvelopeIcon, GearIcon,
+  GridIcon, HeadsetIcon, MenuIcon, ShieldIcon, SparklesIcon, StarIcon, UserIcon, WalletIcon,
 } from "@/components/icons";
 
 type IconCmp = (props: { className?: string }) => JSX.Element;
@@ -47,6 +47,7 @@ export default function DashboardShell({
   const pathname = usePathname() || "";
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,6 +61,20 @@ export default function DashboardShell({
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  // Mobile sidebar drawer: close on navigation, lock body scroll + Escape while open.
+  useEffect(() => setNavOpen(false), [pathname]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [navOpen]);
 
   function logout() {
     api("/auth/logout", { method: "POST", body: JSON.stringify({ refresh: tokens.refresh }) }).catch(() => {});
@@ -96,21 +111,70 @@ export default function DashboardShell({
         </Link>
       </aside>
 
+      {/* ── mobile sidebar drawer (the desktop aside is lg-only) ── */}
+      {navOpen && (
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="قائمة لوحة التحكم">
+          <div className="animate-fade-in absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={() => setNavOpen(false)} />
+          <div className="animate-drawer-in absolute inset-y-0 start-0 flex w-64 max-w-[82vw] flex-col bg-white shadow-soft-lg">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
+              <Logo tone="brand" className="h-8 w-auto" />
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                aria-label="إغلاق القائمة"
+                className="grid h-10 w-10 place-content-center rounded-full text-[20px] text-sub transition hover:bg-tint hover:text-primary-dark"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+              {NAV.map((n) => {
+                const on = active === n.key;
+                return (
+                  <Link key={n.key} href={n.href}
+                    className={`flex items-center gap-3 rounded-m px-3 py-2.5 text-sm font-medium transition ${
+                      on ? "bg-tint text-primary-dark" : "text-sub hover:bg-bg hover:text-ink"
+                    }`}>
+                    <n.Icon className={`text-[18px] ${on ? "text-primary" : "text-sub"}`} />
+                    {n.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            <Link href="/support" className="m-3 flex items-center gap-2 rounded-m bg-tint px-3 py-3 text-sm text-primary-dark">
+              <HeadsetIcon className="text-[18px]" />
+              <span>تحتاج مساعدة؟<br /><span className="font-bold">تواصل مع الدعم</span></span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* ── main ── */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* top bar */}
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/90 px-5 py-3 backdrop-blur">
-          <Link href="/dashboard" className="flex items-center gap-1.5 text-sm font-medium text-ink">
-            <BarChartIcon className="text-[18px] text-primary" /> لوحة التحكم
-          </Link>
           <div className="flex items-center gap-1.5">
-            <Link href="/notifications" aria-label="الإشعارات" className="grid h-9 w-9 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label="القائمة"
+              aria-expanded={navOpen}
+              className="grid h-10 w-10 place-content-center rounded-full text-[22px] text-sub transition hover:bg-tint hover:text-primary-dark lg:hidden"
+            >
+              <MenuIcon />
+            </button>
+            <Link href="/dashboard" className="flex items-center gap-1.5 text-sm font-medium text-ink">
+              <BarChartIcon className="text-[18px] text-primary" /> لوحة التحكم
+            </Link>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Link href="/notifications" aria-label="الإشعارات" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <BellIcon />
             </Link>
-            <Link href="/messages" aria-label="الرسائل" className="grid h-9 w-9 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
+            <Link href="/messages" aria-label="الرسائل" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <EnvelopeIcon />
             </Link>
-            <Link href="/support" aria-label="المساعدة" className="grid h-9 w-9 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
+            <Link href="/support" aria-label="المساعدة" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <HeadsetIcon />
             </Link>
             <div className="relative" ref={menuRef}>
@@ -130,16 +194,6 @@ export default function DashboardShell({
         </header>
 
         <main className="min-w-0 flex-1 px-5 py-6 sm:px-7">
-          {/* mobile nav (sidebar is desktop-only) */}
-          <div className="mb-4 flex gap-2 overflow-x-auto lg:hidden">
-            {NAV.slice(0, 7).map((n) => (
-              <Link key={n.key} href={n.href}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${active === n.key ? "bg-primary text-white" : "bg-white text-sub ring-1 ring-line"}`}>
-                {n.label}
-              </Link>
-            ))}
-          </div>
-
           {(title || headerActions) && (
             <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>

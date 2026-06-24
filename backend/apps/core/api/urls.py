@@ -1,8 +1,9 @@
 from django.urls import path
 
-from .views import AdminStatsView, PublicSettingsView
+from .views import AdminStatsView, CreateReportView, PublicSettingsView
 
 urlpatterns = [
     path("settings/public", PublicSettingsView.as_view(), name="public-settings"),
     path("admin/stats", AdminStatsView.as_view(), name="admin-stats"),
+    path("reports", CreateReportView.as_view(), name="report-create"),
 ]

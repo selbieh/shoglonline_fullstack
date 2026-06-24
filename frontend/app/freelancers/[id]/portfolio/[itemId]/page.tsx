@@ -6,7 +6,8 @@ import { DetailRail, RailRow } from "@/components/DetailRail";
 import OwnerCard from "@/components/OwnerCard";
 import SimilarWorks, { type SimilarWork } from "@/components/SimilarWorks";
 import FeatureChecklist from "@/components/FeatureChecklist";
-import { AlertIcon, BarChartIcon, BriefcaseIcon, ClockIcon, CodeIcon, ExternalLinkIcon, WalletIcon } from "@/components/icons";
+import ReportButton from "@/components/ReportButton";
+import { BarChartIcon, BriefcaseIcon, ClockIcon, CodeIcon, ExternalLinkIcon, WalletIcon } from "@/components/icons";
 
 /* Public single portfolio work — work-showcase (معرض عمل فردي، رؤية الغير — ppt slide-22). SSR for
    SEO. Hero/thumbnail gallery + structured detail rail + owner card + «أعمال مشابهة» from the same
@@ -82,9 +83,7 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
 
         <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
           <h1 className="text-2xl font-extrabold md:text-3xl">{it.title}</h1>
-          <a href="/support" className="inline-flex items-center gap-1.5 rounded-m border border-line px-3 py-1.5 text-xs font-medium text-sub transition hover:border-danger/40 hover:text-danger">
-            <AlertIcon className="text-[14px]" /> الإبلاغ عن مخالفة
-          </a>
+          <ReportButton kind="portfolio" id={it.id} label="الإبلاغ عن مخالفة" />
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">

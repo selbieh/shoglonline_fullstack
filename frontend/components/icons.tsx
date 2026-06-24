@@ -23,6 +23,24 @@ function Svg({ children, ...props }: IconProps) {
   );
 }
 
+export const MenuIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </Svg>
+);
+
+export const CloseIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </Svg>
+);
+
+export const FilterIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 5h16l-6.5 8v5l-3 2v-7L4 5Z" />
+  </Svg>
+);
+
 export const BriefcaseIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="3" y="7" width="18" height="13" rx="2.5" />

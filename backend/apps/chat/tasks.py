@@ -8,13 +8,11 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.core.mail import send_mail
 from django.utils import timezone
 
 from apps.core.services import get_setting
 
 logger = logging.getLogger(__name__)
-FRONTEND_URL = "http://localhost:3000"
 
 
 @shared_task
@@ -38,10 +36,13 @@ def send_unread_chat_emails() -> int:
         already_read = member and member.last_read_at and member.last_read_at >= msg.created_at
         opted_out = not preference_allows(recipient, "chat_message")  # FR-PROF-9: chat-unread category
         if not already_read and not opted_out:
-            send_mail(
+            from apps.notifications.services import send_branded_email
+            send_branded_email(
+                to=recipient.email,
                 subject=f"رسالة جديدة من {msg.sender.first_name or msg.sender.email}",
-                message=f"{(msg.body or '')[:200]}\n\nافتح المحادثة: {FRONTEND_URL}/messages/{conv.pk}",
-                from_email=None, recipient_list=[recipient.email], fail_silently=True,
+                body=(msg.body or "")[:200],
+                deep_link=f"/messages/{conv.pk}",
+                cta_label="افتح المحادثة",
             )
             sent += 1
         msg.unread_email_sent = True  # fire once regardless (no repeat spam)

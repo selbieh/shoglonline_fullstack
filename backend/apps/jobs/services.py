@@ -145,6 +145,16 @@ def submit_proposal(*, worker, job: Job, budget, delivery_days, description, ans
             raise ValidationError(ERR["no_bids"]) from None
 
     Job.objects.filter(pk=job.pk).update(proposals_count=job.proposals.count())
+
+    from apps.notifications.models import Notification  # noqa: PLC0415 (avoid import cycle)
+    from apps.notifications.services import notify  # noqa: PLC0415
+    notify(
+        job.employer,
+        kind=Notification.Kind.PROPOSAL,
+        title="عرض جديد على وظيفتك",
+        body=f"تلقّيت عرضًا جديدًا على «{job.title}».",
+        deep_link=f"/jobs/{job.slug}",
+    )
     return proposal
 
 

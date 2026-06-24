@@ -7,7 +7,10 @@ signals/services call notify() for side-effect fan-out only (SRS §23).
 import logging
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.html import strip_tags
 
 from apps.core.services import get_setting
 
@@ -17,6 +20,9 @@ from .models import Notification, NotificationPreference
 logger = logging.getLogger(__name__)
 
 FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
+# Absolute, externally-reachable logo so it renders in any mail client (served from the Next app's public/).
+EMAIL_LOGO_URL = getattr(settings, "EMAIL_LOGO_URL", f"{FRONTEND_URL}/logo.png")
+EMAIL_PREFS_URL = f"{FRONTEND_URL}/settings"  # where the user manages notification preferences
 
 # The admin-allowed, user-suppressible categories (FR-PROF-9). Only these kinds consult a
 # preference; every other kind is transactional and is ALWAYS delivered.
@@ -70,17 +76,55 @@ def _dispatch(note: Notification, *, email: bool = True) -> None:
                           deep_link=note.deep_link, collapse_key=note.kind):
             note.pushed = True
     if email and note.user.email and not note.emailed and get_setting("emails.enabled", True):
-        link = f"{FRONTEND_URL}{note.deep_link}" if note.deep_link else FRONTEND_URL
-        send_mail(
-            subject=note.title,
-            message=f"{note.body}\n\n{link}",
-            from_email=None,
-            recipient_list=[note.user.email],
-            fail_silently=True,
-        )
+        _send_branded_email(note)
         note.emailed = True
     if note.pushed or note.emailed:
         note.save(update_fields=["pushed", "emailed"])
+
+
+def _send_branded_email(note: Notification) -> None:
+    """Deliver a notification as a branded email, with the CTA pointing at the item (deep_link)."""
+    send_branded_email(
+        to=[note.user.email],
+        subject=note.title,
+        title=note.title,
+        body=note.body,
+        deep_link=note.deep_link,
+    )
+
+
+def send_branded_email(*, to, subject: str, title: str = "", body: str = "", deep_link: str = "",
+                       cta_label: str = "عرض التفاصيل", fail_silently: bool = True) -> None:
+    """Render the shared branded, RTL HTML email (matching the web app's colors/logo) and send it
+    with a plain-text fallback. `deep_link` becomes the CTA button URL (the item link). Used by the
+    notification hub and the chat/subscription sweepers so every channel looks identical.
+
+    `to` is a single address or list; `fail_silently=False` lets a caller (e.g. the retrying
+    fan-out task) surface SMTP errors. `title` defaults to `subject` when omitted."""
+    recipients = [to] if isinstance(to, str) else list(to)
+    heading = title or subject
+    cta_url = f"{FRONTEND_URL}{deep_link}" if deep_link and deep_link.startswith("/") else (deep_link or "")
+    html_body = render_to_string("email/notification.html", {
+        "title": heading,
+        "body": body,
+        "cta_url": cta_url,
+        "cta_label": cta_label,
+        "site_url": FRONTEND_URL,
+        "logo_url": EMAIL_LOGO_URL,
+        "prefs_url": EMAIL_PREFS_URL,
+        "year": timezone.now().year,
+    })
+    text_body = "\n\n".join(part for part in (heading, body, cta_url) if part).strip()
+    if not text_body:
+        text_body = strip_tags(html_body)
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=None,  # uses DEFAULT_FROM_EMAIL ("شغل أونلاين <no-reply@…>")
+        to=recipients,
+    )
+    msg.attach_alternative(html_body, "text/html")
+    msg.send(fail_silently=fail_silently)
 
 
 def notify_both(user_a, user_b, **kwargs) -> None:

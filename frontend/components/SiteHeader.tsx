@@ -8,7 +8,7 @@ import { signinHref } from "@/lib/nav";
 import { getMessages } from "@/lib/i18n";
 import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
-import { BellIcon, EnvelopeIcon, GearIcon, UserIcon, WalletIcon } from "@/components/icons";
+import { BellIcon, CloseIcon, EnvelopeIcon, GearIcon, MenuIcon, UserIcon, WalletIcon } from "@/components/icons";
 
 type Me = { first_name: string; last_name: string; avatar_url: string };
 
@@ -24,6 +24,7 @@ export default function SiteHeader() {
   const [authed, setAuthed] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,6 +48,20 @@ export default function SiteHeader() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  // Mobile drawer: close on navigation, and while open lock body scroll + close on Escape.
+  useEffect(() => setNavOpen(false), [pathname]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setNavOpen(false);
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [navOpen]);
 
   // Pages that ship their own header chrome — avoid stacking two bars.
   // (dashboard-area routes render the DashboardShell with its own sidebar + top bar)
@@ -83,9 +98,20 @@ export default function SiteHeader() {
       }`}
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link href="/" aria-label={t.nav.home} className="group flex items-center">
-          <Logo priority tone={transparent ? "light" : "brand"} className="h-9 w-auto transition group-hover:scale-105" />
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            aria-label="القائمة"
+            aria-expanded={navOpen}
+            className={`grid h-10 w-10 place-content-center rounded-full text-[22px] transition md:hidden ${iconBtn}`}
+          >
+            <MenuIcon />
+          </button>
+          <Link href="/" aria-label={t.nav.home} className="group flex items-center">
+            <Logo priority tone={transparent ? "light" : "brand"} className="h-9 w-auto transition group-hover:scale-105" />
+          </Link>
+        </div>
 
         <div className={`hidden items-center gap-7 text-sm font-medium md:flex ${transparent ? "text-white/90" : "text-sub"}`}>
           {links.map((l) => {
@@ -111,10 +137,10 @@ export default function SiteHeader() {
 
         {authed ? (
           <div className="flex items-center gap-1.5">
-            <Link href="/messages" aria-label="الرسائل" className={`grid h-9 w-9 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
+            <Link href="/messages" aria-label="الرسائل" className={`grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
               <EnvelopeIcon />
             </Link>
-            <Link href="/notifications" aria-label="الإشعارات" className={`grid h-9 w-9 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
+            <Link href="/notifications" aria-label="الإشعارات" className={`grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
               <BellIcon />
             </Link>
             <div className="relative" ref={menuRef}>
@@ -149,7 +175,77 @@ export default function SiteHeader() {
           </Link>
         )}
       </nav>
+
+      {/* mobile nav drawer — the only path to the primary sections on phones (links are md:flex above) */}
+      {navOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true" aria-label="قائمة التنقل">
+          <div className="animate-fade-in absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={() => setNavOpen(false)} />
+          <div className="animate-drawer-in absolute inset-y-0 start-0 flex w-72 max-w-[82vw] flex-col bg-white shadow-soft-lg">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3">
+              <Logo tone="brand" className="h-8 w-auto" />
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                aria-label="إغلاق القائمة"
+                className="grid h-10 w-10 place-content-center rounded-full text-[20px] text-sub transition hover:bg-tint hover:text-primary-dark"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto p-3">
+              {links.map((l) => {
+                const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`block rounded-m px-4 py-3 text-[15px] font-medium transition ${
+                      active ? "bg-tint font-semibold text-primary-dark" : "text-ink hover:bg-bg"
+                    }`}
+                  >
+                    {l.label}
+                  </Link>
+                );
+              })}
+
+              <div className="my-2 border-t border-line" />
+
+              {authed ? (
+                <>
+                  <DrawerLink href="/me/profile" icon={<UserIcon />} label="الملف الشخصي" />
+                  <DrawerLink href="/dashboard" icon={<GearIcon />} label="لوحة التحكم" />
+                  <DrawerLink href="/messages" icon={<EnvelopeIcon />} label="الرسائل" />
+                  <DrawerLink href="/notifications" icon={<BellIcon />} label="الإشعارات" />
+                  <DrawerLink href="/wallet" icon={<WalletIcon />} label="المحفظة" />
+                  <DrawerLink href="/settings" icon={<GearIcon />} label="الإعدادات" />
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="mt-1 flex w-full items-center gap-2.5 rounded-m px-4 py-3 text-[15px] font-medium text-danger transition hover:bg-danger-t"
+                  >
+                    تسجيل الخروج
+                  </button>
+                </>
+              ) : (
+                <Link href={signinHref(pathname)} className="btn-primary mt-1 w-full justify-center py-3 text-sm">
+                  {t.nav.signin}
+                </Link>
+              )}
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
+  );
+}
+
+function DrawerLink({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
+  return (
+    <Link href={href} className="flex items-center gap-2.5 rounded-m px-4 py-3 text-[15px] text-ink transition hover:bg-bg">
+      <span className="text-[18px] text-sub">{icon}</span>
+      {label}
+    </Link>
   );
 }
 

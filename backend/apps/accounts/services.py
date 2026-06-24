@@ -463,8 +463,11 @@ def _email_change_key(user) -> str:
 
 
 def _send_email(to_email: str, subject: str, body: str) -> None:
-    """Pluggable email sender. Dev stub logs the message; wire a provider in production (SEC)."""
+    """Pluggable email sender. Logs for dev visibility, then delivers the branded RTL email
+    (same template/colors/logo as every other notification)."""
     logger.info("Email to %s | %s | %s", to_email, subject, body)
+    from apps.notifications.services import send_branded_email  # noqa: PLC0415 (avoid import cycle)
+    send_branded_email(to=to_email, subject=subject, body=body)
 
 
 def request_email_change(user, new_email: str) -> dict:

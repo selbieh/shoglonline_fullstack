@@ -6,6 +6,7 @@ import MediaGallery from "@/components/MediaGallery";
 import { DetailRail, RailRow } from "@/components/DetailRail";
 import OwnerCard from "@/components/OwnerCard";
 import StarRating from "@/components/StarRating";
+import ReportButton from "@/components/ReportButton";
 import ReviewCard, { type ReviewData } from "@/components/ReviewCard";
 import BuyBox, { type Addon } from "./BuyBox";
 
@@ -86,7 +87,10 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
           <span className="truncate font-medium text-ink">{s.title}</span>
         </nav>
 
-        <h1 className="mt-4 text-2xl font-extrabold md:text-3xl">{s.title}</h1>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+          <h1 className="text-2xl font-extrabold md:text-3xl">{s.title}</h1>
+          <ReportButton kind="service" id={s.id} label="إبلاغ" />
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-sub">
           <span className="inline-flex items-center gap-1.5"><UserIcon className="text-[15px] text-primary" /> {s.worker_name}</span>
           {s.worker_rating != null && s.worker_rating > 0 && (

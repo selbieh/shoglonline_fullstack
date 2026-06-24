@@ -7,6 +7,7 @@ import {
   MapPinIcon, UsersIcon, UserIcon, WalletIcon, ClockIcon, GridIcon,
   AlertIcon, BadgeCheckIcon, SparklesIcon, ClipboardIcon, LightbulbIcon,
 } from "@/components/icons";
+import ReportButton from "@/components/ReportButton";
 import ProposalForm from "./ProposalForm";
 
 /* Server-rendered job detail (SEO): full content + metadata + JobPosting JSON-LD.
@@ -69,7 +70,11 @@ export default async function JobDetailPage({ params }: { params: { slug: string
             <span className="mx-1 opacity-60">/</span>
             {job.category_name}
           </p>
-          <h1 className="mt-3 text-3xl font-extrabold leading-tight drop-shadow-sm md:text-4xl">{job.title}</h1>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+            <h1 className="text-3xl font-extrabold leading-tight drop-shadow-sm md:text-4xl">{job.title}</h1>
+            <ReportButton kind="job" id={job.id} label="إبلاغ"
+              className="glass inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:text-white" />
+          </div>
           <div className="mt-5 flex flex-wrap gap-2 text-sm">
             <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><WalletIcon className="text-[15px]" /> ${job.budget_min}–${job.budget_max}</span>
             <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><MapPinIcon className="text-[15px]" /> {LOCATION_LABEL[job.location_type]}{onsite && place ? ` · ${place}` : ""}</span>

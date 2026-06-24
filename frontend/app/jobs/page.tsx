@@ -14,6 +14,7 @@ import {
 } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
+import FilterPanel from "@/components/FilterPanel";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import SubscribeCategoryButton from "@/components/SubscribeCategoryButton";
 
@@ -348,7 +349,7 @@ function JobsInner() {
           )}
         </div>
 
-        <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-6 lg:w-80 lg:self-start">
+        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (q ? 1 : 0)}>
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
@@ -403,7 +404,7 @@ function JobsInner() {
               </span>
             </div>
           )}
-        </aside>
+        </FilterPanel>
       </div>
     </main>
   );

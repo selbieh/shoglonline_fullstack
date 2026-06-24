@@ -7,9 +7,11 @@ import { EXPERTISE_LABEL, type Freelancer, type Paginated } from "@/lib/types";
 import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import FavoriteButton from "@/components/FavoriteButton";
+import ReportButton from "@/components/ReportButton";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
+import FilterPanel from "@/components/FilterPanel";
 import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, ShareIcon, StarIcon } from "@/components/icons";
 
 const EXPERTISE_OPTIONS = ["entry", "intermediate", "expert"] as const;
@@ -258,7 +260,7 @@ export default function FreelancersPage() {
           )}
         </div>
 
-        <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-6 lg:w-80 lg:self-start">
+        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (q ? 1 : 0) + (expertise ? 1 : 0)}>
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
@@ -318,7 +320,7 @@ export default function FreelancersPage() {
               ))}
             </div>
           </div>
-        </aside>
+        </FilterPanel>
       </div>
     </main>
   );
@@ -339,10 +341,6 @@ function FreelancerCard({ f }: { f: Freelancer }) {
     const url = typeof window !== "undefined" ? `${window.location.origin}${profileUrl}` : profileUrl;
     if (typeof navigator !== "undefined" && navigator.share) navigator.share({ url }).catch(() => {});
     else navigator?.clipboard?.writeText(url).catch(() => {});
-  };
-  const stop = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
   };
   return (
     <Link
@@ -381,10 +379,7 @@ function FreelancerCard({ f }: { f: Freelancer }) {
           </button>
           <FavoriteButton kind="freelancer" id={f.id}
             className="grid h-9 w-9 place-content-center rounded-full text-[18px] text-sub transition hover:bg-tint hover:text-danger" />
-          <button type="button" onClick={stop} title="إبلاغ" aria-label="إبلاغ"
-            className="grid h-9 w-9 place-content-center rounded-full border border-transparent text-[18px] text-sub transition hover:border-danger/30 hover:bg-danger-t hover:text-danger">
-            <AlertIcon />
-          </button>
+          <ReportButton kind="freelancer" id={f.id} />
         </div>
       </div>
 

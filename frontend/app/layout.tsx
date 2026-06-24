@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { SITE_URL } from "@/lib/seo";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image", title: "شغل أونلاين", description: DESC },
   robots: { index: true, follow: true },
+};
+
+// Mobile browser chrome tint (brand blue) + sane default scaling.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1B3DBC",
 };
 
 // Arabic-first RTL (NFR-LOC-1). Locale routing reserved for future languages (NFR-LOC-2).

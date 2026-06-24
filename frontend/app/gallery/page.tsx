@@ -9,6 +9,7 @@ import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
+import FilterPanel from "@/components/FilterPanel";
 import FavoriteButton from "@/components/FavoriteButton";
 import {
   AlertIcon,
@@ -297,7 +298,7 @@ function GalleryInner() {
           )}
         </div>
 
-        <aside className="w-full shrink-0 space-y-4 lg:sticky lg:top-6 lg:w-80 lg:self-start">
+        <FilterPanel activeCount={(media ? 1 : 0) + (category ? 1 : 0) + (skill ? 1 : 0) + (q ? 1 : 0)}>
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
@@ -369,7 +370,7 @@ function GalleryInner() {
               </div>
             )}
           </div>
-        </aside>
+        </FilterPanel>
       </div>
     </main>
   );

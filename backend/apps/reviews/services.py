@@ -38,6 +38,16 @@ def leave_review(contract, author, *, rating: int, comment: str = "") -> Review:
         is_locked=bool(contract.funds_released),
     )
     _recompute_aggregates(review.subject)
+
+    from apps.notifications.models import Notification  # noqa: PLC0415 (avoid import cycle)
+    from apps.notifications.services import notify  # noqa: PLC0415
+    notify(
+        review.subject,
+        kind=Notification.Kind.CONTRACT,  # transactional — a received review is always delivered
+        title="تلقيت تقييمًا جديدًا",
+        body=f"حصلت على تقييم {review.rating}/5 بعد اكتمال العقد.",
+        deep_link=f"/contracts/{contract.pk}",
+    )
     return review
 
 
