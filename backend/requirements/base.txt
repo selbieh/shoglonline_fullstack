@@ -15,3 +15,4 @@ django-storages[boto3]>=1.14  # S3-compatible file storage in prod (attachments,
 filetype>=1.2  # magic-byte sniffing so a disguised upload can't bypass the MIME allow-list
 requests>=2.32
 reportlab>=4.0  # period invoice PDF generation (FR-PAY-7)
+drf-spectacular-sidecar==2026.6.1

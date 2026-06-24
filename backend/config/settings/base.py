@@ -33,6 +33,7 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "django_filters",
     "drf_spectacular",
+    "drf_spectacular_sidecar",
 ]
 LOCAL_APPS = [
     "apps.core",
@@ -175,6 +176,8 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Arabic job & services marketplace — API contract (SRS v1.1 §11)",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
 }
 
 # ---------------------------------------------------------------- cors / security
