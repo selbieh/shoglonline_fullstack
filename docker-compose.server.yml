@@ -37,11 +37,12 @@ services:
     environment: &backend_env
       DJANGO_SETTINGS_MODULE: config.settings.local
       DATABASE_URL: postgres://shoghl:shoghl@db:5432/shoghl   # internal port stays 5432
-      # `redis` resolves to the shared container over REDIS_NETWORK. If it requires a password,
-      # use redis://:THE_PASSWORD@redis:6379/<db>. REDIS_PREFIX keeps our keys isolated.
-      CACHE_URL: redis://redis:6379/1
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      # `redis` resolves to the shared container over REDIS_NETWORK. The shared instance requires
+      # AUTH — REDIS_PASSWORD is read from .env (kept out of git). REDIS_PREFIX (default "shogl")
+      # namespaces every key, so sharing these DBs with the other project is collision-safe.
+      CACHE_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/0
     volumes:
       - ./backend:/app
       # Named volumes (not host dirs) for the paths the app must WRITE to. The bind mount above
