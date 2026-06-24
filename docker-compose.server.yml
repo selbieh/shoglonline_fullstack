@@ -44,6 +44,12 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
       - ./backend:/app
+      # Named volumes (not host dirs) for the paths the app must WRITE to. The bind mount above
+      # shadows the image's app-owned /app/staticfiles & /app/media with host dirs the unprivileged
+      # `app` user can't write — these writable volumes (chowned to app by the entrypoint) fix the
+      # collectstatic PermissionError and persist uploads across deploys.
+      - staticfiles:/app/staticfiles
+      - media:/app/media
     networks: [default, shared_redis]
     ports:
       - "8000:8000"
@@ -60,6 +66,7 @@ services:
     environment: *backend_env
     volumes:
       - ./backend:/app
+      - media:/app/media          # share uploads with backend (attachment sweeper, etc.)
     networks: [default, shared_redis]
     depends_on:
       backend: { condition: service_started }
@@ -101,4 +108,6 @@ networks:
 
 volumes:
   pgdata:
+  staticfiles:
+  media:
   frontend_modules:
