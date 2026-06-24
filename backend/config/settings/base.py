@@ -62,7 +62,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+   # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "apps.core.middleware.MaintenanceModeMiddleware",  # FR-ADM-3: 503 + Arabic page when on
     "apps.core.middleware.SecurityHeadersMiddleware",  # SEC-6: CSP + security headers on every response
