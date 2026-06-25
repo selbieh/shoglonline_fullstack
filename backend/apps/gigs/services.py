@@ -86,7 +86,11 @@ def request_service(*, employer, service: Service, quantity: int = 1, descriptio
         raise ValidationError(ERR["not_live"])
 
     addons = list(ServiceAddon.objects.filter(service=service, pk__in=addon_ids or []))
-    qty = max(1, int(quantity))
+    try:
+        qty = int(quantity)
+    except (TypeError, ValueError):
+        raise ValidationError({"code": "bad_quantity", "message_ar": "كمية غير صالحة"})
+    qty = min(max(1, qty), 999)  # cap so total_price can't overflow DecimalField(max_digits=12)
     unit = Decimal(service.base_price) + sum((a.price for a in addons), Decimal("0"))
     total = unit * qty
     extra_days = sum((a.extra_days for a in addons), 0)

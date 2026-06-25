@@ -329,6 +329,9 @@ def request_update(contract: Contract, actor, *, new_budget=None, new_deadline=N
         raise ValidationError(ERR["bad_state"])
     if new_budget is None and new_deadline is None:
         raise ValidationError({"code": "empty_update", "message_ar": "حدّد ميزانية أو موعدًا جديدًا"})
+    if new_budget is not None and Decimal(str(new_budget)) <= 0:
+        # A negative/zero budget would invert the escrow math (over-refund / negative escrow, BR-9).
+        raise ValidationError({"code": "bad_budget", "message_ar": "الميزانية الجديدة يجب أن تكون أكبر من صفر"})
     return UpdateRequest.objects.create(
         contract=contract, requested_by=actor,
         new_budget=(Decimal(str(new_budget)) if new_budget is not None else None),
@@ -347,6 +350,11 @@ def respond_update(update: UpdateRequest, actor, *, accept: bool, reason: str = 
     if actor.id == update.requested_by_id:
         raise PermissionDenied({"code": "needs_counterpart", "message_ar": "الطرف الآخر هو من يردّ على الطلب"})
     if update.status not in (UpdateRequest.Status.PENDING, UpdateRequest.Status.PENDING_FUNDING):
+        raise ValidationError(ERR["bad_state"])
+    # The contract may have completed/cancelled/disputed AFTER this update was raised (especially a
+    # PENDING_FUNDING-parked one): re-check here so we never re-hold or refund escrow against a
+    # terminal contract (that would strand funds / drive escrow negative).
+    if contract.status not in (Contract.Status.ACTIVE, Contract.Status.DELIVERED):
         raise ValidationError(ERR["bad_state"])
 
     if not accept:
@@ -530,6 +538,15 @@ def resolve_dispute(contract: Contract, *, outcome: str, refund_pct: Decimal = D
         contract.save(update_fields=["status", "completed_at", "funds_released", "resolution_note"])
         from apps.jobs.models import Job
         Job.objects.filter(pk=contract.job_id).update(status=Job.Status.COMPLETED)
+        # Terminal payout bypasses the warranty sweeper, so do its side-effects here:
+        # lock the conversation (BR-10) and reviews (BR-13), and accrue affiliate on the
+        # *actually collected* commission (BR-18) — not the frozen full commission_amount.
+        from apps.chat.services import lock_contract_conversations  # noqa: PLC0415 (avoid cycle)
+        from apps.reviews.services import lock_contract_reviews  # noqa: PLC0415
+        from apps.affiliate.services import accrue_for_contract  # noqa: PLC0415
+        lock_contract_conversations(contract)
+        lock_contract_reviews(contract)
+        accrue_for_contract(contract, base_override=commission)
     else:
         raise ValidationError({"code": "bad_outcome", "message_ar": "نتيجة تسوية غير معروفة"})
 

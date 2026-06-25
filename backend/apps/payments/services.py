@@ -183,8 +183,33 @@ def request_withdrawal(user, amount: Decimal, paypal_email: str) -> WithdrawalRe
     return withdrawal
 
 
-@transaction.atomic
 def process_withdrawal(withdrawal: WithdrawalRequest, *, paid: bool, actor=None, reason: str = "",
+                       gateway_ref: str = "") -> WithdrawalRequest:
+    """Admin decision on a payout (FR-PAY-3/8).
+
+    When `paid`, the money is sent for real via PayPal Payouts BEFORE the ledger row is settled —
+    done outside the DB transaction so we never hold a row lock across the network call, and keyed
+    on a deterministic sender_batch_id so a retry can't double-pay. If the payout raises, nothing is
+    recorded and the funds stay held, so the admin can safely retry.
+    """
+    from . import paypal  # noqa: PLC0415 (avoid import cycle)
+    from apps.core.services import get_setting  # noqa: PLC0415
+
+    if paid and not gateway_ref:
+        status = WithdrawalRequest.objects.filter(pk=withdrawal.pk).values_list("status", flat=True).first()
+        if status in (WithdrawalRequest.Status.REQUESTED, WithdrawalRequest.Status.PROCESSING):
+            result = paypal.payout(
+                email=withdrawal.paypal_email, amount=str(withdrawal.amount),
+                currency=str(get_setting("platform.currency", "USD")),
+                sender_batch_id=f"wd-{withdrawal.pk}",
+                note=f"Shoghl Online withdrawal #{withdrawal.pk}",
+            )
+            gateway_ref = result.get("payout_batch_id", "")
+    return _settle_withdrawal(withdrawal, paid=paid, actor=actor, reason=reason, gateway_ref=gateway_ref)
+
+
+@transaction.atomic
+def _settle_withdrawal(withdrawal: WithdrawalRequest, *, paid: bool, actor=None, reason: str = "",
                        gateway_ref: str = "") -> WithdrawalRequest:
     withdrawal = WithdrawalRequest.objects.select_for_update().get(pk=withdrawal.pk)
     if withdrawal.status not in (WithdrawalRequest.Status.REQUESTED, WithdrawalRequest.Status.PROCESSING):

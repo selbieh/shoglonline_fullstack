@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 def fanout_job_published(self, job_id: int) -> int:
     """Email every active subscriber of the job's category/subcategory.
 
-    Idempotency-safe: re-delivery sends at most once per run; EmailLog dedupe
-    arrives with the notifications app (Phase 5).
+    Until per-recipient EmailLog dedupe lands (Phase 5), each send is fail-silent so one bad
+    SMTP send can't abort the batch and trigger a whole-batch retry that re-emails everyone
+    already notified this run.
     """
     from apps.jobs.models import Job
 
@@ -49,7 +50,7 @@ def fanout_job_published(self, job_id: int) -> int:
             body=f"{snippet}…\n\nالميزانية: ${job.budget_min}–${job.budget_max}",
             deep_link=f"/jobs/{job.slug}",
             cta_label="قدّم عرضك",
-            fail_silently=False,  # let the retrying task surface SMTP errors
+            fail_silently=True,  # never abort the batch / re-send to already-notified subscribers
         )
         sent += 1
     logger.info("job %s fan-out: %s emails", job_id, sent)

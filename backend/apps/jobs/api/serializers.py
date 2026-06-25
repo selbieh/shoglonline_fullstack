@@ -43,6 +43,7 @@ class JobDetailSerializer(serializers.ModelSerializer):
             "skill_ids", "budget_min", "budget_max", "deadline", "location_type", "country",
             "city", "status", "reject_reason", "published_at", "expires_at", "proposals_count",
             "is_locked", "employer_name", "screening_questions", "created_at",
+            "meta_title", "meta_description",
         ]
 
     def get_employer_name(self, obj) -> str:
@@ -61,8 +62,15 @@ class JobCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
+        if attrs["budget_min"] < 0:
+            raise serializers.ValidationError({"budget_min": "الميزانية لا يمكن أن تكون سالبة"})
         if attrs["budget_min"] > attrs["budget_max"]:
             raise serializers.ValidationError({"budget_min": "الحد الأدنى أكبر من الأعلى"})
+        deadline = attrs.get("deadline")
+        if deadline is not None:
+            from django.utils import timezone  # noqa: PLC0415
+            if deadline < timezone.now().date():
+                raise serializers.ValidationError({"deadline": "الموعد النهائي في الماضي"})
         return attrs
 
     def validate_title(self, v):

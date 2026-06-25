@@ -263,6 +263,31 @@ class TestUpdateRequests:
         with pytest.raises(PermissionDenied):
             cs.respond_update(ur, employer, accept=True)
 
+    def test_negative_budget_rejected(self, employer, worker, category):
+        """Regression: a negative new_budget would invert the escrow math (over-refund)."""
+        from rest_framework.exceptions import ValidationError
+        contract = make_contract(employer, worker, category, budget="100")
+        with pytest.raises(ValidationError):
+            cs.request_update(contract, worker, new_budget=Decimal("-1000"))
+
+    def test_cannot_accept_parked_update_after_contract_completed(self, employer, worker, category):
+        """Regression: a PENDING_FUNDING-parked update must not re-hold escrow on a terminal contract."""
+        from rest_framework.exceptions import ValidationError
+        contract = make_contract(employer, worker, category, budget="100")  # available 50
+        ur = cs.request_update(contract, employer, new_budget=Decimal("500"))
+        cs.respond_update(ur, worker, accept=True)  # parks (insufficient funds)
+        assert ur.status == "pending_funding"
+        # contract completes before the employer tops up
+        sub = cs.submit_deliverable(contract, worker, notes="done")
+        cs.accept_submission(sub, employer)
+        contract.refresh_from_db()
+        assert contract.status == Contract.Status.COMPLETED
+        fund_wallet(employer, "500")
+        with pytest.raises(ValidationError):
+            cs.respond_update(ur, worker, accept=True)  # blocked — contract no longer ACTIVE/DELIVERED
+        contract.refresh_from_db()
+        assert contract.budget == Decimal("100")  # untouched; no escrow re-hold
+
 
 # ------------------------------------------------------------------ cancellation
 @pytest.mark.django_db
@@ -310,6 +335,21 @@ class TestDisputes:
         assert Decimal("40") + ww.available + pw.available == Decimal("100")
         contract.refresh_from_db()
         assert contract.status == Contract.Status.COMPLETED
+
+    def test_split_locks_conversation(self, employer, worker, category):
+        """Regression: a dispute-split is terminal (funds_released) so the warranty sweeper never
+        runs — the split itself must lock the conversation read-only (BR-10)."""
+        from apps.chat.models import Conversation
+        from apps.chat.services import get_or_create_for_contract
+
+        contract = make_contract(employer, worker, category, budget="100")
+        conv = get_or_create_for_contract(contract)  # contract is ACTIVE → opens a live chat (D-2)
+        assert conv.status == Conversation.Status.ACTIVE
+        cs.submit_deliverable(contract, worker, notes="partial")
+        cs.open_dispute(contract, employer, reason="x")
+        cs.resolve_dispute(contract, outcome="split", refund_pct=Decimal("40"))
+        conv.refresh_from_db()
+        assert conv.status == Conversation.Status.READ_ONLY
 
     def test_cancel_outcome_full_refund(self, employer, worker, category):
         contract = make_contract(employer, worker, category, budget="100")

@@ -103,7 +103,9 @@ class WithdrawalAdmin(ExportCsvMixin, ModelAdmin):
     search_fields = ("user__email", "paypal_email", "gateway_ref")
     list_select_related = ("user", "processed_by")
     date_hierarchy = "created_at"
-    readonly_fields = ("user", "amount", "paypal_email", "gateway_ref",
+    # status / reject_reason are read-only so every transition goes through the actions below
+    # (which post the WITHDRAWAL_PAID/REVERSED ledger legs + AuditLog + notify) — never a raw edit.
+    readonly_fields = ("user", "amount", "paypal_email", "gateway_ref", "status", "reject_reason",
                        "created_at", "processed_at", "processed_by")
     export_fields = ("id", "user", "amount", "paypal_email", "status", "created_at", "processed_at")
     actions = ["mark_paid", "reject_with_refund", "export_as_csv"]
@@ -113,10 +115,22 @@ class WithdrawalAdmin(ExportCsvMixin, ModelAdmin):
 
     @admin.action(description="✅ Paid via PayPal")
     def mark_paid(self, request, queryset):
+        from django.contrib import messages
+
+        paid = failed = 0
         for withdrawal in queryset:
-            services.process_withdrawal(withdrawal, paid=True, actor=request.user)
-            AuditLog.objects.create(actor=request.user, action="admin.withdrawal_paid",
-                                    model="WithdrawalRequest", object_id=str(withdrawal.pk))
+            try:
+                # Sends the PayPal payout for real; isolate per row so one failed/declined payout
+                # (insufficient PayPal balance, bad email) doesn't abort the rest or mark it paid.
+                services.process_withdrawal(withdrawal, paid=True, actor=request.user)
+                AuditLog.objects.create(actor=request.user, action="admin.withdrawal_paid",
+                                        model="WithdrawalRequest", object_id=str(withdrawal.pk))
+                paid += 1
+            except Exception as exc:  # noqa: BLE001 — surface, don't crash the batch
+                failed += 1
+                self.message_user(request, f"#{withdrawal.pk}: تعذّر الدفع — {exc}", level=messages.ERROR)
+        if paid:
+            self.message_user(request, f"دُفع {paid} طلب سحب عبر PayPal.", level=messages.SUCCESS)
 
     @admin.action(description="❌ Reject & return funds")
     def reject_with_refund(self, request, queryset):

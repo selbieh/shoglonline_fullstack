@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import User
 from apps.attachments.models import Attachment
 from apps.attachments.services import attach
+from apps.core.services import get_setting
 from apps.gigs.models import Service
 
 from ..models import Certificate, EmployerProfile, IDVerification, PortfolioItem, WorkerProfile
@@ -47,18 +48,21 @@ class MyWorkerProfileView(RetrieveUpdateAPIView):
 class PublishProfileView(APIView):
     """POST /api/v1/me/profile/publish — submit the profile for publication (rule D-1).
 
-    Gated on ≥70% completeness; returns 400 with the percentage when not complete enough.
-    A passing request goes live immediately when `profiles.auto_publish` is ON, otherwise it
-    moves to PENDING_REVIEW and goes live only after an admin approves it."""
+    Gated on the admin-tunable `profiles.publish_min_completeness` threshold (default 70%; set 0
+    to publish all profiles with no completeness gate); returns 400 with the percentage when not
+    complete enough. A passing request goes live immediately when `profiles.auto_publish` is ON,
+    otherwise it moves to PENDING_REVIEW and goes live only after an admin approves it."""
 
     def post(self, request):
         profile, _ = WorkerProfile.objects.get_or_create(user=request.user)
-        if profile.completeness_pct < 70:
+        min_pct = int(get_setting("profiles.publish_min_completeness", 70))
+        if profile.completeness_pct < min_pct:
             return Response(
                 {
                     "code": "profile_incomplete",
-                    "message_ar": "أكمل ملفك حتى ٧٠٪ على الأقل قبل النشر",
+                    "message_ar": f"أكمل ملفك حتى {min_pct}٪ على الأقل قبل النشر",
                     "completeness_pct": profile.completeness_pct,
+                    "required_pct": min_pct,
                 },
                 status=400,
             )

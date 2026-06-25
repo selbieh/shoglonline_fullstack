@@ -1,6 +1,23 @@
+import type { Metadata } from "next";
 import { Fragment } from "react";
 import Link from "next/link";
 import { JsonLd, SITE_URL, serverApi } from "@/lib/seo";
+
+const HOME_DESC =
+  "ابحث عن أفضل المستقلين العرب أو انشر وظيفتك مجانًا — آلاف الخدمات الجاهزة، عروض من محترفين، ومدفوعات محمية بنظام الضمان. حساب واحد للعمل والتوظيف، ودخول بنقرة عبر جوجل.";
+
+export const metadata: Metadata = {
+  title: "شغل أونلاين — وظّف مستقلين واعثر على عمل حر",
+  description: HOME_DESC,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    title: "شغل أونلاين — وظّف مستقلين واعثر على عمل حر",
+    description: HOME_DESC,
+    url: SITE_URL,
+  },
+  twitter: { card: "summary_large_image", title: "شغل أونلاين", description: HOME_DESC },
+};
 import { Blobs, HeroIllustration, RatingChip, Wave } from "@/components/Brand";
 import CategoryGrid from "@/components/CategoryGrid";
 import CtaButton from "@/components/CtaButton";

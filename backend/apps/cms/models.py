@@ -6,6 +6,9 @@ class ContentPage(models.Model):
     slug = models.SlugField(max_length=80, unique=True)         # e.g. about, terms, privacy
     title = models.CharField(max_length=160)
     body = models.TextField()                                   # markdown/HTML
+    # Optional SEO overrides — when blank the frontend falls back to title / a body excerpt.
+    meta_title = models.CharField(max_length=70, blank=True, help_text="عنوان SEO (≤70 حرفًا) — يُستخدم العنوان عند تركه فارغًا")
+    meta_description = models.CharField(max_length=160, blank=True, help_text="وصف SEO (≤160 حرفًا) — يُشتق من المحتوى عند تركه فارغًا")
     is_published = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 

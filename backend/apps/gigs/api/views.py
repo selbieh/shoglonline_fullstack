@@ -54,6 +54,7 @@ class PublicServiceDetailView(APIView):
         service = get_object_or_404(
             Service.objects.select_related("category", "worker").prefetch_related("addons"),
             slug=slug,
+            status=Service.Status.LIVE,  # never expose draft/pending/paused/archived/rejected (IDOR)
         )
         # count the visit for the owner analytics panel (ppt slide-20)
         Service.objects.filter(pk=service.pk).update(views_count=F("views_count") + 1)

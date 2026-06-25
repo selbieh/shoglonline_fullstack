@@ -304,11 +304,11 @@ export default function ContractDetailPage() {
               </div>
               <div className="flex flex-wrap gap-2 border-t border-line pt-3">
                 <button className="text-sm text-sub hover:text-danger"
-                  onClick={() => { const r = prompt("سبب طلب الإلغاء (اختياري):"); act(`/contracts/${id}/cancel`, { reason: r || "" }, "أُرسل طلب الإلغاء — بانتظار الطرف الآخر"); }}>
+                  onClick={() => { const r = prompt("سبب طلب الإلغاء (اختياري):"); if (r === null) return; act(`/contracts/${id}/cancel`, { reason: r }, "أُرسل طلب الإلغاء — بانتظار الطرف الآخر"); }}>
                   طلب إلغاء بالتراضي
                 </button>
                 <button className="text-sm text-sub hover:text-danger"
-                  onClick={() => { if (confirm("فتح نزاع يوقف العقد ويحيله للإدارة. متابعة؟")) { const r = prompt("سبب النزاع:"); act(`/contracts/${id}/dispute`, { reason: r || "" }, "فُتح النزاع — ستتولاه الإدارة"); } }}>
+                  onClick={() => { if (!confirm("فتح نزاع يوقف العقد ويحيله للإدارة. متابعة؟")) return; const r = prompt("سبب النزاع:"); if (r === null) return; act(`/contracts/${id}/dispute`, { reason: r }, "فُتح النزاع — ستتولاه الإدارة"); }}>
                   فتح نزاع
                 </button>
               </div>

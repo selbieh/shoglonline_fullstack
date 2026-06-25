@@ -1,3 +1,4 @@
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateAPIView
@@ -67,7 +68,8 @@ class PublicJobListView(ListAPIView):
 
 class PublicJobDetailView(APIView):
     permission_classes = [AllowAny]
-    authentication_classes: list = []
+    # Auth stays enabled (no authentication_classes override) so the owner or an invited worker
+    # can view a PRIVATE (invite-only) job; everyone else gets 404 for it.
 
     def get(self, request, slug):
         job = get_object_or_404(
@@ -75,6 +77,14 @@ class PublicJobDetailView(APIView):
             slug=slug,
             status__in=[Job.Status.PUBLISHED, Job.Status.IN_PROGRESS, Job.Status.COMPLETED, Job.Status.CLOSED],
         )
+        if job.is_private:
+            user = request.user
+            allowed = user.is_authenticated and (
+                job.employer_id == user.id
+                or Invitation.objects.filter(job=job, worker=user).exists()
+            )
+            if not allowed:
+                raise Http404
         return Response(JobDetailSerializer(job).data)
 
 

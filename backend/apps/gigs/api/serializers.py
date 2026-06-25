@@ -40,7 +40,7 @@ class ServiceDetailSerializer(ServiceListSerializer):
         fields = ServiceListSerializer.Meta.fields + [
             "subcategory", "addons", "is_favorite", "worker", "keywords", "what_you_get",
             "views_count", "worker_avatar", "worker_rating", "worker_rating_count",
-            "worker_verified", "purchases_count", "reviews",
+            "worker_verified", "purchases_count", "reviews", "meta_title", "meta_description",
         ]
 
     def get_is_favorite(self, obj) -> bool:
@@ -101,6 +101,8 @@ class OwnerServiceDetailSerializer(ServiceDetailSerializer):
 
 
 class AddonWriteSerializer(serializers.ModelSerializer):
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+
     class Meta:
         model = ServiceAddon
         fields = ["title", "price", "extra_days"]
@@ -109,6 +111,7 @@ class AddonWriteSerializer(serializers.ModelSerializer):
 class ServiceWriteSerializer(serializers.ModelSerializer):
     keywords = serializers.ListField(child=serializers.CharField(max_length=40), required=False)
     addons = AddonWriteSerializer(many=True, required=False)
+    base_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
 
     class Meta:
         model = Service

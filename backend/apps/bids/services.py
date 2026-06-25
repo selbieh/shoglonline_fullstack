@@ -26,6 +26,11 @@ class InsufficientBids(Exception):
 @transaction.atomic
 def consume_bid(user, proposal) -> None:
     """One bid per proposal (FR-BID-1) — atomic, balance can never go negative."""
+    from apps.accounts.models import User  # noqa: PLC0415 (avoid import cycle)
+
+    # Serialize concurrent consumption for this user so two in-flight proposals can't both read
+    # balance=1 and each insert a -1 (TOCTOU → negative balance).
+    User.objects.select_for_update().get(pk=user.pk)
     if bid_balance(user) < 1:
         raise InsufficientBids()
     BidLedger.objects.create(

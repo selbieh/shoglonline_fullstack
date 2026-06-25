@@ -92,6 +92,7 @@ export default function SiteHeader() {
     : "text-sub hover:bg-tint hover:text-primary-dark";
 
   return (
+    <>
     <header
       className={`${isLanding ? "fixed" : "sticky"} inset-x-0 top-0 z-50 transition-all duration-300 ${
         transparent ? "bg-transparent" : "border-b border-line/70 bg-white/90 shadow-card backdrop-blur"
@@ -175,8 +176,11 @@ export default function SiteHeader() {
           </Link>
         )}
       </nav>
+    </header>
 
-      {/* mobile nav drawer — the only path to the primary sections on phones (links are md:flex above) */}
+      {/* mobile nav drawer — rendered OUTSIDE <header> on purpose: the header uses
+          backdrop-blur (a backdrop-filter), which makes it a containing block for
+          position:fixed descendants and would clip this overlay to the header's height. */}
       {navOpen && (
         <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true" aria-label="قائمة التنقل">
           <div className="animate-fade-in absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={() => setNavOpen(false)} />
@@ -236,7 +240,7 @@ export default function SiteHeader() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
 

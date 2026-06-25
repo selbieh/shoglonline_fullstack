@@ -196,9 +196,9 @@ class ChargeConfirmView(APIView):
         if tx.status == Transaction.Status.PENDING:
             captured = paypal.capture_order(order_id)
             services.settle_pending(tx, succeeded=captured)
+            tx.refresh_from_db()  # settle_pending mutates a re-fetched row; reload the real status
         wallet = services.get_wallet(request.user)
-        return Response({"status": tx.status if tx.status != "pending" else "succeeded",
-                         "available": wallet.available})
+        return Response({"status": tx.status, "available": wallet.available})
 
 
 class MyWithdrawalsView(APIView):

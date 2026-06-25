@@ -44,6 +44,28 @@ describe("api() client", () => {
     expect(tokens.access).toBe("fresh");
   });
 
+  it("coalesces concurrent 401s into a single refresh (rotation-safe)", async () => {
+    // Regression: the backend rotates + blacklists refresh tokens, so N parallel refreshes would
+    // invalidate each other and bounce the user to sign-in. Concurrent 401s must share one refresh.
+    tokens.set("stale", "ref-1");
+    let refreshCalls = 0;
+    server.use(
+      http.get(`${API_URL}/p`, ({ request }) =>
+        request.headers.get("authorization") === "Bearer stale"
+          ? new HttpResponse(null, { status: 401 })
+          : HttpResponse.json({ ok: true }),
+      ),
+      http.post(`${API_URL}/auth/refresh`, () => {
+        refreshCalls += 1;
+        return HttpResponse.json({ access: "fresh", refresh: "ref-2" });
+      }),
+    );
+
+    await Promise.all([api("/p"), api("/p"), api("/p")]);
+    expect(refreshCalls).toBe(1);
+    expect(tokens.access).toBe("fresh");
+  });
+
   it("throws an error carrying status + parsed body envelope", async () => {
     server.use(
       http.get(`${API_URL}/bad`, () =>

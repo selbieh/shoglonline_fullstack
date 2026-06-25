@@ -105,6 +105,23 @@ class TestInvoices:
         invoice.refresh_from_db()
         assert invoice.status == InvoiceRequest.Status.REJECTED
 
+    def test_no_double_invoice_same_contract(self, employer, worker, category):
+        """Regression: a contract already on a REQUESTED/CONFIRMED invoice can't be billed again."""
+        from rest_framework.exceptions import ValidationError
+        completed_contract(employer, worker, category, "100")
+        inv.create_invoice_request(worker=worker, employer=employer, period_type="month")
+        # the only completed contract is already invoiced → nothing left to bill
+        with pytest.raises(ValidationError):
+            inv.create_invoice_request(worker=worker, employer=employer, period_type="month")
+
+    def test_rejected_invoice_frees_its_contracts(self, employer, worker, category):
+        """A rejected invoice releases its contracts so a corrected invoice can include them again."""
+        completed_contract(employer, worker, category, "100")
+        first = inv.create_invoice_request(worker=worker, employer=employer, period_type="month")
+        inv.reject_invoice(first, employer, "خطأ")
+        again = inv.create_invoice_request(worker=worker, employer=employer, period_type="month")
+        assert again.lines.count() == 1
+
 
 # ------------------------------------------------------------------ affiliate
 @pytest.mark.django_db
@@ -132,6 +149,30 @@ class TestAffiliate:
         commission = AffiliateCommission.objects.get(referrer=referrer)
         assert commission.amount == Decimal("2.00")  # 20% of platform commission (10)
         assert pay.get_wallet(referrer).available == Decimal("2.00")
+
+    def test_dispute_split_accrues_affiliate(self, employer, worker, category):
+        """Regression: a dispute-split settlement must still credit the referrer (BR-18), on the
+        commission actually collected — not skip accrual the way the terminal split path used to."""
+        referrer = User.objects.create_user(email="ref@example.com")
+        af.attribute(employer, af.get_or_create_profile(referrer).slug)
+        CommissionRule.objects.create(applies_to="any", min_amount=0, max_amount=1000, rate_pct=Decimal("20"))
+
+        job = Job.objects.create(employer=employer, title="مهمة", description="وصف", category=category,
+                                 budget_min=10, budget_max=500, status=Job.Status.PUBLISHED,
+                                 published_at=timezone.now())
+        proposal = js.submit_proposal(worker=worker, job=job, budget=Decimal("100"),
+                                      delivery_days=7, description="عرض", answers={})
+        pay.post(pay.get_wallet(employer), type=Transaction.Type.DEPOSIT,
+                 bucket=Transaction.Bucket.AVAILABLE, amount=Decimal("150"), note="seed")
+        contract = js.accept_proposal(proposal)
+        cs.submit_deliverable(contract, worker, notes="partial")
+        cs.open_dispute(contract, employer, reason="x")
+        cs.resolve_dispute(contract, outcome="split", refund_pct=Decimal("40"))
+
+        # split: payout_gross 60 → commission 6 (10%); affiliate 20% of the collected 6 = 1.20
+        commission = AffiliateCommission.objects.get(referrer=referrer)
+        assert commission.amount == Decimal("1.20")
+        assert pay.get_wallet(referrer).available == Decimal("1.20")
 
     def test_frozen_affiliate_earns_nothing(self, employer, worker, category):
         referrer = User.objects.create_user(email="ref@example.com")

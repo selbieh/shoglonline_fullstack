@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { serverApi, encodeSegment } from "@/lib/seo";
+import { JsonLd, SITE_URL, serverApi, encodeSegment, portfolioLd, breadcrumbLd } from "@/lib/seo";
 import MediaGallery from "@/components/MediaGallery";
 import { DetailRail, RailRow } from "@/components/DetailRail";
 import OwnerCard from "@/components/OwnerCard";
@@ -43,9 +43,27 @@ function fmtDate(v?: string | null): string {
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" });
 }
 
-export async function generateMetadata({ params }: { params: { itemId: string } }): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: { params: { id: string; itemId: string } },
+): Promise<Metadata> {
   const it = await getItem(params.itemId);
-  return it ? { title: it.title, description: (it.description || it.title).slice(0, 160) } : { title: "عمل غير موجود" };
+  if (!it) return { title: "عمل غير موجود" };
+  const description = (it.description || it.title).slice(0, 160);
+  const url = `${SITE_URL}/freelancers/${params.id}/portfolio/${it.id}`;
+  const image = it.image_url || it.cover_url || it.url;
+  return {
+    title: it.title,
+    description,
+    alternates: { canonical: `/freelancers/${params.id}/portfolio/${it.id}` },
+    openGraph: {
+      type: "article",
+      title: it.title,
+      description,
+      url,
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
+    twitter: { card: "summary_large_image", title: it.title, description },
+  };
 }
 
 export default async function PortfolioItemPage({ params }: { params: { id: string; itemId: string } }) {
@@ -69,8 +87,28 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
       href: `/freelancers/${params.id}/portfolio/${p.id}`,
     }));
 
+  const jsonLd = [
+    portfolioLd({
+      id: it.id,
+      title: it.title,
+      description: it.description,
+      image: it.image_url || it.cover_url || it.url,
+      authorName: worker?.name,
+      authorId: worker?.id,
+      created_at: it.created_at,
+      keywords: skills,
+    }),
+    breadcrumbLd([
+      { name: "الرئيسية", path: "/" },
+      { name: "المستقلون", path: "/freelancers" },
+      ...(worker?.name ? [{ name: worker.name, path: `/freelancers/${params.id}` }] : []),
+      { name: it.title, path: `/freelancers/${params.id}/portfolio/${it.id}` },
+    ]),
+  ];
+
   return (
     <main className="bg-bg">
+      <JsonLd data={jsonLd} />
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* breadcrumb */}
         <nav className="flex flex-wrap items-center gap-1.5 text-xs text-sub" aria-label="مسار التنقل">

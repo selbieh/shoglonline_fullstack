@@ -160,21 +160,30 @@ export default function ProfileEditPage() {
   }
 
   async function saveSkills(skills: Skill[]) {
+    const prev = profile?.skills;  // snapshot for rollback if the save fails
     setProfile((p) => (p ? { ...p, skills } : p));
-    await api("/me/profile", {
-      method: "PATCH",
-      body: JSON.stringify({ skills: skills.map((s) => ({ skill_id: s.skill_id, efficiency: s.efficiency })) }),
-    }).catch(() => undefined);
+    try {
+      const updated = await api<Profile>("/me/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ skills: skills.map((s) => ({ skill_id: s.skill_id, efficiency: s.efficiency })) }),
+      });
+      setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
+    } catch (e) {
+      if (prev) setProfile((p) => (p ? { ...p, skills: prev } : p));  // don't leave the UI lying
+      setMsg({ ok: false, text: apiError(e).message_ar });
+    }
   }
 
   /** Replace-all save for a repeatable section (employments / educations / languages). */
   async function saveList<K extends "employments" | "educations" | "languages">(key: K, list: Profile[K]) {
+    const prev = profile?.[key];  // snapshot for rollback if the save fails
     setProfile((p) => (p ? { ...p, [key]: list } : p));
     try {
       const updated = await api<Profile>("/me/profile", { method: "PATCH", body: JSON.stringify({ [key]: list }) });
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
       setMsg({ ok: true, text: "✅ تم الحفظ" });
     } catch (e) {
+      if (prev !== undefined) setProfile((p) => (p ? { ...p, [key]: prev } : p));
       setMsg({ ok: false, text: apiError(e).message_ar });
     }
   }

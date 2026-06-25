@@ -17,13 +17,23 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
   const [picked, setPicked] = useState<number[]>([]);
   const [desc, setDesc] = useState("");
   const [fav, setFav] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    setAuthed(Boolean(tokens.access));
-  }, []);
+    const a = Boolean(tokens.access);
+    setAuthed(a);
+    if (!a) return;
+    // Hydrate the heart from the server so an already-favorited service shows as favorited.
+    api<unknown>(`/me/favorites?kind=service`)
+      .then((rows) => {
+        const list = Array.isArray(rows) ? rows : ((rows as { results?: unknown[] })?.results ?? []);
+        setFav(list.some((s) => (s as { id?: number })?.id === service.id));
+      })
+      .catch(() => undefined);
+  }, [service.id]);
 
   const addonsTotal = service.addons
     .filter((a) => picked.includes(a.id))
@@ -32,8 +42,17 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
 
   async function toggleFav() {
     if (!tokens.access) return router.push(signinHereHref());
-    await api(`/me/favorites/${service.id}`, { method: fav ? "DELETE" : "PUT" }).catch(() => undefined);
-    setFav((v) => !v);
+    if (favBusy) return;
+    setFavBusy(true);
+    const next = !fav;
+    try {
+      await api(`/me/favorites/${service.id}`, { method: next ? "PUT" : "DELETE" });
+      setFav(next);  // only reflect the change once the server confirms it
+    } catch {
+      /* keep the previous state on failure (no optimistic desync) */
+    } finally {
+      setFavBusy(false);
+    }
   }
 
   async function buy() {
@@ -58,7 +77,8 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
       <div className="flex justify-end">
         <button
           onClick={toggleFav}
-          className={`grid h-10 w-10 place-content-center rounded-full text-[22px] transition ${fav ? "bg-danger-t text-danger" : "text-sub hover:bg-danger-t hover:text-danger"}`}
+          disabled={favBusy}
+          className={`grid h-10 w-10 place-content-center rounded-full text-[22px] transition disabled:opacity-50 ${fav ? "bg-danger-t text-danger" : "text-sub hover:bg-danger-t hover:text-danger"}`}
           aria-label="المفضلة"
         >
           <HeartIcon filled={fav} />

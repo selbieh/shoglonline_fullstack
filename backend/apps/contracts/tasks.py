@@ -19,26 +19,39 @@ logger = logging.getLogger("apps.contracts.tasks")
 def cancel_unfunded_contracts() -> int:
     """BR-6a: Pending Funding past the timeout → Cancelled; job back to Published,
     winning proposal reverts to Viewed, both parties notified."""
+    from django.db import transaction
+
     from apps.jobs.models import Job, Proposal
 
     from .models import Contract
     from .services import _event
 
     now = timezone.now()
-    stale = Contract.objects.filter(status=Contract.Status.PENDING_FUNDING, funding_deadline__lt=now)
+    stale_ids = list(
+        Contract.objects.filter(
+            status=Contract.Status.PENDING_FUNDING, funding_deadline__lt=now
+        ).values_list("pk", flat=True)
+    )
     count = 0
-    for contract in stale:
+    for pk in stale_ids:
         try:
-            contract.status = Contract.Status.CANCELLED
-            contract.cancel_reason = "انتهت مهلة التمويل دون شحن المحفظة"
-            contract.save(update_fields=["status", "cancel_reason"])
-            Proposal.objects.filter(pk=contract.proposal_id).update(status=Proposal.Status.VIEWED)
-            Job.objects.filter(pk=contract.job_id, status=Job.Status.PUBLISHED).update(status=Job.Status.PUBLISHED)
-            # job is already Published (we never moved it to In Progress before funding) — no-op kept explicit
-            _event(contract, "cancelled", detail="إلغاء تلقائي — انتهت مهلة التمويل (BR-6a)")
-            count += 1
+            with transaction.atomic():
+                # Re-lock and re-check under the row lock so we can't race a concurrent fund_now()
+                # (which locks the same row) and cancel a contract that just got funded — that would
+                # strand the escrow hold against a Cancelled contract (BR-6a / FR-PAY-2).
+                contract = Contract.objects.select_for_update().get(pk=pk)
+                if not (contract.status == Contract.Status.PENDING_FUNDING
+                        and contract.funding_deadline and contract.funding_deadline < now):
+                    continue
+                contract.status = Contract.Status.CANCELLED
+                contract.cancel_reason = "انتهت مهلة التمويل دون شحن المحفظة"
+                contract.save(update_fields=["status", "cancel_reason"])
+                Proposal.objects.filter(pk=contract.proposal_id).update(status=Proposal.Status.VIEWED)
+                # job is already Published (we never moved it to In Progress before funding) — no-op
+                _event(contract, "cancelled", detail="إلغاء تلقائي — انتهت مهلة التمويل (BR-6a)")
+                count += 1
         except Exception:  # noqa: BLE001 — isolate one bad row; it retries next tick
-            logger.exception("cancel_unfunded_contracts failed for contract %s", contract.pk)
+            logger.exception("cancel_unfunded_contracts failed for contract %s", pk)
     return count
 
 

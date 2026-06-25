@@ -30,6 +30,9 @@ class Service(models.Model):
     cover_image = models.URLField(blank=True)
     keywords = models.JSONField(default=list, blank=True)   # ppt slide-19: كلمات مفتاحية (list[str])
     what_you_get = models.TextField(blank=True)             # ppt slide-19: ماذا سيحصل عليه المشتري
+    # Optional SEO overrides — when blank the frontend falls back to title / a description excerpt.
+    meta_title = models.CharField(max_length=70, blank=True, help_text="عنوان SEO (≤70 حرفًا) — يُستخدم عنوان الخدمة عند تركه فارغًا")
+    meta_description = models.CharField(max_length=160, blank=True, help_text="وصف SEO (≤160 حرفًا) — يُشتق من الوصف عند تركه فارغًا")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     frozen_prev_status = models.CharField(max_length=16, blank=True, default="")  # restore target on unfreeze (BR-23)
     reject_reason = models.TextField(blank=True)

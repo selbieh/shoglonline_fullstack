@@ -52,6 +52,20 @@ class TestDeposit:
         assert wallet.available == Decimal("100")
         assert wallet.available == ledger_sum(wallet, "available")  # invariant
 
+    def test_confirm_reports_failed_capture(self, client, user, monkeypatch):
+        """Regression: a failed PayPal capture must report 'failed', not a hard-coded 'succeeded'."""
+        from apps.payments import paypal
+
+        order_id = client.post("/api/v1/wallet/charge", {"amount": "40"}, format="json").json()["order_id"]
+        monkeypatch.setattr(paypal, "capture_order", lambda _oid: False)
+        res = client.post("/api/v1/wallet/charge/confirm", {"order_id": order_id}, format="json")
+        assert res.status_code == 200
+        assert res.json()["status"] == "failed"  # not the stale "succeeded"
+        wallet = services.get_wallet(user)
+        wallet.refresh_from_db()
+        assert wallet.available == 0  # nothing credited
+        assert Transaction.objects.get(gateway_ref=order_id).status == "failed"
+
     def test_confirm_is_idempotent(self, client, user):
         order_id = client.post("/api/v1/wallet/charge", {"amount": "50"}, format="json").json()["order_id"]
         for _ in range(3):  # webhook replay safety (AC-5)
@@ -120,6 +134,38 @@ class TestWithdrawal:
         wallet = services.get_wallet(user)
         wallet.refresh_from_db()
         assert wallet.available == Decimal("50")
+
+    def test_paid_sends_paypal_payout_and_records_batch(self, client, user):
+        """paid=True actually invokes PayPal Payouts and stores the returned batch as gateway_ref."""
+        self._fund(client)
+        client.post("/api/v1/me/withdrawals", {"amount": "150"}, format="json")
+        withdrawal = WithdrawalRequest.objects.get()
+        services.process_withdrawal(withdrawal, paid=True)
+        withdrawal.refresh_from_db()
+        assert withdrawal.status == WithdrawalRequest.Status.PAID
+        batch_ref = f"STUBPO-wd-{withdrawal.pk}"
+        # the PayPal batch reference is persisted on BOTH the withdrawal and its ledger marker row
+        assert withdrawal.gateway_ref == batch_ref
+        paid_row = Transaction.objects.get(related_withdrawal=withdrawal,
+                                           type=Transaction.Type.WITHDRAWAL_PAID)
+        assert paid_row.gateway_ref == batch_ref and paid_row.gateway == "paypal"
+
+    def test_payout_failure_leaves_funds_held_for_retry(self, client, user, monkeypatch):
+        """A failed PayPal payout must NOT mark paid; the hold stays so the admin can retry."""
+        from apps.payments import paypal
+        self._fund(client)
+        client.post("/api/v1/me/withdrawals", {"amount": "150"}, format="json")
+        withdrawal = WithdrawalRequest.objects.get()
+        def _boom(**_kw):
+            raise paypal.PayPalError("payout")
+        monkeypatch.setattr(paypal, "payout", _boom)
+        with pytest.raises(paypal.PayPalError):
+            services.process_withdrawal(withdrawal, paid=True)
+        withdrawal.refresh_from_db()
+        assert withdrawal.status == WithdrawalRequest.Status.REQUESTED  # not paid
+        wallet = services.get_wallet(user)
+        wallet.refresh_from_db()
+        assert wallet.available == Decimal("50")  # 200 funded − 150 still held; payout failure didn't reverse it
 
 
 @pytest.mark.django_db

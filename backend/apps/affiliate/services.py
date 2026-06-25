@@ -132,10 +132,13 @@ def _pick_rule(applies_to: str, base: Decimal):
 
 
 @transaction.atomic
-def accrue_for_contract(contract) -> int:
+def accrue_for_contract(contract, *, base_override=None) -> int:
     """BR-18: at warranty release, credit the referrer(s) of contract parties a range-rate
-    cut of the platform commission. Idempotent per (contract, referred party)."""
-    base = Decimal(contract.commission_amount or 0)
+    cut of the platform commission. Idempotent per (contract, referred party).
+
+    `base_override` lets a dispute-split settlement accrue on the commission actually collected
+    (which is less than the frozen contract.commission_amount when the budget was partly refunded)."""
+    base = Decimal(base_override if base_override is not None else (contract.commission_amount or 0))
     if base <= 0:
         return 0
     accrued = 0

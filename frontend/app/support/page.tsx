@@ -17,12 +17,16 @@ type TicketType = { id: number; name_ar: string; is_dispute: boolean };
 const ST_LABEL: Record<string, string> = {
   open: "مفتوحة",
   answered: "تم الرد",
+  pending: "بانتظار طرف خارجي",
+  on_hold: "موقوفة مؤقتًا",
   solved: "محلولة",
   closed: "مغلقة",
 };
 const ST_CHIP: Record<string, string> = {
   open: "bg-warn-t text-warn",
   answered: "bg-tint text-primary-dark",
+  pending: "bg-warn-t text-warn",
+  on_hold: "bg-bg text-sub",
   solved: "bg-success-t text-success",
   closed: "bg-bg text-sub",
 };

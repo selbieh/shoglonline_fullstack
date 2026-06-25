@@ -78,6 +78,7 @@ UNFOLD = {
                     {"title": "Categories", "icon": "category", "link": _changelist("catalog_category")},
                     {"title": "Skills", "icon": "tag", "link": _changelist("catalog_skill")},
                     {"title": "Bid plans", "icon": "confirmation_number", "link": _changelist("bids_bidplan")},
+                    {"title": "Bid ledger", "icon": "receipt", "link": _changelist("bids_bidledger")},
                 ],
             },
             {
@@ -98,7 +99,9 @@ UNFOLD = {
                     {"title": "Withdrawals", "icon": "payments", "link": _changelist("payments_withdrawalrequest")},
                     {"title": "Commission tiers", "icon": "percent", "link": _changelist("payments_commissiontier")},
                     {"title": "Payment methods", "icon": "credit_card", "link": _changelist("payments_paymentmethod")},
+                    {"title": "Payout methods", "icon": "account_balance", "link": _changelist("payments_payoutmethod")},
                     {"title": "Invoices", "icon": "description", "link": _changelist("invoices_invoicerequest")},
+                    {"title": "Affiliate profiles", "icon": "diversity_3", "link": _changelist("affiliate_affiliateprofile")},
                     {"title": "Affiliate rules", "icon": "percent", "link": _changelist("affiliate_commissionrule")},
                     {"title": "Affiliate earnings", "icon": "redeem", "link": _changelist("affiliate_affiliatecommission")},
                     {"title": "Affiliate clicks", "icon": "ads_click", "link": _changelist("affiliate_affiliateclick")},
@@ -109,6 +112,7 @@ UNFOLD = {
                 "collapsible": True,
                 "items": [
                     {"title": "Conversations", "icon": "forum", "link": _changelist("chat_conversation")},
+                    {"title": "Messages", "icon": "chat", "link": _changelist("chat_message")},
                     {"title": "Chat reports", "icon": "flag", "link": _changelist("chat_chatreport")},
                     {"title": "Content reports", "icon": "report", "link": _changelist("core_report")},
                     {"title": "Notifications", "icon": "notifications", "link": _changelist("notifications_notification")},
@@ -135,6 +139,7 @@ UNFOLD = {
                 "collapsible": True,
                 "items": [
                     {"title": "Global settings", "icon": "settings", "link": _changelist("core_globalsetting")},
+                    {"title": "Setting changes", "icon": "manage_history", "link": _changelist("core_settingchangelog")},
                     {"title": "Audit log", "icon": "history", "link": _changelist("core_auditlog")},
                     {"title": "Attachments", "icon": "attach_file", "link": _changelist("attachments_attachment")},
                 ],

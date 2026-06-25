@@ -19,6 +19,8 @@ export type Job = {
   is_locked?: boolean;
   employer_name?: string;
   screening_questions?: ScreeningQuestion[];
+  meta_title?: string;
+  meta_description?: string;
 };
 
 export type ScreeningQuestion = {

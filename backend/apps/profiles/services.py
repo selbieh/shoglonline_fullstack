@@ -22,7 +22,7 @@ def submit_profile_for_publication(profile: WorkerProfile) -> WorkerProfile:
 
     Mirrors jobs/services.submit_for_publication: with the flag ON the profile goes live with no
     admin review; with it OFF it waits in PENDING_REVIEW for review_profile_publish(). Callers gate
-    on completeness (≥70%) before invoking this."""
+    on the admin-tunable `profiles.publish_min_completeness` threshold before invoking this."""
     if get_setting("profiles.auto_publish", False):
         profile.publish_state = WorkerProfile.PublishState.PUBLISHED
     else:
@@ -70,7 +70,7 @@ def review_profile_publish(profile: WorkerProfile, *, approve: bool, reviewer=No
     return profile
 
 
-@transaction.atomic
+@transaction.atomic  # all-or-nothing: never soft-delete the old ID file if the new link fails
 def submit_id_verification(user, attachment_ids, doc_type="", consent=False) -> IDVerification:
     """Create/replace the user's verification request (resets a rejected one to pending).
     `attachment_ids` may carry several files (front / back / selfie — ppt slide-08)."""

@@ -29,18 +29,34 @@ export const tokens = {
   },
 };
 
-async function refreshAccess(): Promise<boolean> {
-  const refresh = tokens.refresh;
-  if (!refresh) return false;
-  const res = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-  });
-  if (!res.ok) return false;
-  const data = await res.json();
-  tokens.set(data.access, data.refresh ?? refresh);
-  return true;
+// The backend rotates refresh tokens and blacklists the old one after rotation
+// (SIMPLE_JWT ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION). If several requests 401 at once
+// and each refreshed independently, the first rotation would blacklist the shared refresh token and
+// the rest would fail → the user gets bounced to sign-in. Coalesce concurrent refreshes into one.
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshAccess(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = (async () => {
+    const refresh = tokens.refresh;
+    if (!refresh) return false;
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      tokens.set(data.access, data.refresh ?? refresh);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
 }
 
 export async function api<T = unknown>(

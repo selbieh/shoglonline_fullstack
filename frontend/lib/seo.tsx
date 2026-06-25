@@ -3,6 +3,101 @@ import type { FreelancerDetail, Job } from "@/lib/types";
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/** Brand identity reused across structured data + OG images. */
+export const ORG_NAME = "شغل أونلاين";
+export const ORG_LOGO = `${SITE_URL}/logo.png`;
+/** Official social profiles (Organization.sameAs → Knowledge Panel). Comma-separated env override. */
+export const SAME_AS = (process.env.NEXT_PUBLIC_SOCIAL_LINKS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+/** Absolute URL for a site-relative path (structured data must use absolute URLs). */
+export function absoluteUrl(path: string): string {
+  return path.startsWith("http") ? path : `${SITE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+/**
+ * Clean plain-text excerpt for a meta description fallback (used when an editor leaves
+ * meta_description blank). Strips HTML/markdown, collapses whitespace, and trims on a word
+ * boundary near `max` chars with an ellipsis — so a markdown/HTML body never leaks `#`, `*`,
+ * tags, or a mid-word cut into the SERP snippet.
+ */
+export function metaExcerpt(raw: string, max = 160): string {
+  const text = (raw || "")
+    .replace(/<[^>]+>/g, " ") // HTML tags
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // markdown images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // markdown links → label
+    .replace(/[#>*_`~]+/g, " ") // heading / emphasis / code / quote markers
+    .replace(/\s+/g, " ") // collapse whitespace + newlines
+    .replace(/\s+([.,;:!؟،؛])/g, "$1") // drop space left before punctuation by stripping
+    .trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  // trim to the last whole word (unless that throws away too much), then drop trailing punctuation
+  const base = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${base.replace(/[\s.,;:!؟،؛-]+$/u, "")}…`;
+}
+
+// ---------------------------------------------------------------- meta-description fallbacks (§17)
+// When an editor leaves meta_description blank we still want a STRONG, keyword-rich snippet — not a
+// thin slice of body text. These builders prefer the entity's own copy when it's substantial, and
+// otherwise compose a well-formed Arabic description from its structured attributes. Each result is
+// clamped + cleaned by metaExcerpt so it's always SERP-safe (≤160, no markup, word-boundary).
+
+const SUBSTANTIAL = 60; // chars: below this, the entity's own text is too thin to stand alone
+
+/** SEO description for a service gig (price/delivery/category aware). */
+export function serviceMetaDescription(s: {
+  title: string; description?: string; category_name?: string;
+  delivery_days?: number; base_price?: string | number; worker_name?: string;
+}): string {
+  const own = metaExcerpt(s.description || "");
+  if (own.length >= SUBSTANTIAL) return own;
+  const head = `خدمة ${s.title}${s.category_name ? ` في ${s.category_name}` : ""}`;
+  const facts: string[] = [];
+  if (s.delivery_days) facts.push(`التسليم خلال ${s.delivery_days} يوم`);
+  if (s.base_price != null && `${s.base_price}` !== "") facts.push(`تبدأ من $${s.base_price}`);
+  if (s.worker_name) facts.push(`من ${s.worker_name}`);
+  return metaExcerpt(`${head}${facts.length ? ` — ${facts.join("، ")}` : ""}. اطلبها الآن على ${ORG_NAME}.`);
+}
+
+/** SEO description for a job posting (category/location/budget aware). */
+export function jobMetaDescription(j: {
+  title: string; description?: string; category_name?: string;
+  location_label?: string; city?: string; budget_min?: string | number; budget_max?: string | number;
+}): string {
+  const own = metaExcerpt(j.description || "");
+  if (own.length >= SUBSTANTIAL) return own;
+  const head = `وظيفة ${j.title}${j.category_name ? ` - ${j.category_name}` : ""}`;
+  const facts: string[] = [];
+  if (j.location_label) facts.push(`${j.location_label}${j.city ? ` (${j.city})` : ""}`);
+  if (j.budget_min != null && j.budget_max != null) facts.push(`الميزانية $${j.budget_min}–$${j.budget_max}`);
+  return metaExcerpt(`${head}${facts.length ? `، ${facts.join("، ")}` : ""}. قدّم عرضك الآن على ${ORG_NAME}.`);
+}
+
+/** SEO description for a freelancer profile (headline/skills/location/rating aware). */
+export function freelancerMetaDescription(f: {
+  name: string; bio_title?: string; overview?: string; skills?: string[];
+  city?: string; country?: string; rating_avg?: string | number; rating_count?: number;
+}): string {
+  const own = metaExcerpt(f.overview || "");
+  if (own.length >= SUBSTANTIAL) return own;
+  const head = `${f.name}${f.bio_title ? ` - ${f.bio_title}` : ""}`;
+  const facts: string[] = [];
+  const loc = [f.city, f.country].filter(Boolean).join("، ");
+  if (loc) facts.push(loc);
+  if (f.skills?.length) facts.push(`خبرة في ${f.skills.slice(0, 3).join("، ")}`);
+  if (Number(f.rating_count) > 0) facts.push(`بتقييم ${Number(f.rating_avg).toFixed(1)}/5`);
+  return metaExcerpt(`${head}${facts.length ? `، ${facts.join("، ")}` : ""}. وظّفه الآن على ${ORG_NAME}.`);
+}
+
+/** SEO description for a CMS page — its body excerpt, or a branded line if the body is empty. */
+export function pageMetaDescription(p: { title: string; body?: string }): string {
+  return metaExcerpt(p.body || "") || `${p.title} — ${ORG_NAME}، منصة الوظائف والخدمات الحرة.`;
+}
+
 // Server components fetch the backend over the internal network; localhost:8000 inside
 // the frontend container points at the frontend itself.
 const SERVER_API =
@@ -95,6 +190,126 @@ export function personLd(f: FreelancerDetail): Record<string, unknown> {
     knowsAbout: f.skills?.length ? f.skills.map((s) => s.name) : undefined,
     ...(rated
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Number(f.rating_avg).toFixed(1), reviewCount: f.rating_count } }
+      : {}),
+  };
+}
+
+/** schema.org Organization — the publisher identity (logo + social profiles → Knowledge Panel). */
+export function organizationLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: ORG_NAME,
+    url: SITE_URL,
+    logo: ORG_LOGO,
+    ...(SAME_AS.length ? { sameAs: SAME_AS } : {}),
+  };
+}
+
+/** schema.org WebSite with a SearchAction (enables the Google sitelinks search box). */
+export function websiteLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: ORG_NAME,
+    url: SITE_URL,
+    inLanguage: "ar",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/services?search={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+/** schema.org BreadcrumbList from an ordered [{ name, path }] trail (rich-result breadcrumbs). */
+export function breadcrumbLd(trail: { name: string; path: string }[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: trail.map((t, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: t.name,
+      item: absoluteUrl(t.path),
+    })),
+  };
+}
+
+/** schema.org Product/Offer for a service gig — with cover image, seller, and aggregateRating +
+ * Review list when reviews exist (eligible for review-snippet rich results). */
+export function serviceLd(s: {
+  title: string; slug: string; description: string; base_price: string;
+  cover_image?: string; worker_name?: string; category_name?: string;
+  reviews?: { author_name: string; rating: number; comment?: string; created_at?: string }[];
+}): Record<string, unknown> {
+  const reviews = s.reviews ?? [];
+  const ratingCount = reviews.length;
+  const ratingValue = ratingCount
+    ? (reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / ratingCount).toFixed(1)
+    : null;
+  return {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: s.title,
+    description: s.description,
+    image: s.cover_image ? absoluteUrl(s.cover_image) : undefined,
+    category: s.category_name || undefined,
+    brand: s.worker_name ? { "@type": "Brand", name: s.worker_name } : undefined,
+    offers: {
+      "@type": "Offer",
+      price: s.base_price,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: `${SITE_URL}/services/${s.slug}`,
+      ...(s.worker_name ? { seller: { "@type": "Person", name: s.worker_name } } : {}),
+    },
+    ...(ratingValue
+      ? {
+          aggregateRating: { "@type": "AggregateRating", ratingValue, reviewCount: ratingCount, bestRating: 5 },
+          review: reviews.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.author_name },
+            datePublished: r.created_at || undefined,
+            reviewBody: r.comment || undefined,
+            reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
+          })),
+        }
+      : {}),
+  };
+}
+
+/** schema.org Article for a CMS content page (about/terms/blog…). */
+export function articleLd(page: { slug: string; title: string; body: string; updated_at?: string }): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: page.title,
+    description: metaExcerpt(page.body, 200),
+    inLanguage: "ar",
+    url: `${SITE_URL}/pages/${page.slug}`,
+    ...(page.updated_at ? { dateModified: page.updated_at } : {}),
+    author: { "@type": "Organization", name: ORG_NAME },
+    publisher: { "@type": "Organization", name: ORG_NAME, logo: { "@type": "ImageObject", url: ORG_LOGO } },
+  };
+}
+
+/** schema.org CreativeWork for a single portfolio work (attributed to its freelancer). */
+export function portfolioLd(args: {
+  id: number; title: string; description?: string; image?: string;
+  authorName?: string; authorId?: number; created_at?: string; keywords?: string[];
+}): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: args.title,
+    description: args.description || undefined,
+    image: args.image ? absoluteUrl(args.image) : undefined,
+    inLanguage: "ar",
+    ...(args.created_at ? { dateCreated: args.created_at } : {}),
+    ...(args.keywords?.length ? { keywords: args.keywords.join(", ") } : {}),
+    ...(args.authorName
+      ? { author: { "@type": "Person", name: args.authorName, ...(args.authorId ? { url: `${SITE_URL}/freelancers/${args.authorId}` } : {}) } }
       : {}),
   };
 }

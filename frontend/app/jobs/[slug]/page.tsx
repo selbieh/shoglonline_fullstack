@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { JsonLd, SITE_URL, serverApi, encodeSegment, jobIsIndexable, jobPostingLd } from "@/lib/seo";
+import { JsonLd, SITE_URL, serverApi, encodeSegment, jobIsIndexable, jobPostingLd, breadcrumbLd, jobMetaDescription } from "@/lib/seo";
 import { LOCATION_LABEL, type Job } from "@/lib/types";
 import { timeAgo } from "@/lib/format";
 import {
@@ -22,14 +22,24 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const job = await getJob(params.slug);
   if (!job) return { title: "وظيفة غير موجودة" };
-  const description = (job.description || "").slice(0, 160);
+  // editor SEO overrides win; otherwise fall back to the title / a description excerpt
+  const title = job.meta_title || job.title;
+  const description = job.meta_description || jobMetaDescription({
+    title: job.title,
+    description: job.description,
+    category_name: job.category_name,
+    location_label: LOCATION_LABEL[job.location_type],
+    city: job.city,
+    budget_min: job.budget_min,
+    budget_max: job.budget_max,
+  });
   const url = `${SITE_URL}/jobs/${job.slug}`;
   return {
-    title: job.title,
+    title,
     description,
     alternates: { canonical: `/jobs/${job.slug}` },
-    openGraph: { type: "article", title: job.title, description, url },
-    twitter: { card: "summary", title: job.title, description },
+    openGraph: { type: "article", title, description, url },
+    twitter: { card: "summary_large_image", title, description },
     // expired/closed postings drop out of the index (FR-JOB-17 / §17)
     robots: jobIsIndexable(job) ? undefined : { index: false, follow: true },
   };
@@ -52,7 +62,14 @@ export default async function JobDetailPage({ params }: { params: { slug: string
   const job = await getJob(params.slug);
   if (!job) notFound();
 
-  const jsonLd = jobPostingLd(job);
+  const jsonLd = [
+    jobPostingLd(job),
+    breadcrumbLd([
+      { name: "الرئيسية", path: "/" },
+      { name: "الوظائف", path: "/jobs" },
+      { name: job.title, path: `/jobs/${job.slug}` },
+    ]),
+  ];
   const posted = timeAgo(job.published_at ?? job.created_at);
   const expires = timeAgo(job.expires_at);
   const onsite = job.location_type !== "remote";

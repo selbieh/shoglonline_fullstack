@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
-import { JsonLd, SITE_URL, serverApi, encodeSegment, personLd } from "@/lib/seo";
+import { JsonLd, SITE_URL, serverApi, encodeSegment, personLd, breadcrumbLd, freelancerMetaDescription } from "@/lib/seo";
 import type { FreelancerDetail } from "@/lib/types";
 import Avatar from "@/components/Avatar";
 import StarRating from "@/components/StarRating";
@@ -31,13 +31,22 @@ async function getFreelancer(id: string): Promise<FreelancerDetail | null> {
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const f = await getFreelancer(params.id);
   if (!f) return { title: "مستقل غير موجود" };
-  const description = (f.bio_title || f.overview || `الملف الشخصي لـ ${f.name}`).slice(0, 160);
+  const description = freelancerMetaDescription({
+    name: f.name,
+    bio_title: f.bio_title,
+    overview: f.overview,
+    skills: f.skills?.map((s) => s.name),
+    city: f.city,
+    country: f.country,
+    rating_avg: f.rating_avg,
+    rating_count: f.rating_count,
+  });
   return {
     title: f.name,
     description,
     alternates: { canonical: `/freelancers/${f.id}` },
     openGraph: { type: "profile", title: f.name, description, url: `${SITE_URL}/freelancers/${f.id}` },
-    twitter: { card: "summary", title: f.name, description },
+    twitter: { card: "summary_large_image", title: f.name, description },
   };
 }
 
@@ -78,7 +87,14 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
 
   return (
     <main className="bg-bg">
-      <JsonLd data={personLd(f)} />
+      <JsonLd data={[
+        personLd(f),
+        breadcrumbLd([
+          { name: "الرئيسية", path: "/" },
+          { name: "المستقلون", path: "/freelancers" },
+          { name: f.name, path: `/freelancers/${f.id}` },
+        ]),
+      ]} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <a href="/freelancers" className="text-sm font-medium text-primary-dark hover:underline">← كل المستقلين</a>
 

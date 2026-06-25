@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { JsonLd, SITE_URL, serverApi, encodeSegment } from "@/lib/seo";
+import { JsonLd, SITE_URL, serverApi, encodeSegment, serviceLd, breadcrumbLd, serviceMetaDescription } from "@/lib/seo";
 import { BarChartIcon, ClipboardIcon, ClockIcon, GridIcon, HeartIcon, UserIcon } from "@/components/icons";
 import MediaGallery from "@/components/MediaGallery";
 import { DetailRail, RailRow } from "@/components/DetailRail";
@@ -35,6 +35,8 @@ type Service = {
   worker_rating_count?: number;
   worker_verified?: boolean;
   reviews?: ReviewData[];
+  meta_title?: string;
+  meta_description?: string;
 };
 
 async function getService(slug: string): Promise<Service | null> {
@@ -46,13 +48,15 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const s = await getService(params.slug);
   if (!s) return { title: "خدمة غير موجودة" };
-  const description = (s.description || "").slice(0, 160);
+  // editor SEO overrides win; otherwise fall back to the title / a description excerpt
+  const title = s.meta_title || s.title;
+  const description = s.meta_description || serviceMetaDescription(s);
   return {
-    title: s.title,
+    title,
     description,
     alternates: { canonical: `/services/${s.slug}` },
-    openGraph: { type: "article", title: s.title, description, url: `${SITE_URL}/services/${s.slug}` },
-    twitter: { card: "summary", title: s.title, description },
+    openGraph: { type: "article", title, description, url: `${SITE_URL}/services/${s.slug}` },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -60,19 +64,14 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
   const s = await getService(params.slug);
   if (!s) notFound();
 
-  const jsonLd = {
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    name: s.title,
-    description: s.description,
-    offers: {
-      "@type": "Offer",
-      price: s.base_price,
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-      url: `${SITE_URL}/services/${s.slug}`,
-    },
-  };
+  const jsonLd = [
+    serviceLd(s),
+    breadcrumbLd([
+      { name: "الرئيسية", path: "/" },
+      { name: "الخدمات", path: "/services" },
+      { name: s.title, path: `/services/${s.slug}` },
+    ]),
+  ];
 
   return (
     <main className="bg-bg">

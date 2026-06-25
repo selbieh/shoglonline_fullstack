@@ -256,7 +256,7 @@ function WalletInner() {
                 <input className="min-w-48 flex-1 field" dir="auto" type="email" inputMode="email"
                   placeholder="بريد PayPal (افتراضيًا بريد حسابك)"
                   value={wdEmail} onChange={(e) => setWdEmail(e.target.value)} />
-                <button className="btn-secondary" disabled={busy} onClick={withdraw}>طلب سحب</button>
+                <button className="btn-secondary" disabled={busy || !(Number(wdAmount) >= 10)} onClick={withdraw}>طلب سحب</button>
               </div>
               <p className="flex items-start gap-1.5 text-xs text-sub">
                 <AlertIcon className="mt-0.5 shrink-0 text-[14px] text-warn" />

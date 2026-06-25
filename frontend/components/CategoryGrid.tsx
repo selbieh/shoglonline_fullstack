@@ -45,10 +45,11 @@ export default function CategoryGrid({
           <span className={`icon-tile h-12 w-12 shrink-0 text-[22px] transition duration-300 group-hover:scale-105 ${categoryTone(c.slug)}`}>
             <CategoryIcon icon={c.icon} slug={c.slug} />
           </span>
-          <span className="min-w-0 flex-1 truncate font-bold text-ink transition group-hover:text-primary-deep">
+          <span className="line-clamp-2 min-w-0 flex-1 font-bold leading-snug text-ink transition group-hover:text-primary-deep">
             {c.title}
           </span>
-          <ArrowLeftIcon className="shrink-0 text-[16px] text-primary opacity-0 transition duration-300 group-hover:opacity-100" />
+          {/* arrow only on ≥sm: on phones it has no hover state and would steal width from the label */}
+          <ArrowLeftIcon className="hidden shrink-0 text-[16px] text-primary opacity-0 transition duration-300 group-hover:opacity-100 sm:block" />
         </Link>
       ))}
     </div>

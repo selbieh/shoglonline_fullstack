@@ -38,6 +38,7 @@ export default function MyServicesPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [status, setStatus] = useState("");
   const [incoming, setIncoming] = useState<Incoming[]>([]);
+  const [busyReq, setBusyReq] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -67,14 +68,26 @@ export default function MyServicesPage() {
   }
 
   async function respond(id: number, act: "accept" | "reject") {
+    if (busyReq !== null) return;  // guard against double-submit (accept creates a contract)
+    let reason = "";
     if (act === "reject") {
-      const reason = prompt("سبب الرفض:");
-      if (!reason) return;
-      await api(`/requests/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }).catch(() => undefined);
-    } else {
-      await api(`/requests/${id}/accept`, { method: "POST" }).catch(() => undefined);
+      const r = prompt("سبب الرفض:");
+      if (!r) return;
+      reason = r;
     }
-    await load();
+    setBusyReq(id);
+    try {
+      if (act === "reject") {
+        await api(`/requests/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) });
+      } else {
+        await api(`/requests/${id}/accept`, { method: "POST" });
+      }
+      await load();
+    } catch {
+      /* surfaced on next load; keep the row so the user can retry */
+    } finally {
+      setBusyReq(null);
+    }
   }
 
   // per-row action menu (ppt slide-17). Owner edit page (slide-20) is a follow-up → معاينة links
@@ -110,8 +123,8 @@ export default function MyServicesPage() {
                 </div>
                 {r.description && <p className="mt-1 text-sub">{r.description}</p>}
                 <div className="mt-2 flex gap-2">
-                  <button className="btn-primary" onClick={() => respond(r.id, "accept")}>قبول (إنشاء عقد)</button>
-                  <button className="btn-secondary" onClick={() => respond(r.id, "reject")}>رفض</button>
+                  <button className="btn-primary" disabled={busyReq !== null} onClick={() => respond(r.id, "accept")}>قبول (إنشاء عقد)</button>
+                  <button className="btn-secondary" disabled={busyReq !== null} onClick={() => respond(r.id, "reject")}>رفض</button>
                 </div>
               </li>
             ))}

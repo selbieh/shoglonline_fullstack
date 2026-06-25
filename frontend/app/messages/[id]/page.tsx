@@ -72,15 +72,23 @@ export default function ThreadPage() {
       await load(); // metadata (read-only, names, context) + initial messages via REST
       // Heavy path: stream messages + read receipts from Firestore. Falls back to polling when
       // Firebase isn't configured (dev / FIRESTORE_STUB) — the subscribe fns return null.
-      unsubMsgs = await subscribeToMessages(id, (live) => {
+      const um = await subscribeToMessages(id, (live) => {
         if (!active) return;
         liveRef.current = true;
         setMsgs(live.map((m) => ({ id: m.id, body: m.body, mine: m.mine, created_at: m.created_at, attachments: m.attachments })));
       });
-      unsubConv = await subscribeToConversation(id, (info) => {
+      // Unmounted while the subscribe promise was in flight → tear down immediately so the
+      // Firestore listener doesn't leak (cleanup already ran with a null unsub ref).
+      if (!active) { um?.(); return; }
+      unsubMsgs = um;
+
+      const uc = await subscribeToConversation(id, (info) => {
         if (active) setReads(info.reads);
       });
-      if (!unsubMsgs && active) poll = setInterval(load, 8000);
+      if (!active) { uc?.(); return; }
+      unsubConv = uc;
+
+      if (!unsubMsgs) poll = setInterval(load, 8000);
     })();
 
     return () => {

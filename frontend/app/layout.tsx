@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { SITE_URL } from "@/lib/seo";
+import { JsonLd, SITE_URL, organizationLd, websiteLd } from "@/lib/seo";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import "./globals.css";
@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: { default: "شغل أونلاين — وظائف وخدمات حرة", template: "%s | شغل أونلاين" },
   description: DESC,
   applicationName: "شغل أونلاين",
+  keywords: ["شغل أونلاين", "وظائف", "عمل حر", "مستقلين", "خدمات مصغرة", "فريلانس", "عمل عن بعد", "مدفوعات بالضمان"],
+  authors: [{ name: "شغل أونلاين" }],
+  creator: "شغل أونلاين",
+  publisher: "شغل أونلاين",
+  category: "business",
+  formatDetection: { telephone: false, email: false, address: false },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
@@ -22,7 +28,11 @@ export const metadata: Metadata = {
     url: SITE_URL,
   },
   twitter: { card: "summary_large_image", title: "شغل أونلاين", description: DESC },
-  robots: { index: true, follow: true },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+  },
 };
 
 // Mobile browser chrome tint (brand blue) + sane default scaling.
@@ -47,6 +57,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="font-sans">
+        {/* site-wide identity for search engines (Knowledge Panel + sitelinks search box) */}
+        <JsonLd data={[organizationLd(), websiteLd()]} />
         <SiteHeader />
         {children}
         <SiteFooter />

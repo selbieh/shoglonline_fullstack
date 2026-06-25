@@ -20,6 +20,8 @@ type Ticket = {
 const ST_LABEL: Record<string, string> = {
   open: "مفتوحة",
   answered: "تم الرد",
+  pending: "بانتظار طرف خارجي",
+  on_hold: "موقوفة مؤقتًا",
   solved: "محلولة",
   closed: "مغلقة",
 };

@@ -36,6 +36,9 @@ class Job(models.Model):
     location_type = models.CharField(max_length=8, choices=LocationType.choices, default=LocationType.REMOTE)
     country = models.CharField(max_length=64, blank=True)
     city = models.CharField(max_length=64, blank=True)
+    # Optional SEO overrides — when blank the frontend falls back to title / a description excerpt.
+    meta_title = models.CharField(max_length=70, blank=True, help_text="عنوان SEO (≤70 حرفًا) — يُستخدم عنوان الوظيفة عند تركه فارغًا")
+    meta_description = models.CharField(max_length=160, blank=True, help_text="وصف SEO (≤160 حرفًا) — يُشتق من الوصف عند تركه فارغًا")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     frozen_prev_status = models.CharField(max_length=16, blank=True, default="")  # restore target on unfreeze (BR-23)
     reject_reason = models.TextField(blank=True)

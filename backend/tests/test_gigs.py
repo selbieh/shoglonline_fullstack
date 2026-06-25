@@ -183,6 +183,17 @@ class TestServiceAPI:
         assert acc.status_code == 201
         assert acc.json()["contract_status"] == "active"
 
+    def test_detail_hides_non_live_service(self, worker, category):
+        """Regression (IDOR): the public detail endpoint must 404 for non-LIVE services."""
+        draft = Service.objects.create(worker=worker, title="مسودة", description="x", category=category,
+                                       base_price=Decimal("50"), delivery_days=3, slug="draft-svc",
+                                       status=Service.Status.DRAFT)
+        assert APIClient().get(f"/api/v1/services/{draft.slug}").status_code == 404
+        live = Service.objects.create(worker=worker, title="حية", description="x", category=category,
+                                      base_price=Decimal("50"), delivery_days=3, slug="live-svc",
+                                      status=Service.Status.LIVE)
+        assert APIClient().get(f"/api/v1/services/{live.slug}").status_code == 200
+
     def test_publish_via_api(self, worker, category):
         set_setting("services.auto_publish", False)
         client = APIClient()

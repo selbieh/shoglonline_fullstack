@@ -49,6 +49,33 @@ def auth(user) -> APIClient:
 
 
 @pytest.mark.django_db
+class TestPrivateJobAccess:
+    """Regression: the public job-detail endpoint must not leak invite-only (private) jobs."""
+
+    def _private_job(self, employer, category):
+        return Job.objects.create(
+            employer=employer, title="مشروع خاص", description="وصف", category=category,
+            budget_min=100, budget_max=200, status=Job.Status.PUBLISHED,
+            published_at=timezone.now(), is_private=True, slug="private-job",
+        )
+
+    def test_anonymous_cannot_view_private_job(self, employer, category):
+        job = self._private_job(employer, category)
+        assert APIClient().get(f"/api/v1/jobs/{job.slug}").status_code == 404
+
+    def test_owner_and_invited_worker_can_view(self, employer, worker, category):
+        job = self._private_job(employer, category)
+        assert auth(employer).get(f"/api/v1/jobs/{job.slug}").status_code == 200
+        Invitation.objects.create(job=job, employer=employer, worker=worker,
+                                  status=Invitation.Status.SENT)
+        assert auth(worker).get(f"/api/v1/jobs/{job.slug}").status_code == 200
+
+    def test_uninvited_worker_cannot_view_private_job(self, employer, worker, category):
+        job = self._private_job(employer, category)
+        assert auth(worker).get(f"/api/v1/jobs/{job.slug}").status_code == 404
+
+
+@pytest.mark.django_db
 class TestPublication:
     def test_auto_publish_flag(self, employer, category):
         set_setting("jobs.auto_publish", True)

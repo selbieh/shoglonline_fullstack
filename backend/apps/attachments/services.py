@@ -167,7 +167,7 @@ def _host_allows(host, user) -> bool:
     """Explicit, auditable per-host authorization. Unknown host types → deny."""
     from apps.chat.models import Message  # noqa: PLC0415 (avoid import cycle)
     from apps.contracts.models import Submission  # noqa: PLC0415
-    from apps.profiles.models import IDVerification, PortfolioItem  # noqa: PLC0415
+    from apps.profiles.models import Certificate, IDVerification, PortfolioItem  # noqa: PLC0415
     from apps.tickets.models import Ticket  # noqa: PLC0415
 
     if isinstance(host, Message):
@@ -178,6 +178,6 @@ def _host_allows(host, user) -> bool:
         return host.user_id == user.id or bool(user.is_staff)
     if isinstance(host, IDVerification):  # owner uploads; staff review the ID file (FR-PROF-6)
         return host.user_id == user.id or bool(user.is_staff)
-    if isinstance(host, PortfolioItem):  # owner manages their own gallery; public read via its own view
+    if isinstance(host, (PortfolioItem, Certificate)):  # owner manages their own gallery/credentials
         return host.profile.user_id == user.id
     return False

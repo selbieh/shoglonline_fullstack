@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.urls import reverse
 from rest_framework import serializers
 
@@ -169,6 +170,15 @@ class WorkerSkillSerializer(serializers.ModelSerializer):
         model = WorkerSkill
         fields = ["skill_id", "name", "efficiency"]
 
+    def validate_skill_id(self, v):
+        # Reject unknown ids up front — otherwise a bad id raises an IntegrityError mid replace-all
+        # (after the old skills were deleted), 500-ing the request and wiping the section.
+        from apps.catalog.models import Skill  # noqa: PLC0415 (avoid import cycle)
+
+        if not Skill.objects.filter(pk=v).exists():
+            raise serializers.ValidationError("مهارة غير معروفة")
+        return v
+
 
 class EducationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -243,6 +253,7 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
     def validate_client_notes(self, v):
         return validate_no_contact(v)
 
+    @transaction.atomic  # replace-all sections must be all-or-nothing (no half-wiped profile)
     def update(self, instance, validated_data):
         skills = validated_data.pop("skills", None)
         educations = validated_data.pop("educations", None)

@@ -11,7 +11,7 @@ from ..models import ContentPage, FAQItem, LandingCard, LandingSection
 class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContentPage
-        fields = ["slug", "title", "body", "updated_at"]
+        fields = ["slug", "title", "body", "meta_title", "meta_description", "updated_at"]
 
 
 class FAQSerializer(serializers.ModelSerializer):

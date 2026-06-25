@@ -33,6 +33,7 @@ DEFAULTS: dict[str, tuple[object, str, str, bool]] = {
     "tickets.auto_close_days": (7, "int", "support", False),
     "profiles.offline_reminder_days": (10, "int", "profiles", False),
     "profiles.phone_verification": (False, "bool", "profiles", True),  # ppt: SMS OTP off by default; operator toggles
+    "profiles.publish_min_completeness": (70, "int", "profiles", True),  # gate for publishing a worker profile; 0 = publish all (no gate)
     "subscriptions.enabled": (True, "bool", "notifications", False),
     "subscriptions.email_mode": ("instant", "str", "notifications", False),
     "bids.enabled": (True, "bool", "bids", True),  # master switch: off → free proposals, commission only
