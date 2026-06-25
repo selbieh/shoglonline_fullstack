@@ -102,13 +102,13 @@ export default function ReportButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 grid place-content-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 grid place-content-center overflow-y-auto bg-black/40 p-4"
           role="dialog"
           aria-modal="true"
           onClick={close}
         >
           <div
-            className="w-full max-w-md rounded-l bg-white p-6 text-right shadow-xl"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-l bg-white p-6 text-right shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {done ? (
