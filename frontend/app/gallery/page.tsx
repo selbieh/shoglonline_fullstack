@@ -11,6 +11,7 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import CardActions from "@/components/CardActions";
+import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import {
   AlertIcon,
   ArrowLeftIcon,
@@ -65,6 +66,7 @@ function GalleryInner() {
   const [skill, setSkill] = useState(params.get("skill") ?? "");
   const [q, setQ] = useState(params.get("search") ?? "");
   const [ordering, setOrdering] = useState(params.get("ordering") ?? DEFAULT_SORT);
+  const favIds = useFavoriteIds("portfolio"); // pre-fill hearts for items the user already saved
 
   useEffect(() => {
     fetch(`${API_URL}/categories`)
@@ -268,7 +270,7 @@ function GalleryInner() {
             <>
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((it) => (
-                  <GalleryCard key={it.id} it={it} />
+                  <GalleryCard key={it.id} it={it} favorited={favIds.has(it.id)} />
                 ))}
               </div>
               {hasMore && (
@@ -423,7 +425,7 @@ function GalleryThumb({ it }: { it: GalleryItem }) {
 /** A gallery tile (in the shared profile-card language): thumbnail + the owning freelancer's
     identity, a stats strip (rating · views · category) and a «عرض العمل» CTA, linking to the
     single-work showcase. */
-function GalleryCard({ it }: { it: GalleryItem }) {
+function GalleryCard({ it, favorited }: { it: GalleryItem; favorited: boolean }) {
   const href = `/freelancers/${it.worker_id}/portfolio/${it.id}`;
   const rated = Number(it.worker_rating_count) > 0;
   const views = Number(it.views_count ?? 0);
@@ -438,6 +440,7 @@ function GalleryCard({ it }: { it: GalleryItem }) {
           reportKind="portfolio"
           favoriteKind="portfolio"
           id={it.id}
+          favoriteInitial={favorited}
           shareUrl={href}
           shareTitle={it.title}
           className="absolute bottom-2 end-2 z-10"

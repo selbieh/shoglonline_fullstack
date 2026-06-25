@@ -20,8 +20,10 @@ from .models import Notification, NotificationPreference
 logger = logging.getLogger(__name__)
 
 FRONTEND_URL = settings.FRONTEND_URL  # env-driven (settings.FRONTEND_URL); localhost default in dev
-# Absolute, externally-reachable logo so it renders in any mail client (served from the Next app's public/).
-EMAIL_LOGO_URL = getattr(settings, "EMAIL_LOGO_URL", f"{FRONTEND_URL}/logo.png")
+# Absolute, externally-reachable logo so it renders in any mail client (served from the Next app's
+# public/). White silhouette because the header is brand-blue — email clients can't apply the site's
+# `brightness-0 invert` CSS filter, so the dark logo.png would be invisible there.
+EMAIL_LOGO_URL = getattr(settings, "EMAIL_LOGO_URL", f"{FRONTEND_URL}/logo-email-white.png")
 EMAIL_PREFS_URL = f"{FRONTEND_URL}/settings"  # where the user manages notification preferences
 
 # The admin-allowed, user-suppressible categories (FR-PROF-9). Only these kinds consult a

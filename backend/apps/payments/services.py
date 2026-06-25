@@ -149,6 +149,15 @@ def settle_pending(tx: Transaction, *, succeeded: bool, gateway_ref: str = "") -
     tx.save(update_fields=["status", "gateway_ref"])
     if succeeded:
         _recompute(Wallet.objects.select_for_update().get(pk=tx.wallet_id))
+        if tx.type == Transaction.Type.DEPOSIT:
+            from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+            notify(
+                tx.wallet.user,
+                kind="payment",
+                title="تم تأكيد الإيداع",
+                body=f"أُضيف مبلغ ${tx.amount} إلى محفظتك ورصيدك جاهز للاستخدام الآن.",
+                deep_link="/wallet",
+            )
     return tx
 
 
@@ -197,6 +206,14 @@ def process_withdrawal(withdrawal: WithdrawalRequest, *, paid: bool, actor=None,
     withdrawal.processed_by = actor
     withdrawal.processed_at = timezone.now()
     withdrawal.save()
+    from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+    if paid:
+        notify(withdrawal.user, kind="payment", title="تم تنفيذ طلب السحب",
+               body=f"حُوِّل مبلغ ${withdrawal.amount} إلى حسابك على PayPal.", deep_link="/wallet")
+    else:
+        notify(withdrawal.user, kind="payment", title="تم رفض طلب السحب",
+               body=f"أُعيد مبلغ ${withdrawal.amount} إلى محفظتك. السبب: {reason or '—'}",
+               deep_link="/wallet")
     return withdrawal
 
 

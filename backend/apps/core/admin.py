@@ -46,19 +46,47 @@ class SettingChangeLogAdmin(ModelAdmin):
         return False
 
 
+REASON_LABELS = {
+    "spam": "محتوى مكرر / سبام",
+    "scam": "احتيال أو نصب",
+    "inappropriate": "محتوى مسيء",
+    "copyright": "انتهاك حقوق ملكية",
+    "misleading": "معلومات مضللة",
+    "other": "أخرى",
+}
+
+
 @admin.register(Report)
 class ReportAdmin(ModelAdmin):
     """Abuse-report review queue: open the reported item, then remove it (archive/reject/withdraw/
-    cancel/delete depending on kind) or dismiss the report. Actions are audit-logged (SEC-10)."""
+    cancel/delete depending on kind) or dismiss the report. Removing an item also resolves every
+    other open report on the same item and notifies its owner. Actions are audit-logged (SEC-10)."""
 
-    list_display = ("id", "kind", "reported_item", "reporter", "reason", "status", "reviewed_by", "created_at")
-    list_filter = ("kind", "status", "reason", "created_at")
+    list_display = ("id", "kind", "reported_item", "times_reported", "reporter", "reason_label",
+                    "status", "reviewed_by", "created_at")
+    list_filter = ("status", "kind", "reason", "created_at")
     search_fields = ("object_id", "reason", "detail", "reporter__email")
     list_select_related = ("reporter", "reviewed_by")
     date_hierarchy = "created_at"
-    readonly_fields = ("kind", "object_id", "reporter", "reason", "detail", "created_at",
-                       "reviewed_by", "reviewed_at", "reported_item")
+    readonly_fields = ("kind", "object_id", "reporter", "reason_label", "detail", "created_at",
+                       "reviewed_by", "reviewed_at", "reported_item", "times_reported")
     actions = ["remove_item", "dismiss"]
+
+    def get_queryset(self, request):
+        # default view leads with the open queue, newest first (status is a filter, not a lock-in)
+        return super().get_queryset(request).order_by("-created_at")
+
+    @admin.display(description="السبب", ordering="reason")
+    def reason_label(self, obj):
+        return REASON_LABELS.get(obj.reason, obj.reason)
+
+    @admin.display(description="بلاغات مفتوحة")
+    def times_reported(self, obj):
+        n = Report.objects.filter(kind=obj.kind, object_id=obj.object_id,
+                                  status=Report.Status.OPEN).count()
+        if n > 1:
+            return format_html('<b style="color:#c1121f">×{}</b>', n)
+        return n
 
     @admin.display(description="Reported item")
     def reported_item(self, obj):
@@ -69,6 +97,29 @@ class ReportAdmin(ModelAdmin):
         label = str(target)
         return format_html('<a href="{}">{}</a>', url, label) if url else label
 
+    def _notify_owner(self, kind, target):
+        """Best-effort: tell the item's owner it was removed after a report (force past opt-out)."""
+        owner = report_targets.owner_of(kind, target)
+        if owner is None:
+            return
+        try:
+            from apps.notifications.services import notify
+            label = report_targets.kind_label(kind)
+            notify(owner, kind="admin_broadcast", title="تمت إزالة عنصر بعد بلاغ",
+                   body=f"تمت إزالة «{label}» الخاص بك بعد مراجعة بلاغ من الإدارة لمخالفته قواعد المنصة.",
+                   force=True)
+        except Exception:  # noqa: BLE001 — notification failure must not abort the moderation action
+            pass
+
+    def _resolve_open_siblings(self, report, reviewer, *, resolution):
+        """Collapse the queue: mark every other OPEN report on the same item as actioned too."""
+        Report.objects.filter(
+            kind=report.kind, object_id=report.object_id, status=Report.Status.OPEN,
+        ).exclude(pk=report.pk).update(
+            status=Report.Status.ACTIONED, resolution=resolution,
+            reviewed_by=reviewer, reviewed_at=timezone.now(),
+        )
+
     @admin.action(description="🗑️ Remove reported item")
     def remove_item(self, request, queryset):
         for report in queryset.exclude(status=Report.Status.ACTIONED):
@@ -78,11 +129,13 @@ class ReportAdmin(ModelAdmin):
                 report.status, report.resolution = Report.Status.ACTIONED, "missing"
             else:
                 label = report_targets.remove_target(report.kind, target)
+                self._notify_owner(report.kind, target)
                 report.status, report.resolution = Report.Status.ACTIONED, "removed"
                 AuditLog.objects.create(
                     actor=request.user, action="admin.report_remove", model=report.kind,
                     object_id=str(report.object_id), after={"resolution": label},
                 )
+                self._resolve_open_siblings(report, request.user, resolution="removed (duplicate)")
                 self.message_user(request, f"البلاغ #{report.pk}: {label}")
             report.reviewed_by, report.reviewed_at = request.user, timezone.now()
             report.save(update_fields=["status", "resolution", "reviewed_by", "reviewed_at"])

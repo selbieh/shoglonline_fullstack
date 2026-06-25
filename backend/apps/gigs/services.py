@@ -97,6 +97,14 @@ def request_service(*, employer, service: Service, quantity: int = 1, descriptio
     )
     if addons:
         request.addons.set(addons)
+    from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+    notify(
+        service.worker,
+        kind="contract",  # transactional — a direct purchase request always reaches the seller
+        title=f"طلب جديد على خدمتك: {service.title}",
+        body=f"أرسل {employer.first_name or employer.email} طلب شراء بقيمة ${request.total_price}.",
+        deep_link="/me/services",
+    )
     return request
 
 

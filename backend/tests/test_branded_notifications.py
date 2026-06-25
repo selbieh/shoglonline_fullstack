@@ -35,7 +35,7 @@ class TestBrandedEmail:
         html = _html_of(msg)
         assert html, "email must carry an HTML alternative"
         assert 'dir="rtl"' in html                       # matches the site's RTL Arabic
-        assert "logo.png" in html                         # brand logo
+        assert "logo-email-white.png" in html             # white brand logo (visible on blue header)
         assert "#2b50c9" in html or "#1f3da6" in html     # brand CTA blue (globals.css tokens)
         assert "/me/profile" in html                      # CTA links to the item
         assert "تم نشر ملفك الشخصي" in html               # the title is rendered
@@ -81,4 +81,40 @@ class TestEventCoverage:
         note = (Notification.objects.filter(user=worker, kind=Notification.Kind.CONTRACT)
                 .order_by("-created_at").first())
         assert note is not None and note.deep_link == f"/contracts/{contract.pk}"
+        assert any(worker.email in m.to for m in mail.outbox)
+
+    def test_welcome_email_on_signup_only_for_new_users(self, monkeypatch):
+        from apps.accounts import services as acc
+        payload = {"sub": "g-123", "email": "newcomer@example.com",
+                   "given_name": "سارة", "family_name": "", "picture": ""}
+        monkeypatch.setattr(acc, "verify_google_token", lambda _t: payload)
+
+        user, created = acc.authenticate_google_user("tok")
+        assert created
+        assert Notification.objects.filter(user=user, kind=Notification.Kind.ADMIN).exists()
+        assert any(user.email in m.to for m in mail.outbox)
+
+        mail.outbox.clear()
+        _user2, created2 = acc.authenticate_google_user("tok")  # second login
+        assert created2 is False and len(mail.outbox) == 0  # no repeat welcome
+
+    def test_deposit_confirmation_notifies_and_emails(self, employer):
+        wallet = pay.get_wallet(employer)
+        tx = pay.post(wallet, type=Transaction.Type.DEPOSIT, bucket=Transaction.Bucket.AVAILABLE,
+                      amount=Decimal("100"), gateway="paypal", status=Transaction.Status.PENDING)
+        mail.outbox.clear()
+        pay.settle_pending(tx, succeeded=True)
+        assert Notification.objects.filter(user=employer, kind=Notification.Kind.PAYMENT).exists()
+        assert any(employer.email in m.to for m in mail.outbox)
+
+    def test_buying_request_notifies_and_emails_the_service_owner(self, worker, employer, category):
+        from apps.gigs import services as gs
+        from apps.gigs.models import Service
+        service = Service.objects.create(worker=worker, title="تصميم شعار", description="وصف",
+                                         category=category, base_price=Decimal("100"), delivery_days=5)
+        gs.submit_service(service)  # → LIVE (mirrors the gigs test helper)
+        mail.outbox.clear()
+        gs.request_service(employer=employer, service=service)
+        note = Notification.objects.filter(user=worker, kind=Notification.Kind.CONTRACT).first()
+        assert note is not None and note.deep_link == "/me/services"
         assert any(worker.email in m.to for m in mail.outbox)

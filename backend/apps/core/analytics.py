@@ -13,6 +13,7 @@ def compute_kpis() -> dict:
     from apps.accounts.models import User
     from apps.chat.models import ChatReport
     from apps.contracts.models import Contract
+    from apps.core.models import Report
     from apps.gigs.models import BuyingRequest, Service
     from apps.jobs.models import Job, Proposal
     from apps.payments.models import Wallet
@@ -79,6 +80,7 @@ def compute_kpis() -> dict:
             status=IDVerification.Status.PENDING,
         ).count(),
         "open_chat_reports": ChatReport.objects.filter(status=ChatReport.Status.OPEN).count(),
+        "open_reports": Report.objects.filter(status=Report.Status.OPEN).count(),
         "disputed_contracts": Contract.objects.filter(status=Contract.Status.DISPUTED).count(),
         "overdue_contracts": Contract.objects.filter(
             status=Contract.Status.ACTIVE, deadline__lt=today,
@@ -106,6 +108,7 @@ _CARDS = [
     ("pending_buying_requests", "طلبات شراء معلّقة"),
     ("pending_id_verifications", "توثيق هوية بانتظار المراجعة"),
     ("open_chat_reports", "بلاغات محادثات مفتوحة"),
+    ("open_reports", "بلاغات محتوى مفتوحة"),
     ("disputed_contracts", "نزاعات قائمة"),
     ("overdue_contracts", "عقود متأخرة"),
 ]
@@ -131,6 +134,7 @@ _STAT_BOXES = [
     ("Pending requests", "pending_buying_requests", "📥", "danger"),
     ("Pending ID checks", "pending_id_verifications", "🪪", "danger"),
     ("Open chat reports", "open_chat_reports", "🚩", "danger"),
+    ("Open content reports", "open_reports", "🚩", "danger"),
     ("Disputes", "disputed_contracts", "⚖️", "danger"),
     ("Overdue contracts", "overdue_contracts", "⏰", "danger"),
 ]

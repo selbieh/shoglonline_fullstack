@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from ..models import Report
-from ..reports import resolve_target
+from ..reports import owner_of, resolve_target
 
 
 class ReportCreateSerializer(serializers.ModelSerializer):
@@ -19,6 +19,10 @@ class ReportCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        if resolve_target(attrs["kind"], attrs["object_id"]) is None:
+        target = resolve_target(attrs["kind"], attrs["object_id"])
+        if target is None:
             raise serializers.ValidationError({"object_id": "العنصر غير موجود."})
+        reporter = getattr(self.context.get("request"), "user", None)
+        if reporter is not None and owner_of(attrs["kind"], target) == reporter:
+            raise serializers.ValidationError("لا يمكنك الإبلاغ عن عنصر يخصّك.")
         return attrs

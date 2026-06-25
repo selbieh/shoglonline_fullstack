@@ -44,7 +44,7 @@ def test_kpis_cover_every_user_input_content_type():
         "total_portfolio_items",
         "total_reviews",
         "pending_jobs", "pending_services",
-        "pending_id_verifications", "open_chat_reports",
+        "pending_id_verifications", "open_chat_reports", "open_reports",
     } <= set(kpis)
 
 

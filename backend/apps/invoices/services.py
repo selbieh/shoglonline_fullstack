@@ -63,6 +63,9 @@ def confirm_invoice(invoice: InvoiceRequest, employer) -> InvoiceRequest:
     invoice.confirmed_at = timezone.now()
     invoice.pdf_url = _generate_pdf(invoice)
     invoice.save(update_fields=["status", "confirmed_at", "pdf_url"])
+    from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+    notify(invoice.worker, kind="payment", title=f"تم اعتماد فاتورتك {invoice.number}",
+           body=f"اعتمد صاحب العمل فاتورتك بقيمة ${invoice.total}.", deep_link="/invoices")
     return invoice
 
 
@@ -74,6 +77,9 @@ def reject_invoice(invoice: InvoiceRequest, employer, reason: str) -> InvoiceReq
     invoice.status = InvoiceRequest.Status.REJECTED
     invoice.reject_reason = reason
     invoice.save(update_fields=["status", "reject_reason"])
+    from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+    notify(invoice.worker, kind="payment", title=f"تم رفض فاتورتك {invoice.number}",
+           body=f"رفض صاحب العمل فاتورتك. السبب: {reason[:150] or '—'}", deep_link="/invoices")
     return invoice
 
 

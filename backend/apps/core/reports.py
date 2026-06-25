@@ -15,11 +15,13 @@ from django.urls import NoReverseMatch, reverse
 
 @dataclass(frozen=True)
 class TargetSpec:
-    """How to load, link, and remove one report kind."""
+    """How to load, link, own, and remove one report kind."""
 
     load: Callable[[int], object]          # object_id -> instance | None
     admin_route: str                       # admin reverse name, e.g. "admin:gigs_service_change"
+    owner: Callable[[object], object]      # instance -> the user who owns/created it
     remove: Callable[[object], str]        # instance -> human label of what was done
+    label: str                             # Arabic noun for the kind (notifications/messages)
 
 
 def _get(model, **kw):
@@ -76,12 +78,16 @@ SPECS: dict[str, TargetSpec] = {
     "service": TargetSpec(
         load=lambda oid: _get(__import__("apps.gigs.models", fromlist=["Service"]).Service, pk=oid),
         admin_route="admin:gigs_service_change",
+        owner=lambda obj: obj.worker,
         remove=_archive_service,
+        label="الخدمة",
     ),
     "job": TargetSpec(
         load=lambda oid: _get(__import__("apps.jobs.models", fromlist=["Job"]).Job, pk=oid),
         admin_route="admin:jobs_job_change",
+        owner=lambda obj: obj.employer,
         remove=_archive_job,
+        label="الوظيفة",
     ),
     "freelancer": TargetSpec(
         # freelancer reports reference the user id (the public profile is keyed on user)
@@ -89,26 +95,34 @@ SPECS: dict[str, TargetSpec] = {
             __import__("apps.profiles.models", fromlist=["WorkerProfile"]).WorkerProfile, user_id=oid
         ),
         admin_route="admin:profiles_workerprofile_change",
+        owner=lambda obj: obj.user,
         remove=_reject_freelancer,
+        label="ملف المستقل",
     ),
     "portfolio": TargetSpec(
         load=lambda oid: _get(
             __import__("apps.profiles.models", fromlist=["PortfolioItem"]).PortfolioItem, pk=oid
         ),
         admin_route="admin:profiles_portfolioitem_change",
+        owner=lambda obj: obj.profile.user,
         remove=_delete_portfolio,
+        label="عمل المعرض",
     ),
     "proposal": TargetSpec(
         load=lambda oid: _get(__import__("apps.jobs.models", fromlist=["Proposal"]).Proposal, pk=oid),
         admin_route="admin:jobs_proposal_change",
+        owner=lambda obj: obj.worker,
         remove=_withdraw_proposal,
+        label="العرض",
     ),
     "buying_request": TargetSpec(
         load=lambda oid: _get(
             __import__("apps.gigs.models", fromlist=["BuyingRequest"]).BuyingRequest, pk=oid
         ),
         admin_route="admin:gigs_buyingrequest_change",
+        owner=lambda obj: obj.employer,
         remove=_cancel_buying_request,
+        label="طلب الشراء",
     ),
 }
 
@@ -128,6 +142,24 @@ def target_admin_url(kind: str, target) -> Optional[str]:
         return reverse(spec.admin_route, args=[target.pk])
     except NoReverseMatch:
         return None
+
+
+def owner_of(kind: str, target):
+    """The user who owns/created the reported item, or None (used to block self-reports and to
+    notify the owner when an admin removes the item)."""
+    spec = SPECS.get(kind)
+    if not spec or target is None:
+        return None
+    try:
+        return spec.owner(target)
+    except Exception:  # noqa: BLE001 — a dangling relation must not break validation/removal
+        return None
+
+
+def kind_label(kind: str) -> str:
+    """Arabic noun for the kind (notifications / admin messages)."""
+    spec = SPECS.get(kind)
+    return spec.label if spec else kind
 
 
 def remove_target(kind: str, target) -> str:

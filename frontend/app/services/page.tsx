@@ -9,6 +9,7 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import CardActions from "@/components/CardActions";
+import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 
 type Service = {
@@ -41,6 +42,7 @@ export default function ServicesPage() {
   const [subcategory, setSubcategory] = useState("");
   const [q, setQ] = useState("");
   const [ordering, setOrdering] = useState("-published_at");
+  const favIds = useFavoriteIds("service"); // pre-fill hearts for items the user already saved
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
   const activeCat = categories.find((c) => String(c.id) === category);
@@ -249,6 +251,7 @@ export default function ServicesPage() {
                             reportKind="service"
                             favoriteKind="service"
                             id={s.id}
+                            favoriteInitial={favIds.has(s.id)}
                             shareUrl={`/services/${s.slug}`}
                             shareTitle={s.title}
                           />

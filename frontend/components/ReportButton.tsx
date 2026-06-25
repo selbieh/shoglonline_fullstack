@@ -15,6 +15,17 @@ import { AlertIcon, CheckIcon } from "@/components/icons";
 export type ReportKind =
   | "service" | "job" | "freelancer" | "portfolio" | "proposal" | "buying_request";
 
+/** Pull the first human-readable string out of a DRF error body (field errors, non_field_errors,
+    or {detail}). Returns undefined when there's nothing useful to show. */
+function serverMessage(err: unknown): string | undefined {
+  const body = (err as { body?: unknown })?.body;
+  if (!body || typeof body !== "object") return undefined;
+  const first = (v: unknown): string | undefined =>
+    typeof v === "string" ? v : Array.isArray(v) ? first(v[0]) : undefined;
+  const b = body as Record<string, unknown>;
+  return first(b.detail ?? b.non_field_errors ?? Object.values(b)[0]);
+}
+
 const REASONS: { value: string; label: string }[] = [
   { value: "spam", label: "محتوى مكرر أو إعلاني (سبام)" },
   { value: "scam", label: "احتيال أو نصب" },
@@ -69,8 +80,8 @@ export default function ReportButton({
         body: JSON.stringify({ kind, object_id: id, reason, detail: detail.trim() }),
       });
       setDone(true);
-    } catch {
-      setError("تعذّر إرسال البلاغ، حاول مرة أخرى.");
+    } catch (err) {
+      setError(serverMessage(err) ?? "تعذّر إرسال البلاغ، حاول مرة أخرى.");
     } finally {
       setBusy(false);
     }

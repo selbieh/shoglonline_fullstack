@@ -103,6 +103,15 @@ def authenticate_google_user(id_token_str: str, ip: str | None = None) -> tuple[
         from apps.bids.services import grant_signup_bids
 
         grant_signup_bids(user)  # FR-BID-5: free bids at registration
+        from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
+        notify(
+            user,
+            kind="admin_broadcast",
+            title="مرحبًا بك في شغل أونلاين 👋",
+            body="حسابك جاهز! أكمل ملفك الشخصي وابدأ بتصفّح الوظائف أو إنشاء خدمتك الأولى.",
+            deep_link="/dashboard",
+            force=True,  # onboarding greeting always delivers (no preference row exists yet)
+        )
     else:
         if user.status == User.Status.FROZEN:
             raise PermissionDenied(

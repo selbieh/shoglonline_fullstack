@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { HeartIcon } from "@/components/icons";
@@ -19,6 +19,12 @@ export default function FavoriteButton({
 }) {
   const [on, setOn] = useState(initial);
   const [busy, setBusy] = useState(false);
+  // `initial` often arrives after mount (listings fetch the user's saved IDs asynchronously). Adopt
+  // it until the user toggles, after which their own choice wins and shouldn't be clobbered.
+  const touched = useRef(false);
+  useEffect(() => {
+    if (!touched.current) setOn(initial);
+  }, [initial]);
 
   async function toggle(e: MouseEvent) {
     e.preventDefault();
@@ -27,6 +33,7 @@ export default function FavoriteButton({
       window.location.href = signinHereHref();
       return;
     }
+    touched.current = true;
     const next = !on;
     setOn(next);
     setBusy(true);

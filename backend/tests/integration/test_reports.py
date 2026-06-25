@@ -56,6 +56,14 @@ def test_unknown_target_rejected(auth):
     assert resp.status_code == 400
 
 
+def test_cannot_report_own_item(auth, live_service):
+    resp = auth(live_service.worker).post(
+        "/api/v1/reports", {"kind": "service", "object_id": live_service.pk, "reason": "spam"},
+        format="json")
+    assert resp.status_code == 400
+    assert Report.objects.count() == 0
+
+
 def test_reporting_twice_reuses_open_report(auth, live_service):
     client = auth(UserFactory())
     body = {"kind": "service", "object_id": live_service.pk, "reason": "spam"}
@@ -84,3 +92,23 @@ def test_admin_remove_item_archives_service(staff, live_service):
     assert live_service.status == Service.Status.ARCHIVED
     assert report.status == Report.Status.ACTIONED and report.resolution == "removed"
     assert AuditLog.objects.filter(action="admin.report_remove").exists()
+
+
+@pytest.mark.django_db
+def test_remove_collapses_sibling_open_reports(staff, live_service):
+    # two users flag the same service; removing it should resolve both reports at once
+    r1 = Report.objects.create(kind="service", object_id=live_service.pk,
+                               reporter=UserFactory(), reason="scam")
+    r2 = Report.objects.create(kind="service", object_id=live_service.pk,
+                               reporter=UserFactory(), reason="spam")
+
+    class _Req:
+        user = staff
+
+    admin = ReportAdmin(Report, None)
+    admin.message_user = lambda *a, **k: None
+    admin.remove_item(_Req(), Report.objects.filter(pk=r1.pk))
+
+    r1.refresh_from_db(); r2.refresh_from_db()
+    assert r1.status == Report.Status.ACTIONED
+    assert r2.status == Report.Status.ACTIONED  # sibling collapsed, not left dangling open

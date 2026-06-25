@@ -13,6 +13,7 @@ import {
 } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CardActions from "@/components/CardActions";
+import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
@@ -34,6 +35,7 @@ function JobsInner() {
   const [subcategory, setSubcategory] = useState<string>(params.get("subcategory") ?? "");
   const [q, setQ] = useState(params.get("search") ?? ""); // prefill from ?search= (e.g. hero search)
   const [ordering, setOrdering] = useState("-published_at");
+  const favIds = useFavoriteIds("job"); // pre-fill hearts for items the user already saved
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
   const activeCat = categories.find((c) => String(c.id) === category);
@@ -267,6 +269,7 @@ function JobsInner() {
                         reportKind="job"
                         favoriteKind="job"
                         id={job.id}
+                        favoriteInitial={favIds.has(job.id)}
                         shareUrl={`/jobs/${job.slug}`}
                         shareTitle={job.title}
                       />

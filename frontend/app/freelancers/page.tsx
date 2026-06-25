@@ -7,6 +7,7 @@ import { EXPERTISE_LABEL, type Freelancer, type Paginated } from "@/lib/types";
 import { tagTone } from "@/lib/tags";
 import Avatar from "@/components/Avatar";
 import CardActions from "@/components/CardActions";
+import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -39,6 +40,7 @@ export default function FreelancersPage() {
   const [subcategory, setSubcategory] = useState("");
   const [q, setQ] = useState("");
   const [ordering, setOrdering] = useState("-rating_avg");
+  const favIds = useFavoriteIds("freelancer"); // pre-fill hearts for items the user already saved
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
   const activeCat = categories.find((c) => String(c.id) === category);
@@ -230,7 +232,7 @@ export default function FreelancersPage() {
           {!loading && !error && items.length > 0 && (
             <div className="space-y-4">
               {items.map((f) => (
-                <FreelancerCard key={f.id} f={f} />
+                <FreelancerCard key={f.id} f={f} favorited={favIds.has(f.id)} />
               ))}
               {hasMore && (
                 <div className="flex justify-center pt-2">
@@ -329,7 +331,7 @@ export default function FreelancersPage() {
     top-right with share / save / report actions top-left, a short description and skills, a
     horizontal stats strip (rating · portfolio · expertise) and an hourly-rate footer. The whole
     card links to the public profile; «عرض الملف» is the card's CTA. */
-function FreelancerCard({ f }: { f: Freelancer }) {
+function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean }) {
   const profileUrl = `/freelancers/${f.id}`;
   const location = [f.city, f.country].filter(Boolean).join(" - ");
   const avail = f.availability ? AVAIL[f.availability] : undefined;
@@ -368,6 +370,7 @@ function FreelancerCard({ f }: { f: Freelancer }) {
           reportKind="freelancer"
           favoriteKind="freelancer"
           id={f.id}
+          favoriteInitial={favorited}
           shareUrl={profileUrl}
           shareTitle={f.name}
         />
