@@ -58,6 +58,32 @@ def test_create_then_public_detail_and_listing(employer, category):
     assert mine.json()["count"] == 1
 
 
+def test_create_with_skills_and_expected_days(employer, category):
+    """FR-JOB-1: skill_ids + expected_days round-trip through create and public detail."""
+    from apps.catalog.models import Category, Skill
+    sub = Category.objects.create(name_ar="واجهات", name_en="UI", slug="ui", parent=category)
+    s1 = Skill.objects.create(name_ar="React", slug="react", subcategory=sub)
+    s2 = Skill.objects.create(name_ar="Figma", slug="figma", subcategory=sub)
+
+    job = _create_job(employer, category, skill_ids=[s1.pk, s2.pk], expected_days=14)
+    assert job["expected_days"] == 14
+
+    detail = APIClient().get(f"/api/v1/jobs/{job['slug']}").json()
+    assert detail["expected_days"] == 14
+    assert sorted(detail["skill_ids"]) == sorted([s1.pk, s2.pk])
+
+
+def test_expected_days_must_be_positive(employer, category):
+    res = auth(employer).post(
+        "/api/v1/me/jobs",
+        {"title": "x", "description": "وصف كافٍ", "category": category.pk,
+         "budget_min": "100", "budget_max": "200", "expected_days": 0},
+        format="json",
+    )
+    assert res.status_code == 400
+    assert "expected_days" in str(res.json())
+
+
 def test_public_budget_filters(employer, category):
     _create_job(employer, category, budget_min="100", budget_max="200")
     _create_job(employer, category, budget_min="900", budget_max="1000")

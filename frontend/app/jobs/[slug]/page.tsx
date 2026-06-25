@@ -114,6 +114,7 @@ export default async function JobDetailPage({ params }: { params: { slug: string
               <Fact icon={<MapPinIcon />} label="نوع العمل" value={onsite && place ? `${LOCATION_LABEL[job.location_type]} · ${place}` : LOCATION_LABEL[job.location_type]} />
               <Fact icon={<GridIcon />} label="التصنيف" value={job.category_name} />
               <Fact icon={<UsersIcon />} label="العروض المقدّمة" value={`${job.proposals_count} عرض`} />
+              {job.expected_days ? <Fact icon={<ClockIcon />} label="مدة التنفيذ المتوقعة" value={`${job.expected_days} يوم`} /> : null}
               {posted && <Fact icon={<ClockIcon />} label="تاريخ النشر" value={posted} />}
               {expires && <Fact icon={<AlertIcon />} label="ينتهي التقديم" value={expires} />}
             </div>

@@ -21,16 +21,16 @@ export default function KpiCard({
   const inner = (
     <>
       <div className="flex items-center gap-3">
-        <span className={`icon-tile h-12 w-12 text-[20px] ${tone}`}>{icon}</span>
+        <span className={`icon-tile h-10 w-10 shrink-0 text-[18px] sm:h-12 sm:w-12 sm:text-[20px] ${tone}`}>{icon}</span>
         <div className="min-w-0">
           <p className="text-xs text-sub">{label}</p>
-          <p className="mt-0.5 truncate text-2xl font-extrabold text-ink" dir="auto">{value}</p>
+          <p className="mt-0.5 truncate text-xl font-extrabold text-ink sm:text-2xl" dir="auto">{value}</p>
         </div>
       </div>
       {subtitle && <p className="mt-2 text-xs text-sub">{subtitle}</p>}
     </>
   );
   return href
-    ? <a href={href} className="card-modern block p-5">{inner}</a>
-    : <div className="card-modern p-5">{inner}</div>;
+    ? <a href={href} className="card-modern block p-4 sm:p-5">{inner}</a>
+    : <div className="card-modern p-4 sm:p-5">{inner}</div>;
 }

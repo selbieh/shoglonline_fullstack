@@ -8,6 +8,7 @@ export type Job = {
   skill_names?: string[];
   budget_min: string;
   budget_max: string;
+  expected_days?: number | null;
   location_type: "remote" | "onsite" | "hybrid";
   country: string;
   city: string;
@@ -170,6 +171,13 @@ export type Category = {
   slug: string;
   icon: string;
   children: Category[];
+};
+
+export type Skill = {
+  id: number;
+  name_ar: string;
+  slug: string;
+  subcategory_id: number;
 };
 
 export type Paginated<T> = { count: number; next: string | null; previous: string | null; results: T[] };

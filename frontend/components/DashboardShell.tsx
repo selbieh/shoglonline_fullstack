@@ -87,28 +87,29 @@ export default function DashboardShell({
 
   return (
     <div dir="rtl" className="flex min-h-screen bg-bg">
-      {/* ── sidebar (right in RTL) ── */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-l border-line bg-white lg:flex">
-        <Link href="/" className="flex items-center gap-2 border-b border-line px-6 py-4">
-          <Logo tone="brand" className="h-8 w-auto" />
+      {/* ── sidebar (right in RTL) — auto-collapses to an icon rail when the
+           pointer leaves it, expanding back to full width with labels on hover ── */}
+      <aside className="group sticky top-0 hidden h-screen w-20 shrink-0 flex-col overflow-hidden border-l border-line bg-white transition-[width] duration-300 ease-out hover:w-64 lg:flex">
+        <Link href="/" className="flex items-center gap-2 overflow-hidden border-b border-line px-5 py-4">
+          <Logo tone="brand" className="h-8 w-auto max-w-none" />
         </Link>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-4">
           {NAV.map((n) => {
             const on = active === n.key;
             return (
-              <Link key={n.key} href={n.href}
-                className={`flex items-center gap-3 rounded-m px-3 py-2.5 text-sm font-medium transition ${
+              <Link key={n.key} href={n.href} title={n.label}
+                className={`flex items-center justify-center gap-3 rounded-m px-3 py-2.5 text-sm font-medium transition group-hover:justify-start ${
                   on ? "bg-tint text-primary-dark" : "text-sub hover:bg-bg hover:text-ink"
                 }`}>
-                <n.Icon className={`text-[18px] ${on ? "text-primary" : "text-sub"}`} />
-                {n.label}
+                <n.Icon className={`shrink-0 text-[18px] ${on ? "text-primary" : "text-sub"}`} />
+                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">{n.label}</span>
               </Link>
             );
           })}
         </nav>
-        <Link href="/support" className="m-3 flex items-center gap-2 rounded-m bg-tint px-3 py-3 text-sm text-primary-dark">
-          <HeadsetIcon className="text-[18px]" />
-          <span>تحتاج مساعدة؟<br /><span className="font-bold">تواصل مع الدعم</span></span>
+        <Link href="/support" title="تواصل مع الدعم" className="m-3 flex items-center justify-center gap-2 rounded-m bg-tint px-3 py-3 text-sm text-primary-dark group-hover:justify-start">
+          <HeadsetIcon className="shrink-0 text-[18px]" />
+          <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">تحتاج مساعدة؟<br /><span className="font-bold">تواصل مع الدعم</span></span>
         </Link>
       </aside>
 
@@ -194,7 +195,7 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-5 py-6 sm:px-7">
+        <main className="mx-auto w-full min-w-0 max-w-[1400px] flex-1 px-5 py-6 transition-all duration-300 ease-out sm:px-7">
           {(title || headerActions) && (
             <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>

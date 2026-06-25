@@ -129,7 +129,7 @@ export default function OwnerServicePage() {
       </div>
 
       {/* analytics KPI panel (owner-only, slide-20) */}
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <KpiCard icon={<BarChartIcon />} label="عدد الزيارات" value={s.views_count.toLocaleString("ar-EG")} tone="bg-tint text-primary-dark" />
         <KpiCard icon={<ClipboardIcon />} label="عدد الطلبات" value={s.orders_count.toLocaleString("ar-EG")} tone="bg-success-t text-success" />
         <KpiCard icon={<BoltIcon />} label="معدل التحويل" value={`${s.conversion.toLocaleString("ar-EG")}٪`} tone="bg-warn-t text-warn" />

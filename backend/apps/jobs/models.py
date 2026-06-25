@@ -33,6 +33,7 @@ class Job(models.Model):
     budget_min = models.DecimalField(max_digits=10, decimal_places=2)
     budget_max = models.DecimalField(max_digits=10, decimal_places=2)
     deadline = models.DateField(null=True, blank=True)
+    expected_days = models.PositiveSmallIntegerField(null=True, blank=True)  # expected delivery window in days
     location_type = models.CharField(max_length=8, choices=LocationType.choices, default=LocationType.REMOTE)
     country = models.CharField(max_length=64, blank=True)
     city = models.CharField(max_length=64, blank=True)

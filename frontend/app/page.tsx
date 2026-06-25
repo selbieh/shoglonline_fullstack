@@ -23,7 +23,7 @@ import CategoryGrid from "@/components/CategoryGrid";
 import CtaButton from "@/components/CtaButton";
 import HeroSearch from "@/components/HeroSearch";
 import { FeatureIcon } from "@/components/FeatureIcon";
-import { BoltIcon, BriefcaseIcon, CheckIcon, ShieldIcon, SparklesIcon } from "@/components/icons";
+import { BoltIcon, BriefcaseIcon, CheckIcon, ShieldIcon, SparklesIcon, UsersIcon } from "@/components/icons";
 
 /* Landing page — server-rendered (SEO) from the CMS (GET /landing) and the live
    catalog (GET /categories); falls back to built-in defaults so it always renders. */
@@ -93,7 +93,11 @@ const stripLeadingEmoji = (s: string) => s.replace(/^[\p{Extended_Pictographic}�
 /** Hero CTA — modern inline icon (jobs → briefcase, services → sparkles) + label. */
 function HeroCta({ label, link, fallback, variant }: { label: string; link: string; fallback: string; variant: "primary" | "secondary" }) {
   const href = link || fallback;
-  const Icon = href.includes("/services") ? SparklesIcon : BriefcaseIcon;
+  const Icon = href.includes("/services")
+    ? SparklesIcon
+    : href.includes("/freelancers")
+      ? UsersIcon
+      : BriefcaseIcon;
   const cls =
     variant === "primary"
       ? "btn bg-white text-primary-dark shadow-glow hover:bg-tint"
@@ -122,12 +126,9 @@ function Hero({ s }: { s: Section }) {
             <HeroSearch />
           </div>
           <div className="animate-fade-up delay-400 mt-6 flex flex-wrap gap-3">
-            {s.cta_primary_label && (
-              <HeroCta label={s.cta_primary_label} link={s.cta_primary_link} fallback="/jobs" variant="primary" />
-            )}
-            {s.cta_secondary_label && (
-              <HeroCta label={s.cta_secondary_label} link={s.cta_secondary_link} fallback="/services" variant="secondary" />
-            )}
+            <HeroCta label="تصفّح المستقلين" link="/freelancers" fallback="/freelancers" variant="primary" />
+            <HeroCta label="تصفّح الخدمات" link="/services" fallback="/services" variant="secondary" />
+            <HeroCta label="تصفّح الوظائف" link="/jobs" fallback="/jobs" variant="secondary" />
           </div>
           <div className="animate-fade-up delay-400 mt-8 flex flex-wrap gap-3 text-sm">
             {[

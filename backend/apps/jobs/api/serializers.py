@@ -40,7 +40,7 @@ class JobDetailSerializer(serializers.ModelSerializer):
         model = Job
         fields = [
             "id", "title", "slug", "description", "category", "category_name", "subcategory",
-            "skill_ids", "budget_min", "budget_max", "deadline", "location_type", "country",
+            "skill_ids", "budget_min", "budget_max", "deadline", "expected_days", "location_type", "country",
             "city", "status", "reject_reason", "published_at", "expires_at", "proposals_count",
             "is_locked", "employer_name", "screening_questions", "created_at",
             "meta_title", "meta_description",
@@ -53,12 +53,14 @@ class JobDetailSerializer(serializers.ModelSerializer):
 class JobCreateSerializer(serializers.ModelSerializer):
     screening_questions = ScreeningQuestionSerializer(many=True, required=False)
     skill_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
+    expected_days = serializers.IntegerField(min_value=1, max_value=365, required=False, allow_null=True)
 
     class Meta:
         model = Job
         fields = [
             "title", "description", "category", "subcategory", "skill_ids", "budget_min",
-            "budget_max", "deadline", "location_type", "country", "city", "screening_questions",
+            "budget_max", "deadline", "expected_days", "location_type", "country", "city",
+            "screening_questions",
         ]
 
     def validate(self, attrs):
