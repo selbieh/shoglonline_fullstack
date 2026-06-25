@@ -69,6 +69,7 @@ export default function SiteHeader() {
   if (pathname.startsWith("/contracts")) return null;
   if (pathname.startsWith("/me/proposals")) return null;
   if (pathname.startsWith("/me/services")) return null;
+  if (pathname.startsWith("/me/activity")) return null;
   if (pathname.startsWith("/signin")) return null;
 
   const t = getMessages();

@@ -207,7 +207,7 @@ export default function ActivityPage() {
             <span className="icon-tile h-10 w-10 shrink-0 bg-tint text-[18px] text-primary-dark transition group-hover:scale-105">
               <Icon />
             </span>
-            <span className="min-w-0 truncate font-semibold text-ink group-hover:text-primary-dark">{label}</span>
+            <span className="min-w-0 font-semibold leading-tight text-ink group-hover:text-primary-dark">{label}</span>
           </a>
         ))}
       </div>

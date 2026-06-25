@@ -197,23 +197,23 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {kpis === null
             ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="card-modern animate-pulse flex items-center gap-3 p-4 sm:gap-4 sm:p-5" aria-hidden>
-                  <div className="h-10 w-10 shrink-0 rounded-m bg-line sm:h-12 sm:w-12" />
-                  <div className="flex-1 space-y-2">
+                <div key={i} className="card-modern animate-pulse flex flex-col gap-4 p-4 sm:p-5" aria-hidden>
+                  <div className="flex items-center justify-between gap-3">
                     <div className="h-3 w-2/3 rounded bg-line" />
-                    <div className="h-6 w-1/3 rounded bg-line" />
+                    <div className="h-10 w-10 shrink-0 rounded-m bg-line sm:h-11 sm:w-11" />
                   </div>
+                  <div className="h-7 w-1/3 rounded bg-line" />
                 </div>
               ))
             : kpis.map((k) => (
-                <a key={k.label} href={k.href} className="card-modern group flex items-center gap-3 p-4 sm:gap-4 sm:p-5">
-                  <span className={`icon-tile h-10 w-10 shrink-0 text-[18px] transition duration-300 group-hover:scale-105 sm:h-12 sm:w-12 sm:text-[20px] ${k.tone}`}>
-                    <k.Icon />
+                <a key={k.label} href={k.href} className="card-modern group flex flex-col gap-4 p-4 sm:p-5">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-xs font-medium leading-snug text-sub sm:text-sm">{k.label}</span>
+                    <span className={`icon-tile h-10 w-10 shrink-0 text-[18px] transition duration-300 group-hover:scale-105 sm:h-11 sm:w-11 sm:text-[20px] ${k.tone}`}>
+                      <k.Icon />
+                    </span>
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-xs leading-snug text-sub">{k.label}</span>
-                    <span className="mt-0.5 block text-xl font-extrabold sm:text-2xl" dir="ltr">{k.value}</span>
-                  </span>
+                  <span className="block text-left text-2xl font-extrabold sm:text-[28px]" dir="ltr">{k.value}</span>
                 </a>
               ))}
         </div>
