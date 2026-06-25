@@ -288,12 +288,26 @@ class InviteWorkerView(APIView):
 
 
 class MyInvitationsView(ListAPIView):
+    """GET /me/invitations — invitations the worker RECEIVED."""
+
     serializer_class = InvitationSerializer
 
     def get_queryset(self):
         # explicit ordering so pagination is stable (avoids UnorderedObjectListWarning)
         return (Invitation.objects.filter(worker=self.request.user)
-                .select_related("job", "employer").order_by("-id"))
+                .select_related("job", "employer", "worker").order_by("-id"))
+
+
+class SentInvitationsView(ListAPIView):
+    """GET /me/sent-invitations — invitations the employer SENT (mirror of the gigs sent/received
+    split so a work owner can track every hire request they made)."""
+
+    serializer_class = InvitationSerializer
+    filterset_fields = ["status"]
+
+    def get_queryset(self):
+        return (Invitation.objects.filter(employer=self.request.user)
+                .select_related("job", "employer", "worker").order_by("-id"))
 
 
 class RejectInvitationView(APIView):

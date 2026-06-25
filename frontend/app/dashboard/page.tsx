@@ -10,7 +10,7 @@ import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
 import {
   BellIcon, BriefcaseIcon, ChatIcon, ClipboardIcon, DocumentIcon, EnvelopeIcon, GearIcon,
-  GiftIcon, HeartIcon, PlusIcon, ShieldIcon, SparklesIcon, TicketIcon, UsersIcon, WalletIcon,
+  GiftIcon, HeartIcon, PlusIcon, SendIcon, ShieldIcon, SparklesIcon, TicketIcon, UsersIcon, WalletIcon,
 } from "@/components/icons";
 
 type IconCmp = (props: { className?: string }) => JSX.Element;
@@ -25,6 +25,17 @@ type Task = {
   id: number; title: string; budget: string; status: string;
   counterpart?: { name: string }; deadline?: string | null;
 };
+type ActivityItem = { id: number; title: string; sub: string; status: string };
+
+// status palette for the dashboard activity strip (invitations + service requests)
+const ACTIVITY_STATUS: Record<string, { label: string; tone: string }> = {
+  sent: { label: "بانتظار الرد", tone: "bg-warn-t text-warn" },
+  pending: { label: "بانتظار الرد", tone: "bg-warn-t text-warn" },
+  accepted: { label: "مقبول", tone: "bg-success-t text-success" },
+  rejected: { label: "مرفوض", tone: "bg-danger-t text-danger" },
+  cancelled: { label: "ملغي", tone: "bg-line/50 text-sub" },
+  expired: { label: "منتهٍ", tone: "bg-line/50 text-sub" },
+};
 
 const JOB_STATUS: Record<string, string> = {
   draft: "مسودة", pending_review: "بانتظار المراجعة", published: "منشورة", in_progress: "قيد التنفيذ",
@@ -38,7 +49,28 @@ export default function Dashboard() {
   const [kpis, setKpis] = useState<Kpi[] | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[] | null>(null);
   const [bidsOn, setBidsOn] = useState(true);
+
+  // recent requests/invitations strip — outgoing for an employer, incoming for a worker.
+  async function loadActivity(mode: Me["active_mode"]) {
+    setActivity(null);
+    try {
+      if (mode === "find_job") {
+        const inv = await api<{ results?: { id: number; job_title: string; employer_name?: string; status: string }[] }>("/me/invitations");
+        setActivity((inv.results ?? []).slice(0, 4).map((i) => ({
+          id: i.id, title: i.job_title, sub: `دعوة من ${i.employer_name ?? "صاحب عمل"}`, status: i.status,
+        })));
+      } else {
+        const reqs = await api<{ results?: { id: number; service_title: string; worker_name?: string; status: string }[] }>("/me/requests");
+        setActivity((reqs.results ?? []).slice(0, 4).map((r) => ({
+          id: r.id, title: r.service_title, sub: `طلب خدمة إلى ${r.worker_name ?? "مستقل"}`, status: r.status,
+        })));
+      }
+    } catch {
+      setActivity([]); // a transient failure shouldn't blank the dashboard
+    }
+  }
 
   async function loadKpis(mode: Me["active_mode"]) {
     const worker = mode === "find_job";
@@ -90,6 +122,7 @@ export default function Dashboard() {
         }
         setMe(data);
         await loadKpis(data.active_mode);
+        loadActivity(data.active_mode);
       })
       .catch(() => router.replace(signinHereHref()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,6 +144,7 @@ export default function Dashboard() {
   const modeLinks: QuickLink[] = worker
     ? [
         { href: "/jobs", label: "تصفّح الوظائف", desc: "ابحث وقدّم عروضك", Icon: BriefcaseIcon, tone: "bg-tint text-primary-dark" },
+        { href: "/me/activity", label: "الدعوات والطلبات الواردة", desc: "دعوات العمل وطلبات الخدمات", Icon: SendIcon, tone: "bg-accent-sky text-primary-deep" },
         { href: "/me/proposals", label: "عروضي المقدّمة", desc: "تابع حالة كل عرض", Icon: ClipboardIcon, tone: "bg-tint text-primary-dark" },
         { href: "/me/services", label: "خدماتي", desc: "أضِف، عدّل، فعّل خدماتك", Icon: SparklesIcon, tone: "bg-accent-sky text-primary-deep" },
         { href: "/contracts", label: "عقودي كمستقل", desc: "الأعمال الجارية والمكتملة", Icon: DocumentIcon, tone: "bg-tint text-primary-dark" },
@@ -120,6 +154,7 @@ export default function Dashboard() {
     : [
         { href: "/jobs/new", label: "نشر وظيفة", desc: "انشر متطلباتك مجانًا", Icon: PlusIcon, tone: "bg-success-t text-success" },
         { href: "/me/jobs", label: "إدارة وظائفي", desc: "الوظائف والعروض المستلمة", Icon: ClipboardIcon, tone: "bg-tint text-primary-dark" },
+        { href: "/me/activity", label: "طلباتي ودعواتي المُرسَلة", desc: "تابِع كل ما أرسلته للمستقلين", Icon: SendIcon, tone: "bg-accent-sky text-primary-deep" },
         { href: "/freelancers", label: "تصفّح المستقلين", desc: "وظّف الأنسب مباشرةً", Icon: UsersIcon, tone: "bg-tint text-primary-dark" },
         { href: "/services", label: "الخدمات الجاهزة", desc: "اطلب خدمة فورية", Icon: SparklesIcon, tone: "bg-accent-sky text-primary-deep" },
         { href: "/contracts", label: "عقودي كصاحب عمل", desc: "تابِع تنفيذ أعمالك", Icon: DocumentIcon, tone: "bg-tint text-primary-dark" },
@@ -155,7 +190,7 @@ export default function Dashboard() {
       headerActions={
         <ModeToggle
           mode={me.active_mode}
-          onChange={(m) => { setMe({ ...me, active_mode: m }); setKpis(null); loadKpis(m); }}
+          onChange={(m) => { setMe({ ...me, active_mode: m }); setKpis(null); loadKpis(m); loadActivity(m); }}
         />
       }
     >
@@ -190,6 +225,44 @@ export default function Dashboard() {
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {modeLinks.map(renderLink)}
         </div>
+
+        {/* recent requests / invitations — the actions that used to be invisible (sent & received) */}
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-bold">{worker ? "آخر الدعوات والطلبات الواردة" : "آخر طلباتي ودعواتي المُرسَلة"}</h2>
+            <a href="/me/activity" className="text-sm font-medium text-primary-dark hover:underline">عرض الكل ←</a>
+          </div>
+          <div className="card mt-4">
+            {activity === null ? (
+              <div className="space-y-3" aria-hidden>
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="h-12 animate-pulse rounded-m bg-line/60" />
+                ))}
+              </div>
+            ) : activity.length === 0 ? (
+              <div className="py-10 text-center text-sub">
+                {worker
+                  ? <>لا دعوات أو طلبات بعد — <a href="/me/profile" className="text-primary-dark hover:underline">حسّن ملفك ليصلك أصحاب العمل</a></>
+                  : <>لم ترسل أي طلب بعد — <a href="/services" className="text-primary-dark hover:underline">تصفّح الخدمات أو وظّف مستقلاً</a></>}
+              </div>
+            ) : (
+              <ul className="divide-y divide-line/60">
+                {activity.map((a) => {
+                  const s = ACTIVITY_STATUS[a.status] ?? { label: a.status, tone: "bg-tint text-primary-dark" };
+                  return (
+                    <li key={`${a.title}-${a.id}`} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <a href="/me/activity" className="min-w-0">
+                        <span className="block truncate font-medium text-ink hover:text-primary-dark">{a.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-sub">{a.sub}</span>
+                      </a>
+                      <span className={`chip shrink-0 ${s.tone}`}>{s.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
 
         {worker && (
           /* freelancer recent tasks (ppt slide-14/15) */

@@ -16,6 +16,7 @@ urlpatterns = [
     path("me/rehire", views.RehireWorkerView.as_view(), name="worker-rehire"),
     path("me/jobs/<int:pk>/proposals", views.JobProposalsView.as_view(), name="job-proposals"),
     path("me/jobs/<int:pk>/invitations", views.InviteWorkerView.as_view(), name="job-invite"),
+    path("me/sent-invitations", views.SentInvitationsView.as_view(), name="my-sent-invitations"),
     # worker
     path("jobs/<int:pk>/proposals", views.SubmitProposalView.as_view(), name="submit-proposal"),
     path("me/proposals", views.MyProposalsView.as_view(), name="my-proposals"),

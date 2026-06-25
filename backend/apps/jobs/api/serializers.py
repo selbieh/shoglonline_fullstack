@@ -130,10 +130,15 @@ class ProposalCreateSerializer(serializers.Serializer):
 class InvitationSerializer(serializers.ModelSerializer):
     job_title = serializers.CharField(source="job.title", read_only=True)
     employer_name = serializers.SerializerMethodField()
+    worker_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
-        fields = ["id", "job", "job_title", "employer_name", "private_message", "status", "created_at"]
+        fields = ["id", "job", "job_title", "employer_name", "worker_name",
+                  "private_message", "status", "created_at"]
 
     def get_employer_name(self, obj) -> str:
         return f"{obj.employer.first_name} {obj.employer.last_name}".strip() or "صاحب العمل"
+
+    def get_worker_name(self, obj) -> str:
+        return f"{obj.worker.first_name} {obj.worker.last_name}".strip() or "المستقل"

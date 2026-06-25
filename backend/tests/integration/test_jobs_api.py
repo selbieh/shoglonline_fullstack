@@ -135,6 +135,15 @@ def test_invitations_flow(employer, category, worker_with_bids):
 
     mine = auth(worker_with_bids).get("/api/v1/me/invitations")
     assert mine.json()["results"][0]["status"] == Invitation.Status.SENT
+    assert mine.json()["results"][0]["worker_name"]  # recipient surfaced for both sides
+
+    # the employer can see the invitation they SENT (mirrors gigs sent/received split)
+    sent = auth(employer).get("/api/v1/me/sent-invitations")
+    assert sent.status_code == 200
+    rows = sent.json()["results"]
+    assert len(rows) == 1 and rows[0]["status"] == Invitation.Status.SENT
+    # a worker must not see another user's sent invitations
+    assert auth(worker_with_bids).get("/api/v1/me/sent-invitations").json()["results"] == []
 
     inv_id = Invitation.objects.get(job_id=job["id"]).pk
     rej = auth(worker_with_bids).post(f"/api/v1/invitations/{inv_id}/reject", {"reason": "مشغول"}, format="json")

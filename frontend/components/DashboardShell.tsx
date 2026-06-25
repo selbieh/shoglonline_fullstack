@@ -9,7 +9,7 @@ import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
 import {
   BarChartIcon, BellIcon, BriefcaseIcon, ClipboardIcon, CloseIcon, CompassIcon, EnvelopeIcon, GearIcon,
-  GridIcon, HeadsetIcon, MenuIcon, ShieldIcon, SparklesIcon, StarIcon, UserIcon, WalletIcon,
+  GridIcon, HeadsetIcon, MenuIcon, SendIcon, ShieldIcon, SparklesIcon, StarIcon, UserIcon, WalletIcon,
 } from "@/components/icons";
 
 type IconCmp = (props: { className?: string }) => JSX.Element;
@@ -24,6 +24,7 @@ const NAV: { key: string; label: string; href: string; Icon: IconCmp }[] = [
   { key: "profile", label: "الملف الشخصي", href: "/me/profile", Icon: UserIcon },
   { key: "browse", label: "تصفح المشاريع", href: "/jobs", Icon: CompassIcon },
   { key: "proposals", label: "عروضي", href: "/me/proposals", Icon: ClipboardIcon },
+  { key: "activity", label: "طلباتي ونشاطي", href: "/me/activity", Icon: SendIcon },
   { key: "tasks", label: "مهامي", href: "/contracts", Icon: BriefcaseIcon },
   { key: "services", label: "خدماتي المميزة", href: "/me/services", Icon: SparklesIcon },
   { key: "portfolio", label: "معرض أعمالي", href: "/me/profile", Icon: GridIcon },

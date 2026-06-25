@@ -147,9 +147,23 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
 
 class BuyingRequestSerializer(serializers.ModelSerializer):
     service_title = serializers.CharField(source="service.title", read_only=True)
+    service_slug = serializers.CharField(source="service.slug", read_only=True)
+    # the freelancer the request was sent to — lets the employer's "sent requests" list name the
+    # recipient, and the worker's "incoming" list name the buyer.
+    worker_name = serializers.SerializerMethodField()
+    employer_name = serializers.SerializerMethodField()
 
     class Meta:
         model = BuyingRequest
-        fields = ["id", "service", "service_title", "quantity", "description", "total_price",
-                  "delivery_days", "status", "reject_reason", "created_at"]
+        fields = ["id", "service", "service_title", "service_slug", "worker_name", "employer_name",
+                  "quantity", "description", "total_price", "delivery_days", "status",
+                  "reject_reason", "created_at"]
         read_only_fields = ["total_price", "delivery_days", "status", "reject_reason"]
+
+    def get_worker_name(self, obj) -> str:
+        w = obj.service.worker
+        return f"{w.first_name} {w.last_name}".strip() or "المستقل"
+
+    def get_employer_name(self, obj) -> str:
+        e = obj.employer
+        return f"{e.first_name} {e.last_name}".strip() or "صاحب العمل"

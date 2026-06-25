@@ -216,9 +216,11 @@ class MyRequestsView(ListAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = BuyingRequestSerializer
+    filterset_fields = ["status"]
 
     def get_queryset(self):
-        return BuyingRequest.objects.filter(employer=self.request.user).select_related("service")
+        return (BuyingRequest.objects.filter(employer=self.request.user)
+                .select_related("service__worker", "employer").order_by("-id"))
 
 
 class IncomingRequestsView(ListAPIView):
@@ -229,7 +231,8 @@ class IncomingRequestsView(ListAPIView):
     filterset_fields = ["status"]
 
     def get_queryset(self):
-        return BuyingRequest.objects.filter(service__worker=self.request.user).select_related("service")
+        return (BuyingRequest.objects.filter(service__worker=self.request.user)
+                .select_related("service__worker", "employer").order_by("-id"))
 
 
 class RequestActionView(APIView):
