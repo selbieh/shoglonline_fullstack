@@ -20,17 +20,43 @@ const FIELD_LABELS: Record<string, string> = {
   screening_questions: "أسئلة الفرز",
 };
 
-/** Flatten a DRF error body ({field: [msg], non_field_errors: [...]}) into a single readable Arabic line. */
+/** Pull a readable message out of one field's error value (string | [msg] | nested object/array). */
+function fieldMessage(val: unknown): string | null {
+  if (Array.isArray(val)) {
+    const msgs = val.map(fieldMessage).filter(Boolean);
+    return msgs.length ? msgs.join("، ") : null;
+  }
+  if (typeof val === "string") return val;
+  if (typeof val === "number") return String(val);
+  if (val && typeof val === "object") {
+    const msgs = Object.values(val as Record<string, unknown>).map(fieldMessage).filter(Boolean);
+    return msgs.length ? msgs.join("، ") : null;
+  }
+  return null;
+}
+
+/**
+ * Turn the backend error envelope into a single readable Arabic line.
+ * The API normalizes validation failures to {code, message_ar, fields: {field: [msg]}},
+ * so we must descend into `fields` for the real per-field reasons — iterating the top-level
+ * object would just echo the code ("validation_error") and the generic message.
+ */
 function describeError(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
+  const env = body as Record<string, unknown>;
+  // Prefer the per-field detail; fall back to a flat DRF body ({field: [msg]}) if there's no envelope.
+  const fields = (env.fields && typeof env.fields === "object" ? env.fields : env) as Record<string, unknown>;
   const parts: string[] = [];
-  for (const [key, val] of Object.entries(body as Record<string, unknown>)) {
-    const label = FIELD_LABELS[key];
-    const msg = Array.isArray(val) ? val.join("، ") : typeof val === "string" ? val : null;
+  for (const [key, val] of Object.entries(fields)) {
+    if (key === "code" || key === "message_ar" || key === "retry_after") continue;
+    const msg = fieldMessage(val);
     if (!msg) continue;
+    const label = FIELD_LABELS[key];
     parts.push(label ? `${label}: ${msg}` : msg);
   }
-  return parts.length ? parts.join(" — ") : null;
+  if (parts.length) return parts.join(" — ");
+  // No usable field detail — surface the human message_ar rather than the raw code.
+  return typeof env.message_ar === "string" ? env.message_ar : null;
 }
 
 /** Post a job (FR-JOB-1/2) — moderation flag may queue it for admin review. Remote-only platform. */
