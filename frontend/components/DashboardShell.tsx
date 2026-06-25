@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import Logo from "@/components/Logo";
@@ -90,26 +91,28 @@ export default function DashboardShell({
       {/* ── sidebar (right in RTL) — auto-collapses to an icon rail when the
            pointer leaves it, expanding back to full width with labels on hover ── */}
       <aside className="group sticky top-0 hidden h-screen w-20 shrink-0 flex-col overflow-hidden border-l border-line bg-white transition-[width] duration-300 ease-out hover:w-64 lg:flex">
-        <Link href="/" className="flex items-center gap-2 overflow-hidden border-b border-line px-5 py-4">
-          <Logo tone="brand" className="h-8 w-auto max-w-none" />
+        {/* collapsed → compact 3-people mark; expanded (hover) → full wordmark lockup */}
+        <Link href="/" aria-label="الرئيسية" className="flex items-center justify-center overflow-hidden border-b border-line px-3 py-4 group-hover:justify-start group-hover:px-6">
+          <Image src="/logo-mark.png" alt="" width={32} height={32} unoptimized className="h-8 w-8 shrink-0 object-contain group-hover:hidden" />
+          <Logo tone="brand" className="hidden h-8 w-auto max-w-none group-hover:block" />
         </Link>
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-4">
           {NAV.map((n) => {
             const on = active === n.key;
             return (
               <Link key={n.key} href={n.href} title={n.label}
-                className={`flex items-center justify-center gap-3 rounded-m px-3 py-2.5 text-sm font-medium transition group-hover:justify-start ${
+                className={`flex items-center justify-center gap-0 rounded-m px-3 py-2.5 text-sm font-medium transition group-hover:justify-start group-hover:gap-3 ${
                   on ? "bg-tint text-primary-dark" : "text-sub hover:bg-bg hover:text-ink"
                 }`}>
                 <n.Icon className={`shrink-0 text-[18px] ${on ? "text-primary" : "text-sub"}`} />
-                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">{n.label}</span>
+                <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100">{n.label}</span>
               </Link>
             );
           })}
         </nav>
-        <Link href="/support" title="تواصل مع الدعم" className="m-3 flex items-center justify-center gap-2 rounded-m bg-tint px-3 py-3 text-sm text-primary-dark group-hover:justify-start">
+        <Link href="/support" title="تواصل مع الدعم" className="m-3 flex items-center justify-center gap-0 rounded-m bg-tint px-3 py-3 text-sm text-primary-dark group-hover:justify-start group-hover:gap-2">
           <HeadsetIcon className="shrink-0 text-[18px]" />
-          <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">تحتاج مساعدة؟<br /><span className="font-bold">تواصل مع الدعم</span></span>
+          <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100">تحتاج مساعدة؟<br /><span className="font-bold">تواصل مع الدعم</span></span>
         </Link>
       </aside>
 

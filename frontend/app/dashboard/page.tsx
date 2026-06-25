@@ -211,7 +211,7 @@ export default function Dashboard() {
                     <k.Icon />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-xs text-sub">{k.label}</span>
+                    <span className="block text-xs leading-snug text-sub">{k.label}</span>
                     <span className="mt-0.5 block text-xl font-extrabold sm:text-2xl" dir="ltr">{k.value}</span>
                   </span>
                 </a>

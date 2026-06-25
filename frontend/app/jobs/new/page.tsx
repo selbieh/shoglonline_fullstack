@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api, API_URL, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import type { Category, Skill } from "@/lib/types";
 import ContactHint from "@/components/ContactHint";
-import { InfoIcon } from "@/components/icons";
+import { InfoIcon, CheckIcon } from "@/components/icons";
 
 /** Arabic labels for backend field errors, so we can show the real reason instead of a blanket message. */
 const FIELD_LABELS: Record<string, string> = {
@@ -49,6 +50,8 @@ export default function NewJobPage() {
   const [questions, setQuestions] = useState<{ question: string; is_required: boolean }[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // When set, the form is replaced by a thank-you screen. `pending` distinguishes "queued for review" from "published".
+  const [done, setDone] = useState<{ slug: string; pending: boolean } | null>(null);
 
   useEffect(() => {
     if (!tokens.access) router.replace(signinHereHref());
@@ -118,11 +121,7 @@ export default function NewJobPage() {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      if (job.status === "pending_review") {
-        setMsg("⏳ أُرسلت وظيفتك لمراجعة الإدارة — ستُنشر فور الموافقة ويصل بريد للمشتركين في الفئة");
-      } else {
-        router.push(`/jobs/${job.slug}`);
-      }
+      setDone({ slug: job.slug, pending: job.status === "pending_review" });
     } catch (e: unknown) {
       const detail = describeError((e as { body?: unknown })?.body);
       setMsg(detail ? `⚠️ ${detail}` : "⚠️ تعذّر نشر الوظيفة — تحقّق من الحقول وحاول مجددًا");
@@ -133,6 +132,31 @@ export default function NewJobPage() {
 
   const input = "mt-1 w-full field";
   const optional = <span className="font-normal text-sub">(اختياري)</span>;
+
+  // Success screen — replaces the form once the job is created.
+  if (done) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-16">
+        <div className="card flex flex-col items-center gap-5 py-12 text-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success-t text-success">
+            <CheckIcon className="text-[40px]" />
+          </span>
+          <h1 className="text-3xl font-extrabold">شكرًا لك! تم بنجاح 🎉</h1>
+          <p className="max-w-md text-sub">
+            {done.pending
+              ? "أُرسلت وظيفتك لمراجعة الإدارة — ستُنشر فور الموافقة، ويصل بريد للمشتركين في الفئة."
+              : "تم نشر وظيفتك بنجاح، وأصبحت ظاهرة للمستقلين. وسيصل بريد للمشتركين في الفئة."}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link href="/" className="btn-primary px-6 py-3">العودة إلى الرئيسية</Link>
+            {!done.pending && (
+              <Link href={`/jobs/${done.slug}`} className="btn-ghost px-6 py-3">عرض الوظيفة</Link>
+            )}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
