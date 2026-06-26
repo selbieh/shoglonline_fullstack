@@ -1,7 +1,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import ContentPage, FAQItem, LandingCard, LandingSection
+from .models import ContentPage, FAQItem, LandingCard, LandingSection, SiteSettings
 
 
 @admin.action(description="✅ Publish selected")
@@ -50,3 +50,32 @@ class LandingSectionAdmin(ModelAdmin):
     list_filter = ("kind", "is_active")
     search_fields = ("key", "heading", "subheading")
     inlines = [LandingCardInline]
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(ModelAdmin):
+    """Footer contact / app / social links — a singleton (FR-CMS).
+
+    Clear any field to hide that entry on the public footer.
+    """
+
+    fieldsets = (
+        ("تواصل معنا", {"fields": ("contact_email", "contact_phone", "contact_address")}),
+        ("تطبيقات الجوال", {"fields": ("app_store_url", "google_play_url")}),
+        ("روابط التواصل الاجتماعي", {
+            "fields": ("facebook_url", "twitter_url", "instagram_url", "youtube_url", "linkedin_url"),
+        }),
+    )
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        # Singleton — never more than one row; edit the existing one.
+        return not SiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        from django.shortcuts import redirect
+        obj = SiteSettings.load()
+        return redirect("admin:cms_sitesettings_change", obj.pk)

@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { JsonLd, SITE_URL, organizationLd, websiteLd } from "@/lib/seo";
+import { JsonLd, SITE_URL, organizationLd, websiteLd, serverApi } from "@/lib/seo";
 import SiteHeader from "@/components/SiteHeader";
-import SiteFooter from "@/components/SiteFooter";
+import SiteFooter, { type SiteSettings } from "@/components/SiteFooter";
 import NavProgress from "@/components/NavProgress";
 import "./globals.css";
 
@@ -47,7 +47,10 @@ export const viewport: Viewport = {
 // Arabic-first RTL (NFR-LOC-1). Locale routing reserved for future languages (NFR-LOC-2).
 // Tajawal is loaded via <link> (not next/font) so builds never depend on
 // network access to Google Fonts; the font swaps in at runtime.
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Footer contact / app / social links are admin-controlled (GET /site-settings). Fetched here
+  // (server-side, cached) so the footer paints with no client flash; null on failure → i18n fallback.
+  const footerSettings = await serverApi<SiteSettings>("/site-settings");
   return (
     <html lang="ar" dir="rtl">
       <head>
@@ -66,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </Suspense>
         <SiteHeader />
         {children}
-        <SiteFooter />
+        <SiteFooter settings={footerSettings} />
       </body>
     </html>
   );

@@ -136,6 +136,7 @@ UNFOLD = {
                     {"title": "Landing sections", "icon": "web", "link": _changelist("cms_landingsection")},
                     {"title": "Pages", "icon": "article", "link": _changelist("cms_contentpage")},
                     {"title": "FAQ", "icon": "quiz", "link": _changelist("cms_faqitem")},
+                    {"title": "Site settings", "icon": "settings", "link": _changelist("cms_sitesettings")},
                 ],
             },
             {

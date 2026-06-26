@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import ContentPage, FAQItem, LandingCard, LandingSection
+from ..models import ContentPage, FAQItem, LandingCard, LandingSection, SiteSettings
 
 
 class PageSerializer(serializers.ModelSerializer):
@@ -72,3 +72,24 @@ class LandingView(APIView):
         sections = (LandingSection.objects.filter(is_active=True)
                     .prefetch_related("cards"))
         return Response({"sections": LandingSectionSerializer(sections, many=True).data})
+
+
+class SiteSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteSettings
+        fields = ["contact_email", "contact_phone", "contact_address",
+                  "app_store_url", "google_play_url",
+                  "facebook_url", "twitter_url", "instagram_url", "youtube_url", "linkedin_url"]
+
+
+class SiteSettingsView(APIView):
+    """GET /api/v1/site-settings — admin-controlled footer contact / app / social links (FR-CMS).
+
+    Blank fields are returned as "" so the frontend can hide that line/icon/badge.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    def get(self, request):
+        return Response(SiteSettingsSerializer(SiteSettings.load()).data)

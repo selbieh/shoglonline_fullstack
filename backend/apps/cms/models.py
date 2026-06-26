@@ -84,3 +84,48 @@ class LandingCard(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class SiteSettings(models.Model):
+    """Singleton holding the footer's contact details, mobile-app links, and social URLs.
+
+    Editable from the admin without a deploy (FR-CMS). Every field is optional — the public
+    footer hides any line/icon/badge whose value is blank, so an operator turns an entry off
+    simply by clearing it. Field defaults seed sensible values on first load so the footer
+    looks complete out of the box (good shape for testing/staging).
+    """
+
+    # Contact ("تواصل معنا")
+    contact_email = models.EmailField(blank=True, default="support@shoglonline.com")
+    contact_phone = models.CharField(max_length=40, blank=True, default="+20 123 456 7890")
+    contact_address = models.CharField(max_length=200, blank=True, default="القاهرة، مصر")
+
+    # Mobile app store links (footer badges) — blank hides the badge.
+    app_store_url = models.URLField(blank=True, default="https://apps.apple.com/app/shoglonline")
+    google_play_url = models.URLField(
+        blank=True, default="https://play.google.com/store/apps/details?id=com.shoglonline")
+
+    # Social profiles — blank hides the icon.
+    facebook_url = models.URLField(blank=True, default="https://facebook.com/shoglonline")
+    twitter_url = models.URLField(blank=True, default="https://twitter.com/shoglonline")
+    instagram_url = models.URLField(blank=True, default="https://instagram.com/shoglonline")
+    youtube_url = models.URLField(blank=True, default="https://youtube.com/@shoglonline")
+    linkedin_url = models.URLField(blank=True, default="https://linkedin.com/company/shoglonline")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Site settings"
+        verbose_name_plural = "Site settings"
+
+    def __str__(self) -> str:
+        return "إعدادات الموقع"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # enforce singleton
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls) -> "SiteSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
