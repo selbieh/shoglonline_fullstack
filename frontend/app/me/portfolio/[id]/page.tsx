@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
+import FileUpload from "@/components/FileUpload";
 
 /* Manage / edit a portfolio work (ppt slide-24) — edit the project fields (PATCH), preview, or
    delete. Built on GET/PATCH/DELETE /me/portfolio/<id>. */
@@ -12,7 +13,7 @@ import { apiError } from "@/lib/errors";
 type Item = {
   id: number; title: string; description: string; project_type?: string; cover_url?: string;
   project_link?: string; duration_value?: number | null; duration_unit?: string;
-  skills?: string[]; completed_at?: string | null;
+  skills?: string[]; completed_at?: string | null; image_url?: string;
 };
 
 export default function PortfolioManagePage() {
@@ -25,6 +26,9 @@ export default function PortfolioManagePage() {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [coverAtt, setCoverAtt] = useState<number | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState("");
+  const [existingImage, setExistingImage] = useState("");
 
   const load = useCallback(async () => {
     const it = await api<Item>(`/me/portfolio/${params.id}`);
@@ -39,6 +43,7 @@ export default function PortfolioManagePage() {
       duration_unit: it.duration_unit || "month",
       completed_at: it.completed_at ?? "",
     });
+    setExistingImage(it.image_url ?? "");
     setLoaded(true);
   }, [params.id]);
 
@@ -69,8 +74,14 @@ export default function PortfolioManagePage() {
           duration_unit: f.duration_value ? f.duration_unit : "",
           skills,
           completed_at: f.completed_at || null,
+          attachment_ids: coverAtt ? [coverAtt] : undefined,
         }),
       });
+      if (uploadedUrl) {
+        setExistingImage(uploadedUrl);
+        setUploadedUrl("");
+        setCoverAtt(null);
+      }
       setMsg({ ok: true, text: "✅ تم حفظ التعديلات" });
     } catch (e) {
       setMsg({ ok: false, text: apiError(e).message_ar });
@@ -110,10 +121,20 @@ export default function PortfolioManagePage() {
             <input className="field" dir="ltr" value={f.project_link} onChange={(e) => set({ project_link: e.target.value })} />
           </Field>
         </div>
-        <Field label="رابط الصورة المصغّرة">
-          <input className="field" dir="ltr" value={f.cover_url} onChange={(e) => set({ cover_url: e.target.value })} />
+        <Field label="صورة العمل (الغلاف)">
+          {existingImage && !coverAtt && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={existingImage} alt="صورة الغلاف الحالية" className="mb-2 h-32 w-full rounded-m object-cover" />
+          )}
+          <FileUpload accept="image/*" multiple={false} label="ارفع صورة الغلاف"
+            hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
+            onUploaded={(a) => { setCoverAtt(a.id); setUploadedUrl(a.url); }} />
+          {coverAtt && <span className="mt-1 block text-xs text-success">تم رفع الصورة — احفظ التعديلات للتطبيق ✓</span>}
+          <p className="mt-2 text-center text-xs text-sub">أو ألصق رابطًا</p>
+          <input className="field mt-1" dir="ltr" value={f.cover_url} placeholder="https://… (رابط صورة)"
+            onChange={(e) => { set({ cover_url: e.target.value }); setCoverAtt(null); setUploadedUrl(""); }} />
         </Field>
-        <Field label="وصف العمل" hint={`${f.description.length.toLocaleString("ar-EG")}/1000`}>
+        <Field label="وصف العمل" hint={`${f.description.length.toLocaleString("en-US")}/1000`}>
           <textarea className="field min-h-28" maxLength={1000} value={f.description} onChange={(e) => set({ description: e.target.value })} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">

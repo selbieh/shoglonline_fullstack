@@ -25,3 +25,26 @@ export function apiError(e: unknown): { code: string; message_ar: string } {
   }
   return { code: "", message_ar: "حدث خطأ — حاول مجددًا" };
 }
+
+/**
+ * Flatten the `fields` map from a `validation_error` envelope into `{ field: message }`,
+ * so a form can highlight the offending input instead of showing only the generic
+ * "تحقّق من الحقول المدخلة". DRF returns each field's errors as a list (and nested
+ * serializers as objects/lists) — we collapse to the first human-readable string.
+ */
+export function apiFieldErrors(e: unknown): Record<string, string> {
+  const fields = (e as { body?: ApiErrorBody } | undefined)?.body?.fields;
+  const out: Record<string, string> = {};
+  if (fields && typeof fields === "object") {
+    for (const [key, val] of Object.entries(fields)) {
+      out[key] = flatten(val);
+    }
+  }
+  return out;
+}
+
+function flatten(val: unknown): string {
+  if (Array.isArray(val)) return val.map(flatten).filter(Boolean).join("، ");
+  if (val && typeof val === "object") return Object.values(val).map(flatten).filter(Boolean).join("، ");
+  return val == null ? "" : String(val);
+}

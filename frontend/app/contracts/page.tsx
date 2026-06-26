@@ -8,6 +8,7 @@ import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
 import StatusTabs from "@/components/StatusTabs";
 import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
 import DashboardShell from "@/components/DashboardShell";
+import { formatUSD } from "@/lib/currency";
 
 const STATUS_FILTERS = [
   { value: "", label: "الكل" },
@@ -116,7 +117,7 @@ export default function ContractsPage() {
                 </p>
               </a>
               <div className="flex items-center gap-3">
-                <span className="font-extrabold" dir="ltr">${c.budget}</span>
+                <span className="font-extrabold">{formatUSD(c.budget)}</span>
                 <span className={`rounded-full px-3 py-1 text-xs ${STATUS_CHIP[c.status]}`}>
                   {STATUS_LABEL[c.status]}
                 </span>

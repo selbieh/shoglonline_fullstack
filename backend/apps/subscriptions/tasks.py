@@ -3,6 +3,7 @@ import logging
 
 from celery import shared_task
 
+from apps.core.money import fmt_usd_range
 from apps.core.services import get_setting
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def fanout_job_published(self, job_id: int) -> int:
         send_branded_email(
             to=sub.user.email,
             subject=f"وظيفة جديدة في «{job.category.name_ar}»: {job.title}",
-            body=f"{snippet}…\n\nالميزانية: ${job.budget_min}–${job.budget_max}",
+            body=f"{snippet}…\n\nالميزانية: {fmt_usd_range(job.budget_min, job.budget_max)}",
             deep_link=f"/jobs/{job.slug}",
             cta_label="قدّم عرضك",
             fail_silently=True,  # never abort the batch / re-send to already-notified subscribers

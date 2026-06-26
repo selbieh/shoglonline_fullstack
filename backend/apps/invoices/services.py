@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from apps.core.money import fmt_usd
 from .models import InvoiceLine, InvoiceRequest
 
 ERR = {
@@ -69,7 +70,7 @@ def confirm_invoice(invoice: InvoiceRequest, employer) -> InvoiceRequest:
     invoice.save(update_fields=["status", "confirmed_at", "pdf_url"])
     from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
     notify(invoice.worker, kind="payment", title=f"تم اعتماد فاتورتك {invoice.number}",
-           body=f"اعتمد صاحب العمل فاتورتك بقيمة ${invoice.total}.", deep_link="/invoices")
+           body=f"اعتمد صاحب العمل فاتورتك بقيمة {fmt_usd(invoice.total)}.", deep_link="/invoices")
     return invoice
 
 
@@ -119,11 +120,11 @@ def _generate_pdf(invoice: InvoiceRequest) -> str:
     for line in invoice.lines.all():
         y -= 18
         c.drawString(50, y, line.description[:60])
-        c.drawString(420, y, f"${line.amount}")
+        c.drawString(420, y, f"{line.amount} USD")
     y -= 28
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Total")
-    c.drawString(420, y, f"${invoice.total}")
+    c.drawString(420, y, f"{invoice.total} USD")
     c.showPage()
     c.save()
     return f"{settings.MEDIA_URL}invoices/{invoice.number}.pdf"

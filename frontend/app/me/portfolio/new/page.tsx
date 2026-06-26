@@ -6,6 +6,7 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
+import { TrashIcon } from "@/components/icons";
 
 /* Add a portfolio work (إضافة عمل جديد — ppt slide-23), on the enriched PortfolioItem
    (type/link/duration/skills/completion/ownership). Cover is a URL for now (upload = follow-up). */
@@ -89,13 +90,26 @@ export default function AddPortfolioPage() {
         </div>
         <Field label="صورة العمل (الغلاف)">
           <FileUpload accept="image/*" multiple={false} label="ارفع صورة الغلاف"
+            hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
             onUploaded={(a) => { setCoverAtt(a.id); set({ cover_url: a.url }); }} />
-          {coverAtt && <span className="mt-1 block text-xs text-success">تم رفع الصورة ✓</span>}
+          {f.cover_url && (
+            <div className="relative mt-2 overflow-hidden rounded-m border border-line">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={f.cover_url} alt="معاينة صورة الغلاف"
+                className="aspect-video w-full bg-tint object-cover" />
+              <button type="button" onClick={() => { set({ cover_url: "" }); setCoverAtt(null); }}
+                className="absolute end-2 top-2 grid h-8 w-8 place-content-center rounded-full bg-white/90 text-danger shadow transition hover:bg-white"
+                aria-label="إزالة الصورة">
+                <TrashIcon />
+              </button>
+              <span className="absolute bottom-2 start-2 rounded-full bg-success-t px-2 py-0.5 text-xs text-success">تم تعيين الصورة ✓</span>
+            </div>
+          )}
           <p className="mt-2 text-center text-xs text-sub">أو ألصق رابطًا</p>
           <input className="field mt-1" dir="ltr" value={f.cover_url} placeholder="https://… (رابط صورة)"
             onChange={(e) => { set({ cover_url: e.target.value }); setCoverAtt(null); }} />
         </Field>
-        <Field label="وصف العمل" hint={`${f.description.length.toLocaleString("ar-EG")}/1000`}>
+        <Field label="وصف العمل" hint={`${f.description.length.toLocaleString("en-US")}/1000`}>
           <textarea className="field min-h-28" maxLength={1000} value={f.description}
             placeholder="اشرح أهداف المشروع، دورك فيه، التقنيات المستخدمة، والنتائج التي حققتها…"
             onChange={(e) => set({ description: e.target.value })} />
@@ -116,7 +130,7 @@ export default function AddPortfolioPage() {
               onChange={(e) => set({ completed_at: e.target.value })} />
           </Field>
         </div>
-        <Field label="ميزانية المشروع (اختياري)">
+        <Field label="ميزانية المشروع (اختياري، بالدولار الأمريكي)">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-12 place-content-center rounded-m bg-tint text-sm font-bold text-primary-dark">USD</span>
             <input type="number" min={0} className="field" value={f.budget}

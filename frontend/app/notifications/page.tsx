@@ -81,7 +81,7 @@ export default function NotificationsPage() {
                 {!n.is_read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="غير مقروء" />}
               </div>
               {n.body && <p className="mt-1 text-sm text-sub">{n.body}</p>}
-              <p className="mt-1 text-xs text-sub">{new Date(n.created_at).toLocaleString("ar")}</p>
+              <p className="mt-1 text-xs text-sub">{new Date(n.created_at).toLocaleString("ar-u-nu-latn")}</p>
             </button>
           </li>
         ))}

@@ -7,6 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import StatusTabs from "@/components/StatusTabs";
 import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
 import DashboardShell from "@/components/DashboardShell";
+import { formatUSD } from "@/lib/currency";
 
 type Service = { id: number; title: string; slug: string; base_price: string; status: string };
 type Incoming = {
@@ -119,7 +120,7 @@ export default function MyServicesPage() {
               <li key={r.id} className="rounded-m bg-bg p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{r.service_title} × {r.quantity}</span>
-                  <span className="font-bold" dir="ltr">${r.total_price}</span>
+                  <span className="font-bold">{formatUSD(r.total_price)}</span>
                 </div>
                 {r.description && <p className="mt-1 text-sub">{r.description}</p>}
                 <div className="mt-2 flex gap-2">
@@ -140,7 +141,7 @@ export default function MyServicesPage() {
             <div key={s.id} className="card flex flex-wrap items-center justify-between gap-3">
               <a href={`/me/services/${s.id}`} className="min-w-0 flex-1">
                 <p className="truncate font-bold transition hover:text-primary-dark">{s.title}</p>
-                <p className="mt-0.5 text-xs text-sub">{ST_LABEL[s.status]} · <span dir="ltr">${s.base_price}</span></p>
+                <p className="mt-0.5 text-xs text-sub">{ST_LABEL[s.status]} · <span>{formatUSD(s.base_price)}</span></p>
               </a>
               <RowActionMenu actions={rowActions(s)} />
             </div>

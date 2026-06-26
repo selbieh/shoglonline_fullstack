@@ -9,6 +9,7 @@ import {
 } from "@/components/icons";
 import ReportButton from "@/components/ReportButton";
 import ProposalForm from "./ProposalForm";
+import { formatUSDRange } from "@/lib/currency";
 
 /* Server-rendered job detail (SEO): full content + metadata + JobPosting JSON-LD.
    The proposal form is a client island. */
@@ -93,7 +94,7 @@ export default async function JobDetailPage({ params }: { params: { slug: string
               className="glass inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/90 transition hover:text-white" />
           </div>
           <div className="mt-5 flex flex-wrap gap-2 text-sm">
-            <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><WalletIcon className="text-[15px]" /> ${job.budget_min}–${job.budget_max}</span>
+            <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><WalletIcon className="text-[15px]" /> {formatUSDRange(job.budget_min, job.budget_max)}</span>
             <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><MapPinIcon className="text-[15px]" /> {LOCATION_LABEL[job.location_type]}{onsite && place ? ` · ${place}` : ""}</span>
             <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><UsersIcon className="text-[15px]" /> {job.proposals_count} عروض</span>
             {posted && <span className="glass inline-flex items-center gap-1.5 px-3 py-1.5"><ClockIcon className="text-[15px]" /> نُشرت {posted}</span>}
@@ -110,7 +111,7 @@ export default async function JobDetailPage({ params }: { params: { slug: string
               <span className="inline-flex items-center gap-2"><ClipboardIcon className="text-[18px] text-primary" /> تفاصيل الوظيفة</span>
             </h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Fact icon={<WalletIcon />} label="الميزانية" value={`$${job.budget_min}–$${job.budget_max}`} />
+              <Fact icon={<WalletIcon />} label="الميزانية" value={formatUSDRange(job.budget_min, job.budget_max)} />
               <Fact icon={<MapPinIcon />} label="نوع العمل" value={onsite && place ? `${LOCATION_LABEL[job.location_type]} · ${place}` : LOCATION_LABEL[job.location_type]} />
               <Fact icon={<GridIcon />} label="التصنيف" value={job.category_name} />
               <Fact icon={<UsersIcon />} label="العروض المقدّمة" value={`${job.proposals_count} عرض`} />

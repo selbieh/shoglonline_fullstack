@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
+from apps.core.contact_guard import contains_contact_info
+from apps.core.money import fmt_usd
 from apps.core.services import get_setting
 
 from .models import BuyingRequest, Service, ServiceAddon, ServiceFavorite
@@ -31,9 +33,19 @@ def _unique_slug(title: str) -> str:
 
 # ------------------------------------------------------------------ lifecycle
 def submit_service(service: Service) -> Service:
-    """Draft → live (flag ON) or pending_review (flag OFF) — §9.3."""
+    """Draft → live (flag ON) or pending_review (flag OFF) — §9.3.
+
+    Contact-info guard is a *soft gate* (mirrors jobs.services.submit_for_publication): a service
+    whose public text looks like it shares external contact details is diverted to admin review even
+    when auto-publish is ON, instead of being hard-rejected. A false positive then costs only a short
+    review wait, never a failed submission."""
     service.slug = service.slug or _unique_slug(service.title)
-    if get_setting("services.auto_publish", False):
+    flagged = (
+        contains_contact_info(service.title)
+        or contains_contact_info(service.description)
+        or contains_contact_info(service.what_you_get)
+    )
+    if get_setting("services.auto_publish", False) and not flagged:
         service.status = Service.Status.LIVE
         service.published_at = timezone.now()
     else:
@@ -106,7 +118,7 @@ def request_service(*, employer, service: Service, quantity: int = 1, descriptio
         service.worker,
         kind="contract",  # transactional — a direct purchase request always reaches the seller
         title=f"طلب جديد على خدمتك: {service.title}",
-        body=f"أرسل {employer.first_name or employer.email} طلب شراء بقيمة ${request.total_price}.",
+        body=f"أرسل {employer.first_name or employer.email} طلب شراء بقيمة {fmt_usd(request.total_price)}.",
         deep_link="/me/services",
     )
     return request

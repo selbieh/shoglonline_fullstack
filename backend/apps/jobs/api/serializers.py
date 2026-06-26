@@ -78,11 +78,9 @@ class JobCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"deadline": "الموعد النهائي في الماضي"})
         return attrs
 
-    def validate_title(self, v):
-        return validate_no_contact(v)
-
-    def validate_description(self, v):
-        return validate_no_contact(v)
+    # No hard contact-info block here: a match must not fail submission (false positives would block
+    # legitimate posts). The soft gate lives in services.submit_for_publication, which diverts a
+    # flagged post to admin review instead of rejecting it.
 
     def create(self, validated_data):
         questions = validated_data.pop("screening_questions", [])

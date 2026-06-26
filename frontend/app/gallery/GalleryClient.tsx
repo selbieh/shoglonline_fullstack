@@ -186,7 +186,7 @@ export default function GalleryClient({
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">معرض الأعمال</h1>
             <p className="animate-fade-up delay-200 mt-2 text-tint">
-              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("ar-EG")} عمل من المستقلين — تصفّح واطّلع على التفاصيل.`}
+              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("en-US")} عمل من المستقلين — تصفّح واطّلع على التفاصيل.`}
             </p>
           </div>
           <div className="seg flex-wrap">
@@ -493,7 +493,7 @@ function GalleryCard({ it, favorited }: { it: GalleryItem; favorited: boolean })
             </span>
             <span className="inline-flex items-center gap-1" title="المشاهدات">
               <BarChartIcon className="text-[14px] text-primary" />
-              <span className="font-bold text-ink">{views.toLocaleString("ar-EG")}</span>
+              <span className="font-bold text-ink">{views.toLocaleString("en-US")}</span>
               مشاهدة
             </span>
           </div>

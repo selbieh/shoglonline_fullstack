@@ -21,7 +21,7 @@ export default function StarRating({
         ))}
       </span>
       <span className="text-sm font-bold text-ink" dir="ltr">{value.toFixed(1)}</span>
-      {count != null && <span className="text-xs text-sub">({count.toLocaleString("ar-EG")})</span>}
+      {count != null && <span className="text-xs text-sub">({count.toLocaleString("en-US")})</span>}
     </span>
   );
 }

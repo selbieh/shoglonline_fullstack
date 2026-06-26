@@ -10,6 +10,7 @@ import PortfolioCard from "@/components/PortfolioCard";
 import ReviewCard from "@/components/ReviewCard";
 import { BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, PlayIcon, StarIcon } from "@/components/icons";
 import ProfileActions from "./ProfileActions";
+import { formatUSD } from "@/lib/currency";
 
 const PROF: Record<string, string> = { basic: "أساسية", advanced: "جيد جدًا", native: "اللغة الأم" };
 const AVAIL: Record<string, { t: string; cls: string }> = {
@@ -127,15 +128,15 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
             <div className="flex-1">
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
                 <HeroStat icon={<StarIcon filled />} label="التقييم العام"
-                  value={rated ? <span dir="ltr">{Number(f.rating_avg).toFixed(1)} <span className="text-xs font-normal text-sub">({f.rating_count.toLocaleString("ar-EG")})</span></span> : "جديد"} />
-                <HeroStat icon={<GridIcon />} label="أعمال المعرض" value={portfolio.length.toLocaleString("ar-EG")} />
-                <HeroStat icon={<BriefcaseIcon />} label="الخدمات" value={services.length.toLocaleString("ar-EG")} />
-                <HeroStat icon={<ClockIcon />} label="سنوات الخبرة" value={f.years_experience != null ? f.years_experience.toLocaleString("ar-EG") : "—"} />
+                  value={rated ? <span dir="ltr">{Number(f.rating_avg).toFixed(1)} <span className="text-xs font-normal text-sub">({f.rating_count.toLocaleString("en-US")})</span></span> : "جديد"} />
+                <HeroStat icon={<GridIcon />} label="أعمال المعرض" value={portfolio.length.toLocaleString("en-US")} />
+                <HeroStat icon={<BriefcaseIcon />} label="الخدمات" value={services.length.toLocaleString("en-US")} />
+                <HeroStat icon={<ClockIcon />} label="سنوات الخبرة" value={f.years_experience != null ? f.years_experience.toLocaleString("en-US") : "—"} />
               </div>
 
               <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
                 <span className="text-xs text-sub">سعر الساعة</span>
-                <span className="text-xl font-extrabold text-primary" dir="ltr">{f.hourly_rate ? `$${f.hourly_rate}` : "عند الطلب"}</span>
+                <span className="text-xl font-extrabold text-primary">{f.hourly_rate ? formatUSD(f.hourly_rate) : "عند الطلب"}</span>
                 {f.is_verified && (
                   <span className="ms-auto inline-flex items-center gap-1.5 rounded-full bg-success-t px-3 py-1 text-xs font-bold text-success">
                     <BadgeCheckIcon className="text-[14px]" /> هوية محققة

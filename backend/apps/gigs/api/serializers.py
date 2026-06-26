@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from apps.core.contact_guard import validate_no_contact
-
 from ..models import BuyingRequest, Service, ServiceAddon
 
 
@@ -112,6 +110,12 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
     keywords = serializers.ListField(child=serializers.CharField(max_length=40), required=False)
     addons = AddonWriteSerializer(many=True, required=False)
     base_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    # Require a real description (mirrors the wizard's client-side min) so it can't be
+    # bypassed via the API; the frontend surfaces this per-field via apiFieldErrors.
+    description = serializers.CharField(
+        min_length=30, max_length=2500,
+        error_messages={"min_length": "الوصف قصير جدًا — اكتب 30 حرفًا على الأقل"},
+    )
 
     class Meta:
         model = Service
@@ -135,14 +139,9 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
             ServiceAddon.objects.bulk_create([ServiceAddon(service=instance, **a) for a in addons])
         return instance
 
-    def validate_title(self, v):
-        return validate_no_contact(v)
-
-    def validate_description(self, v):
-        return validate_no_contact(v)
-
-    def validate_what_you_get(self, v):
-        return validate_no_contact(v)
+    # No hard contact-info block on public free text: a match must not fail submission (false
+    # positives would block legitimate services). The soft gate lives in services.submit_service,
+    # which diverts a flagged service to admin review instead of rejecting it.
 
 
 class BuyingRequestSerializer(serializers.ModelSerializer):

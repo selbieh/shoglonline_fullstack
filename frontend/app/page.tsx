@@ -72,9 +72,9 @@ const DEFAULTS: Section[] = [
     key: "steps", kind: "steps", heading: "كيف تعمل المنصة؟", subheading: "",
     cta_primary_label: "", cta_primary_link: "", cta_secondary_label: "", cta_secondary_link: "",
     cards: [
-      { icon: "١", title: "تصفّح بحرية", subtitle: "استعرض الوظائف والخدمات وابحث وفلتر دون تسجيل.", link: "", image_url: "" },
-      { icon: "٢", title: "سجّل بنقرة", subtitle: "دخول عبر جوجل عند التقديم أو الشراء — بلا كلمات مرور.", link: "", image_url: "" },
-      { icon: "٣", title: "اعمل بأمان", subtitle: "مدفوعات بنظام الضمان: تُحجز وتُحرَّر بعد التسليم والقبول.", link: "", image_url: "" },
+      { icon: "1", title: "تصفّح بحرية", subtitle: "استعرض الوظائف والخدمات وابحث وفلتر دون تسجيل.", link: "", image_url: "" },
+      { icon: "2", title: "سجّل بنقرة", subtitle: "دخول عبر جوجل عند التقديم أو الشراء — بلا كلمات مرور.", link: "", image_url: "" },
+      { icon: "3", title: "اعمل بأمان", subtitle: "مدفوعات بنظام الضمان: تُحجز وتُحرَّر بعد التسليم والقبول.", link: "", image_url: "" },
     ],
   },
   {
@@ -293,7 +293,7 @@ function Testimonials() {
   const items = [
     {
       name: "نورة العتيبي", role: "مصمّمة جرافيك", avatar: "ن", stars: 5,
-      quote: "أنجزت أكثر من ٣٠ مشروعًا خلال أشهر، ونظام الضمان جعلني أعمل وأنا مطمئنة على حقّي بالكامل.",
+      quote: "أنجزت أكثر من 30 مشروعًا خلال أشهر، ونظام الضمان جعلني أعمل وأنا مطمئنة على حقّي بالكامل.",
     },
     {
       name: "أحمد منصور", role: "صاحب متجر إلكتروني", avatar: "أ", stars: 5,

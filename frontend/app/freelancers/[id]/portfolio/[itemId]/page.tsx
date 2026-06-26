@@ -8,6 +8,7 @@ import SimilarWorks, { type SimilarWork } from "@/components/SimilarWorks";
 import FeatureChecklist from "@/components/FeatureChecklist";
 import ReportButton from "@/components/ReportButton";
 import { BarChartIcon, BriefcaseIcon, ClockIcon, CodeIcon, ExternalLinkIcon, WalletIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 /* Public single portfolio work — work-showcase (معرض عمل فردي، رؤية الغير — ppt slide-22). SSR for
    SEO. Hero/thumbnail gallery + structured detail rail + owner card + «أعمال مشابهة» from the same
@@ -173,9 +174,9 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
               {it.completed_at && <RailRow icon={<ClockIcon />} label="تاريخ الإنجاز" value={fmtDate(it.completed_at)} />}
               {it.duration_value != null && (
                 <RailRow icon={<ClockIcon />} label="مدة التنفيذ"
-                  value={`${it.duration_value.toLocaleString("ar-EG")} ${UNIT[it.duration_unit ?? ""] ?? ""}`} />
+                  value={`${it.duration_value.toLocaleString("en-US")} ${UNIT[it.duration_unit ?? ""] ?? ""}`} />
               )}
-              {it.budget && <RailRow icon={<WalletIcon />} label="الميزانية" value={<span dir="ltr">${it.budget}</span>} />}
+              {it.budget && <RailRow icon={<WalletIcon />} label="الميزانية" value={<span>{formatUSD(it.budget)}</span>} />}
               {skills.length > 0 && <RailRow icon={<CodeIcon />} label="الأدوات المستخدمة" value={skills.join("، ")} />}
               {it.project_link && (
                 <RailRow icon={<ExternalLinkIcon />} label="رابط المشروع"
@@ -199,7 +200,7 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
 
             {it.views_count != null && (
               <DetailRail title="إحصائيات العمل">
-                <RailRow icon={<BarChartIcon />} label="مشاهدات العمل" value={it.views_count.toLocaleString("ar-EG")} />
+                <RailRow icon={<BarChartIcon />} label="مشاهدات العمل" value={it.views_count.toLocaleString("en-US")} />
               </DetailRail>
             )}
           </aside>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { formatUSD } from "@/lib/currency";
 
 type Summary = { slug: string; is_frozen: boolean; total_earned: string; accrued: string; referrals: number };
 type Referrals = {
@@ -71,11 +72,11 @@ export default function AffiliatePage() {
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
         <div className="card">
           <p className="text-sm text-sub">إجمالي الأرباح</p>
-          <p className="mt-1 text-2xl font-extrabold text-success" dir="ltr">${s.total_earned}</p>
+          <p className="mt-1 text-2xl font-extrabold text-success">{formatUSD(s.total_earned, { decimals: 2 })}</p>
         </div>
         <div className="card">
           <p className="text-sm text-sub">أرباح محتسبة</p>
-          <p className="mt-1 text-2xl font-extrabold" dir="ltr">${s.accrued}</p>
+          <p className="mt-1 text-2xl font-extrabold">{formatUSD(s.accrued, { decimals: 2 })}</p>
         </div>
         <div className="card">
           <p className="text-sm text-sub">عدد المُحالين</p>
@@ -91,7 +92,7 @@ export default function AffiliatePage() {
               <li key={i} className="flex items-center justify-between rounded-s bg-bg px-3 py-1.5">
                 <span>عقد #{c.contract}</span>
                 <span className="flex items-center gap-2">
-                  <span dir="ltr" className="font-bold">${c.amount}</span>
+                  <span className="font-bold">{formatUSD(c.amount, { decimals: 2 })}</span>
                   <span className={`text-xs ${c.status === "clawed_back" ? "text-danger" : "text-success"}`}>
                     {c.status === "clawed_back" ? "مُسترجعة" : "محتسبة"}
                   </span>

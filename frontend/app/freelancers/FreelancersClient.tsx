@@ -13,6 +13,7 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, StarIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 const EXPERTISE_OPTIONS = ["entry", "intermediate", "expert"] as const;
 const PAGE = 12; // load-more page size (server caps limit at 100)
@@ -136,7 +137,7 @@ export default function FreelancersClient({
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">المستقلون</h1>
             <p className="animate-fade-up delay-200 mt-2 text-tint">
-              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("ar-EG")} مستقل متاح — تصفّح وتواصل مباشرة.`}
+              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("en-US")} مستقل متاح — تصفّح وتواصل مباشرة.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -397,7 +398,7 @@ function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean })
             <span key={s} className={`tag-soft ${tagTone(s)}`}>{s}</span>
           ))}
           {f.skills.length > 5 && (
-            <span className="tag-soft bg-bg text-sub">+{(f.skills.length - 5).toLocaleString("ar-EG")}</span>
+            <span className="tag-soft bg-bg text-sub">+{(f.skills.length - 5).toLocaleString("en-US")}</span>
           )}
         </div>
       )}
@@ -406,16 +407,16 @@ function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean })
       <ListingStats cols={4}>
         <ListingStat icon={<StarIcon filled />} label="التقييم العام"
           value={rated
-            ? <span dir="ltr">{Number(f.rating_avg).toFixed(1)} <span className="text-xs font-normal text-sub">({f.rating_count.toLocaleString("ar-EG")})</span></span>
+            ? <span dir="ltr">{Number(f.rating_avg).toFixed(1)} <span className="text-xs font-normal text-sub">({f.rating_count.toLocaleString("en-US")})</span></span>
             : "جديد"} />
-        <ListingStat icon={<GridIcon />} label="أعمال المعرض" value={Number(f.portfolio_count ?? 0).toLocaleString("ar-EG")} />
-        <ListingStat icon={<BriefcaseIcon />} label="الخدمات" value={Number(f.services_count ?? 0).toLocaleString("ar-EG")} />
+        <ListingStat icon={<GridIcon />} label="أعمال المعرض" value={Number(f.portfolio_count ?? 0).toLocaleString("en-US")} />
+        <ListingStat icon={<BriefcaseIcon />} label="الخدمات" value={Number(f.services_count ?? 0).toLocaleString("en-US")} />
         <ListingStat icon={<ClockIcon />} label="سنوات الخبرة"
-          value={f.years_experience != null ? f.years_experience.toLocaleString("ar-EG") : "—"} />
+          value={f.years_experience != null ? f.years_experience.toLocaleString("en-US") : "—"} />
       </ListingStats>
 
       {/* footer: hourly rate + view-profile CTA */}
-      <ListingFooter priceLabel="سعر الساعة" priceValue={f.hourly_rate ? `$${f.hourly_rate}` : "عند الطلب"}>
+      <ListingFooter priceLabel="سعر الساعة" priceValue={f.hourly_rate ? formatUSD(f.hourly_rate) : "عند الطلب"}>
         <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
           عرض الملف
           <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />

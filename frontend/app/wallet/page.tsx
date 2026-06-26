@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { USD_LABEL } from "@/lib/currency";
 import { AlertIcon, ClockIcon, LockIcon, ReceiptIcon, ShieldIcon, WalletIcon } from "@/components/icons";
 import KpiCard from "@/components/KpiCard";
 
@@ -149,7 +150,7 @@ function WalletInner() {
   }
 
   if (!wallet) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
-  const cur = wallet.currency === "USD" ? "$" : wallet.currency;
+  const cur = wallet.currency === "USD" ? USD_LABEL : wallet.currency;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -260,7 +261,7 @@ function WalletInner() {
               </div>
               <p className="flex items-start gap-1.5 text-xs text-sub">
                 <AlertIcon className="mt-0.5 shrink-0 text-[14px] text-warn" />
-                <span>يُخصم المبلغ فور التأكيد (منعًا للصرف المزدوج) · الحد الأدنى 10$ · يُعاد تلقائيًا عند الرفض</span>
+                <span>يُخصم المبلغ فور التأكيد (منعًا للصرف المزدوج) · الحد الأدنى 10 {cur} · يُعاد تلقائيًا عند الرفض</span>
               </p>
             </>
           )}
@@ -300,9 +301,9 @@ function WalletInner() {
                   <td className="px-3 py-2 font-medium">{TX_LABEL[tx.type] ?? tx.type}</td>
                   <td className="px-3 py-2 text-sub">{tx.bucket === "available" ? "متاح" : tx.bucket === "escrow_held" ? "ضمان" : "معلّق"}</td>
                   <td className={`px-3 py-2 font-bold ${Number(tx.amount) >= 0 ? "text-success" : "text-danger"}`} dir="ltr">
-                    {Number(tx.amount) >= 0 ? "+" : ""}{tx.amount}
+                    {Number(tx.amount) >= 0 ? "+" : ""}{tx.amount} {cur}
                   </td>
-                  <td className="px-3 py-2 text-sub">{new Date(tx.created_at).toLocaleDateString("ar")}</td>
+                  <td className="px-3 py-2 text-sub">{new Date(tx.created_at).toLocaleDateString("ar-u-nu-latn")}</td>
                   <td className="px-3 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${ST_CHIP[tx.status]}`}>{ST_LABEL[tx.status]}</span>
                   </td>
@@ -330,10 +331,10 @@ function WalletInner() {
             <dl className="mt-4 space-y-2.5 text-sm">
               <RRow k="رقم الإيصال" v={receipt.reference || `TRX-${receipt.id}`} ltr />
               <RRow k="النوع" v={TX_LABEL[receipt.type] ?? receipt.type} />
-              <RRow k="المبلغ" v={`${Number(receipt.amount) >= 0 ? "+" : ""}${receipt.amount} $`} ltr />
+              <RRow k="المبلغ" v={`${Number(receipt.amount) >= 0 ? "+" : ""}${receipt.amount} ${cur}`} ltr />
               <RRow k="الرصيد" v={receipt.bucket === "available" ? "متاح" : receipt.bucket === "escrow_held" ? "ضمان" : "معلّق"} />
               <RRow k="الحالة" v={ST_LABEL[receipt.status] ?? receipt.status} />
-              <RRow k="التاريخ" v={new Date(receipt.created_at).toLocaleString("ar")} />
+              <RRow k="التاريخ" v={new Date(receipt.created_at).toLocaleString("ar-u-nu-latn")} />
               {receipt.gateway && <RRow k="البوابة" v={receipt.gateway} ltr />}
               {receipt.gateway_ref && <RRow k="مرجع البوابة" v={receipt.gateway_ref} ltr />}
               {receipt.note && <RRow k="ملاحظة" v={receipt.note} />}

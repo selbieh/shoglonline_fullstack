@@ -12,6 +12,7 @@ import DashboardShell from "@/components/DashboardShell";
 import {
   BriefcaseIcon, ClipboardIcon, DocumentIcon, SparklesIcon,
 } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 /* ── shapes returned by the request/invitation list endpoints ── */
 type BuyingRequest = {
@@ -242,8 +243,8 @@ export default function ActivityPage() {
                       </a>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                         <span>المستقل: <span className="text-ink">{r.worker_name ?? "—"}</span></span>
-                        <span className="font-bold text-ink" dir="ltr">${r.total_price}</span>
-                        {r.delivery_days ? <span>التسليم خلال {r.delivery_days.toLocaleString("ar-EG")} يوم</span> : null}
+                        <span className="font-bold text-ink">{formatUSD(r.total_price)}</span>
+                        {r.delivery_days ? <span>التسليم خلال {r.delivery_days.toLocaleString("en-US")} يوم</span> : null}
                         {timeAgo(r.created_at) && <span>{timeAgo(r.created_at)}</span>}
                       </div>
                     </div>
@@ -361,7 +362,7 @@ export default function ActivityPage() {
                       <span className="font-bold leading-snug">{r.service_title}</span>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                         <span>صاحب العمل: <span className="text-ink">{r.employer_name ?? "—"}</span></span>
-                        <span className="font-bold text-ink" dir="ltr">${r.total_price}</span>
+                        <span className="font-bold text-ink">{formatUSD(r.total_price)}</span>
                         {timeAgo(r.created_at) && <span>{timeAgo(r.created_at)}</span>}
                       </div>
                     </div>

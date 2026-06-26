@@ -8,6 +8,7 @@ import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
+import { formatUSD } from "@/lib/currency";
 import {
   BellIcon, BriefcaseIcon, ChatIcon, ClipboardIcon, DocumentIcon, EnvelopeIcon, GearIcon,
   GiftIcon, HeartIcon, PlusIcon, SendIcon, ShieldIcon, SparklesIcon, TicketIcon, UsersIcon, WalletIcon,
@@ -295,7 +296,7 @@ export default function Dashboard() {
                             <a href={`/contracts/${t.id}`} className="hover:text-primary-dark">{t.title}</a>
                           </td>
                           <td className="py-2.5 text-sub">{t.counterpart?.name ?? "—"}</td>
-                          <td className="py-2.5 text-sub" dir="ltr">${t.budget}</td>
+                          <td className="py-2.5 text-sub">{formatUSD(t.budget)}</td>
                           <td className="py-2.5">
                             <span className={`chip ${STATUS_CHIP[t.status] ?? "bg-tint text-primary-dark"}`}>{STATUS_LABEL[t.status] ?? t.status}</span>
                           </td>
@@ -328,7 +329,7 @@ export default function Dashboard() {
                 <div className="mt-3 h-2 w-full rounded-full bg-tint">
                   <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${vPct}%` }} />
                 </div>
-                <p className="mt-1 text-xs text-sub">مستوى التحقق {vPct.toLocaleString("ar-EG")}٪</p>
+                <p className="mt-1 text-xs text-sub">مستوى التحقق {vPct.toLocaleString("en-US")}٪</p>
                 <ul className="mt-3 space-y-2 text-sm">
                   {vChannels.map((c) => (
                     <li key={c.label} className="flex items-center justify-between">
@@ -368,7 +369,7 @@ export default function Dashboard() {
                             <td className="py-2.5 text-sub" dir="ltr">
                               {j.budget_min ?? "—"}{j.budget_max ? `–${j.budget_max}` : ""}
                             </td>
-                            <td className="py-2.5 text-sub">{(j.proposals_count ?? 0).toLocaleString("ar-EG")}</td>
+                            <td className="py-2.5 text-sub">{(j.proposals_count ?? 0).toLocaleString("en-US")}</td>
                             <td className="py-2.5">
                               <span className="chip bg-tint text-primary-dark">{JOB_STATUS[j.status] ?? j.status}</span>
                             </td>

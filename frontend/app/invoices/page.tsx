@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
+import { formatUSD } from "@/lib/currency";
 
 type Invoice = {
   id: number;
@@ -115,7 +116,7 @@ export default function InvoicesPage() {
               <li key={i.id} className="flex items-center justify-between rounded-s bg-bg px-3 py-2">
                 <span>{i.number} · {i.employer_email}</span>
                 <span className="flex items-center gap-2">
-                  <span dir="ltr" className="font-bold">${i.total}</span>
+                  <span className="font-bold">{formatUSD(i.total, { decimals: 2 })}</span>
                   <span className="text-xs text-sub">{ST_LABEL[i.status]}</span>
                   {i.pdf_url && <a href={i.pdf_url} className="text-xs text-primary-dark" target="_blank" rel="noreferrer">PDF</a>}
                 </span>
@@ -133,7 +134,7 @@ export default function InvoicesPage() {
               <li key={i.id} className="rounded-m bg-bg p-3">
                 <div className="flex items-center justify-between">
                   <span>{i.number} · {i.worker_email}</span>
-                  <span dir="ltr" className="font-bold">${i.total}</span>
+                  <span className="font-bold">{formatUSD(i.total, { decimals: 2 })}</span>
                 </div>
                 {i.status === "requested" ? (
                   <div className="mt-2 flex gap-2">

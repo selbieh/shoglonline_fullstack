@@ -95,8 +95,8 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
           {s.worker_rating != null && s.worker_rating > 0 && (
             <StarRating value={s.worker_rating} count={s.worker_rating_count} />
           )}
-          <span className="inline-flex items-center gap-1.5"><ClockIcon className="text-[15px] text-primary" /> {s.delivery_days.toLocaleString("ar-EG")} يوم</span>
-          <span className="inline-flex items-center gap-1.5"><HeartIcon className="text-[15px] text-danger" /> {s.favorites_count.toLocaleString("ar-EG")}</span>
+          <span className="inline-flex items-center gap-1.5"><ClockIcon className="text-[15px] text-primary" /> {s.delivery_days.toLocaleString("en-US")} يوم</span>
+          <span className="inline-flex items-center gap-1.5"><HeartIcon className="text-[15px] text-danger" /> {s.favorites_count.toLocaleString("en-US")}</span>
           {s.category_name && <span className="chip bg-tint text-primary-dark">{s.category_name}</span>}
         </div>
 
@@ -129,7 +129,7 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
             {s.reviews && s.reviews.length > 0 && (
               <section className="card">
                 <h2 className="mb-4 text-lg font-extrabold text-ink">
-                  آراء المشترين {s.worker_rating_count ? <span className="text-sm font-normal text-sub">({s.worker_rating_count.toLocaleString("ar-EG")})</span> : null}
+                  آراء المشترين {s.worker_rating_count ? <span className="text-sm font-normal text-sub">({s.worker_rating_count.toLocaleString("en-US")})</span> : null}
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {s.reviews.map((r) => <ReviewCard key={r.id} review={r} />)}
@@ -143,11 +143,11 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
             <BuyBox service={{ id: s.id, base_price: s.base_price, addons: s.addons }} />
 
             <DetailRail title="معلومات الخدمة">
-              <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("ar-EG")} يوم`} />
+              <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
               {s.category_name && <RailRow icon={<GridIcon />} label="التصنيف" value={s.category_name} />}
-              {s.purchases_count != null && <RailRow icon={<ClipboardIcon />} label="مرات الشراء" value={s.purchases_count.toLocaleString("ar-EG")} />}
-              {s.views_count != null && <RailRow icon={<BarChartIcon />} label="عدد المشاهدات" value={s.views_count.toLocaleString("ar-EG")} />}
-              <RailRow icon={<HeartIcon />} label="الإعجابات" value={s.favorites_count.toLocaleString("ar-EG")} />
+              {s.purchases_count != null && <RailRow icon={<ClipboardIcon />} label="مرات الشراء" value={s.purchases_count.toLocaleString("en-US")} />}
+              {s.views_count != null && <RailRow icon={<BarChartIcon />} label="عدد المشاهدات" value={s.views_count.toLocaleString("en-US")} />}
+              <RailRow icon={<HeartIcon />} label="الإعجابات" value={s.favorites_count.toLocaleString("en-US")} />
             </DetailRail>
 
             <OwnerCard

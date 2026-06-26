@@ -6,6 +6,7 @@ import { api, tokens } from "@/lib/api";
 import { apiError } from "@/lib/errors";
 import { signinHereHref } from "@/lib/nav";
 import { HeartIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 export type Addon = { id: number; title: string; price: string; extra_days: number };
 export type ServiceLite = { id: number; base_price: string; addons: Addon[] };
@@ -106,7 +107,7 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
                         onChange={(e) => setPicked((p) => (e.target.checked ? [...p, a.id] : p.filter((x) => x !== a.id)))} />
                       {a.title}
                     </span>
-                    <span dir="ltr">+${a.price}</span>
+                    <span>{formatUSD(a.price, { signed: true })}</span>
                   </label>
                 </li>
               ))}
@@ -125,7 +126,7 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
 
         <div className="flex items-center justify-between border-t border-line pt-3">
           <span className="text-sm text-sub">الإجمالي</span>
-          <span className="text-2xl font-extrabold text-primary" dir="ltr">${total.toFixed(2)}</span>
+          <span className="text-2xl font-extrabold text-primary">{formatUSD(total, { decimals: 2 })}</span>
         </div>
         {authed ? (
           <button className="btn-primary w-full" disabled={busy} onClick={buy}>إرسال طلب الشراء</button>

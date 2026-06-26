@@ -15,6 +15,7 @@ import {
 import StatusTabs from "@/components/StatusTabs";
 import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
 import DashboardShell from "@/components/DashboardShell";
+import { formatUSD } from "@/lib/currency";
 
 /** Soft badge tone per proposal status — mirrors the status palette used across the app. */
 const STATUS_TONE: Record<string, string> = {
@@ -130,8 +131,8 @@ export default function MyProposalsPage() {
                     {p.job_title}
                   </a>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
-                    <span className="font-bold text-ink" dir="ltr">${p.budget}</span>
-                    <span>التسليم خلال {p.delivery_days.toLocaleString("ar-EG")} يوم</span>
+                    <span className="font-bold text-ink">{formatUSD(p.budget)}</span>
+                    <span>التسليم خلال {p.delivery_days.toLocaleString("en-US")} يوم</span>
                     {timeAgo(p.created_at) && <span>{timeAgo(p.created_at)}</span>}
                   </div>
                 </div>

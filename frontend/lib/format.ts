@@ -1,6 +1,7 @@
 // Shared display formatters (Arabic-first). Keep UI-agnostic — pure functions only.
 
-const rtf = new Intl.RelativeTimeFormat("ar-EG", { numeric: "auto" });
+// ar-u-nu-latn: Arabic wording ("منذ … دقائق") with Western/English digits.
+const rtf = new Intl.RelativeTimeFormat("ar-u-nu-latn", { numeric: "auto" });
 
 const DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
   { amount: 60, unit: "second" },

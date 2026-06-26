@@ -16,26 +16,29 @@ export default function WizardStepper({
   steps,
   current,
   percent,
+  completionSubject = "ملفك الشخصي جاهز",
 }: {
   steps: WizardStep[];
   /** zero-based index of the active step. */
   current: number;
-  /** overall profile completion %, shown as "ملفك الشخصي جاهز بنسبة X%". */
+  /** overall completion %, shown as "{completionSubject} بنسبة X%". */
   percent?: number;
+  /** subject phrase incl. the gender-agreeing adjective, e.g. "خدمتك جاهزة". */
+  completionSubject?: string;
 }) {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between text-xs font-medium text-sub">
         {typeof percent === "number" ? (
           <span>
-            ملفك الشخصي جاهز بنسبة {percent.toLocaleString("ar-EG")}٪
+            {completionSubject} بنسبة {percent.toLocaleString("en-US")}٪
           </span>
         ) : (
           <span aria-hidden />
         )}
         <span>
-          {steps[current]?.label} · خطوة {(current + 1).toLocaleString("ar-EG")} من{" "}
-          {steps.length.toLocaleString("ar-EG")}
+          {steps[current]?.label} · خطوة {(current + 1).toLocaleString("en-US")} من{" "}
+          {steps.length.toLocaleString("en-US")}
         </span>
       </div>
       {/* RTL segments — first step on the right */}

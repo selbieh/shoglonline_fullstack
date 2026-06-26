@@ -13,6 +13,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.bids.models import BidLedger
 from apps.bids.services import InsufficientBids, consume_bid, refund_bid
+from apps.core.contact_guard import contains_contact_info
 from apps.core.services import get_setting
 
 from .models import Invitation, Job, Proposal, ScreeningAnswer
@@ -42,9 +43,17 @@ def _unique_slug(title: str) -> str:
 
 # ------------------------------------------------------------------ job lifecycle
 def submit_for_publication(job: Job) -> Job:
-    """Draft → published (flag ON) or pending_review (flag OFF) — FR-JOB-2."""
+    """Draft → published (flag ON) or pending_review (flag OFF) — FR-JOB-2.
+
+    Contact-info guard is a *soft gate*, not a hard block (ppt slide-01): rather than rejecting the
+    post outright (which would block legitimate descriptions on a false positive), a post that looks
+    like it shares external contact details is always diverted to admin review — even when
+    auto-publish is ON. A human approves the legit ones; real violations get caught. So the worst a
+    false positive costs the user is a short review wait, never a failed submission.
+    """
     job.slug = job.slug or _unique_slug(job.title)
-    if get_setting("jobs.auto_publish", False):
+    flagged = contains_contact_info(job.title) or contains_contact_info(job.description)
+    if get_setting("jobs.auto_publish", False) and not flagged:
         _publish(job)
     else:
         job.status = Job.Status.PENDING_REVIEW

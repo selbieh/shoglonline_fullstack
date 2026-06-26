@@ -35,7 +35,7 @@ export default function FilterPanel({
           تصفية النتائج
           {activeCount > 0 && (
             <span className="grid h-5 min-w-[1.25rem] place-content-center rounded-full bg-primary px-1.5 text-xs font-bold text-white">
-              {activeCount.toLocaleString("ar-EG")}
+              {activeCount.toLocaleString("en-US")}
             </span>
           )}
         </span>

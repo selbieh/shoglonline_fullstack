@@ -124,10 +124,10 @@ _STAT_BOXES = [
     ("Portfolio items", "total_portfolio_items", "🖼", "primary"),
     ("Reviews", "total_reviews", "⭐", "primary"),
     ("Active contracts", "active_contracts", "🤝", "primary"),
-    ("GMV", "gmv", "💰", "success", "$"),
-    ("Platform commission", "platform_commission", "🏦", "success", "$"),
-    ("Escrow held", "wallet_escrow_held", "🛡", "warn", "$"),
-    ("Earnings pending", "wallet_earnings_pending", "⏳", "warn", "$"),
+    ("GMV", "gmv", "💰", "success", "USD"),
+    ("Platform commission", "platform_commission", "🏦", "success", "USD"),
+    ("Escrow held", "wallet_escrow_held", "🛡", "warn", "USD"),
+    ("Earnings pending", "wallet_earnings_pending", "⏳", "warn", "USD"),
     ("Open tickets", "open_tickets", "🛟", "danger"),
     ("Pending jobs", "pending_jobs", "📝", "danger"),
     ("Pending services", "pending_services", "🏷", "danger"),
@@ -234,7 +234,7 @@ def dashboard_callback(request, context):
     context["stat_boxes"] = [
         {
             "label": label,
-            "value": (f"{box[4]}{kpis.get(key, 0)}" if len(box) > 4 else kpis.get(key, 0)),
+            "value": (f"{kpis.get(key, 0)} {box[4]}" if len(box) > 4 else kpis.get(key, 0)),
             "emoji": emoji,
             "tone": tone,
         }

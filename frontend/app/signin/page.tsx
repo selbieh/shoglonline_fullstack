@@ -66,12 +66,16 @@ export default function SignIn() {
         client_id: GOOGLE_CLIENT_ID,
         callback: (res: { credential: string }) => exchange(res.credential),
       });
+      // Size the button to the available container width (max 360) so it never
+      // overflows the viewport on narrow phones — a fixed 360 forces horizontal
+      // scroll and shoves the RTL card off-screen.
+      const available = gButton.current?.parentElement?.clientWidth ?? 360;
       google.accounts.id.renderButton(gButton.current, {
         theme: "outline",
         size: "large",
         text: "continue_with",
         locale: "ar",
-        width: 360,
+        width: Math.min(360, Math.round(available)),
       });
     };
     document.head.appendChild(script);

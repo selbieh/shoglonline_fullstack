@@ -28,12 +28,18 @@ _URL = re.compile(
 )
 # 7+ digit run (optionally +, spaces, dashes, parens) — catches phone numbers, not years/prices<7
 _PHONE = re.compile(r"\+?\d(?:[\d\s\-().]{5,})\d")
-# messaging apps + "contact me" handles, EN + AR
+# messaging apps + "contact me" handles. Latin handles need no boundary; the Arabic keywords are
+# wrapped in Arabic-letter boundaries so a keyword like "رقمي" (my number) doesn't match inside an
+# unrelated word such as "الرقمية" (digital) or "البريدية" — substring matches were false positives.
 _HANDLES = re.compile(
-    r"(?:whats\s?app|wa\.me|t\.me|tele\s?gram|insta\s?gram|snap\s?chat|@[A-Za-z0-9_.]{3,}"
-    r"|واتس(?:اب)?|تلي?[غج]رام|انست[غا]رام?|سناب(?:\s?شات)?|راسلني|كلمني|تواصل\s?مع[يى]?"
-    r"|رقم[يى]|جوال[يى]|بريد[يى]|ايميل[يى]?)",
+    r"(?:whats\s?app|wa\.me|t\.me|tele\s?gram|insta\s?gram|snap\s?chat|@[A-Za-z0-9_.]{3,})",
     re.I,
+)
+_HANDLES_AR = re.compile(
+    r"(?<![ء-ي])"
+    r"(?:واتس(?:اب)?|تلي?[غج]رام|انست[غا]رام?|سناب(?:\s?شات)?|راسلني|كلمني|تواصل\s?مع[يى]?"
+    r"|رقم[يى]|جوال[يى]|بريد[يى]|ايميل[يى]?)"
+    r"(?![ء-ي])",
 )
 
 
@@ -43,7 +49,11 @@ def contains_contact_info(text) -> bool:
         return False
     norm = str(text).translate(_DIGIT_MAP)
     return bool(
-        _EMAIL.search(norm) or _URL.search(norm) or _PHONE.search(norm) or _HANDLES.search(norm)
+        _EMAIL.search(norm)
+        or _URL.search(norm)
+        or _PHONE.search(norm)
+        or _HANDLES.search(norm)
+        or _HANDLES_AR.search(norm)
     )
 
 

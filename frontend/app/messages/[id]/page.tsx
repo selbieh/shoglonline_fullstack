@@ -149,7 +149,7 @@ export default function ThreadPage() {
 
       <div className="flex-1 space-y-3 overflow-y-auto bg-bg p-4">
         <div className="mx-auto max-w-md rounded-m bg-tint/60 px-3 py-2 text-center text-[11px] leading-relaxed text-primary-dark">
-          إن لم تُقرأ رسالتك خلال ١٠ دقائق نُرسل للطرف الآخر بريدًا تلقائيًا برابط المحادثة — مرة واحدة لكل رسالة.
+          إن لم تُقرأ رسالتك خلال 10 دقائق نُرسل للطرف الآخر بريدًا تلقائيًا برابط المحادثة — مرة واحدة لكل رسالة.
         </div>
         {msgs.length === 0 && <p className="mt-10 text-center text-sub">ابدأ المحادثة بإرسال أول رسالة</p>}
         {msgs.map((m) => (

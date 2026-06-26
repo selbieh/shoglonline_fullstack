@@ -6,6 +6,7 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
+import { formatUSD } from "@/lib/currency";
 
 type BidPlan = { id: number; name: string; bids_count: number; cost: string; description: string };
 type LedgerRow = { id: number; delta: number; reason: string; created_at: string };
@@ -116,7 +117,7 @@ export default function BidsPage() {
               disabled={busy === plan.id}
               onClick={() => buy(plan)}
             >
-              {busy === plan.id ? "جارٍ الشراء…" : `شراء بـ ${plan.cost}$`}
+              {busy === plan.id ? "جارٍ الشراء…" : `شراء بـ ${formatUSD(plan.cost)}`}
             </button>
           </div>
         ))}
@@ -140,7 +141,7 @@ export default function BidsPage() {
                 <td className={`px-3 py-2 font-bold ${row.delta >= 0 ? "text-success" : "text-danger"}`} dir="ltr">
                   {row.delta >= 0 ? "+" : ""}{row.delta}
                 </td>
-                <td className="px-3 py-2 text-sub">{new Date(row.created_at).toLocaleDateString("ar")}</td>
+                <td className="px-3 py-2 text-sub">{new Date(row.created_at).toLocaleDateString("ar-u-nu-latn")}</td>
               </tr>
             ))}
             {history.ledger.length === 0 && (

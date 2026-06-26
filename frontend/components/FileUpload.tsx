@@ -12,6 +12,7 @@ type Props = {
   maxMb?: number; // client-side pre-check only — the server is the source of truth
   multiple?: boolean;
   label?: string;
+  hint?: string; // small dimension/size recommendation shown under the dropzone
 };
 
 /**
@@ -25,6 +26,7 @@ export default function FileUpload({
   maxMb = 25,
   multiple = true,
   label = "أرفق ملفًا",
+  hint,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -88,6 +90,7 @@ export default function FileUpload({
         hidden
         onChange={(e) => handleFiles(e.target.files)}
       />
+      {hint && !error && <p className="mt-1.5 text-xs text-sub">{hint}</p>}
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );

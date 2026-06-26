@@ -8,6 +8,7 @@ import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import type { Job } from "@/lib/types";
 import ContactHint from "@/components/ContactHint";
 import { TicketIcon, ClockIcon, SendIcon, CheckIcon } from "@/components/icons";
+import { formatUSDRange } from "@/lib/currency";
 
 /** Interactive proposal form (client island) — the surrounding job content is SSR. */
 export default function ProposalForm({ job }: { job: Job }) {
@@ -109,13 +110,12 @@ export default function ProposalForm({ job }: { job: Job }) {
       )}
       <div className="grid grid-cols-2 gap-3">
         <label>
-          <span className="field-label">قيمة العرض <span className="text-danger">*</span></span>
+          <span className="field-label">قيمة العرض (بالدولار الأمريكي) <span className="text-danger">*</span></span>
           <span className="relative block">
-            <input className="field pl-12" inputMode="decimal" placeholder="0"
+            <input className="field" inputMode="decimal" placeholder="0"
               value={budget} onChange={(e) => setBudget(e.target.value)} />
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-sub">$</span>
           </span>
-          <span className="mt-1 block text-xs text-sub">الميزانية: ${job.budget_min}–${job.budget_max}</span>
+          <span className="mt-1 block text-xs text-sub">{`الميزانية: ${formatUSDRange(job.budget_min, job.budget_max)}`}</span>
         </label>
         <label>
           <span className="field-label">مدة التسليم <span className="text-danger">*</span></span>
@@ -153,7 +153,7 @@ export default function ProposalForm({ job }: { job: Job }) {
         {busy ? "جارٍ الإرسال…" : (
           <span className="inline-flex items-center gap-2">
             <SendIcon className="text-[16px]" />
-            {bidsOn ? "إرسال العرض (يُخصم ١ من رصيدك)" : "إرسال العرض"}
+            {bidsOn ? "إرسال العرض (يُخصم 1 من رصيدك)" : "إرسال العرض"}
           </span>
         )}
       </button>

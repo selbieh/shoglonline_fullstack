@@ -9,7 +9,9 @@ import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
 import Logo from "@/components/Logo";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
+import SkillPicker from "@/components/SkillPicker";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
+import { formatUSD } from "@/lib/currency";
 
 /* Freelancer profile setup wizard (تهيئة الحساب — ppt slides 02–11). Full deck parity: personal data
    (incl. a REQUIRED private contact method, slide-02 — stored for the platform, never shown publicly),
@@ -40,7 +42,7 @@ type Category = { id: number; name_ar: string; children: Category[] };
 type PfItem = { id: number; title: string; cover_url?: string; image_url?: string };
 type CertItem = { id: number; name: string; issuer?: string };
 
-type Me = { email: string; email_verified: boolean; phone_verified: boolean; avatar_url: string };
+type Me = { id?: number; email: string; email_verified: boolean; phone_verified: boolean; avatar_url: string };
 
 const EMPTY: Draft = {
   display_name: "", avatar_url: "", intro_video: "", overview: "", bio_title: "",
@@ -185,7 +187,7 @@ export default function ProfileWizard() {
       .catch(() => {});
     api<Me>("/auth/me")
       .then((u) => {
-        setMe({ email: u.email, email_verified: !!u.email_verified, phone_verified: !!u.phone_verified, avatar_url: u.avatar_url || "" });
+        setMe({ id: u.id, email: u.email, email_verified: !!u.email_verified, phone_verified: !!u.phone_verified, avatar_url: u.avatar_url || "" });
         setDraft((d) => ({ ...d, avatar_url: u.avatar_url || "" }));
         setPhoneVerified(!!u.phone_verified);
       })
@@ -273,8 +275,13 @@ export default function ProfileWizard() {
     try {
       if (step === S_REVIEW) {
         await saveProfile();
-        await api("/me/profile/publish", { method: "POST" });
-        router.push("/me/profile");
+        const res = await api<{ publish_state: string }>("/me/profile/publish", { method: "POST" });
+        // published → open the public profile; pending_review → owner page shows the review badge.
+        if (res.publish_state === "published" && me.id) {
+          router.push(`/freelancers/${me.id}`);
+        } else {
+          router.push("/me/profile");
+        }
         return;
       }
       // persist draft when leaving a step that edits it; portfolio/certs/verify save via their own endpoints.
@@ -453,6 +460,7 @@ export default function ProfileWizard() {
               <div className="flex-1">
                 <span className="mb-1 block text-sm font-medium text-ink">الصورة الشخصية</span>
                 <FileUpload accept="image/*" multiple={false} label="رفع صورة"
+                  hint="يُفضَّل صورة مربعة (مثل 512×512 بكسل) لأن الصورة الشخصية تظهر داخل دائرة"
                   onUploaded={(a) => set({ avatar_url: a.url })} />
               </div>
             </div>
@@ -460,11 +468,11 @@ export default function ProfileWizard() {
               <input className="field" value={draft.display_name} placeholder="مثال: أحمد محمد"
                 onChange={(e) => set({ display_name: e.target.value })} />
             </Field>
-            <Field label="نبذة قصيرة عنك" hint={`${draft.overview.length.toLocaleString("ar-EG")}/500`}>
+            <Field label="نبذة قصيرة عنك" hint={`${draft.overview.length.toLocaleString("en-US")}/500`}>
               <textarea className="field min-h-28" maxLength={500} value={draft.overview}
                 placeholder="اكتب نبذة مختصرة عنك، خبراتك، وما يميزك عن غيرك من المستقلين…"
                 onChange={(e) => set({ overview: e.target.value })} />
-              <ContactHint text={draft.overview} />
+              <ContactHint text={draft.overview} mode="review" />
             </Field>
             <Field label="رابط فيديو تعريفي (اختياري)">
               <input className="field" dir="ltr" placeholder="https://… (يوتيوب/فيميو)" value={draft.intro_video}
@@ -540,11 +548,13 @@ export default function ProfileWizard() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <select className="field flex-1" value={skillDraft.skill_id} aria-label="اختر مهارة"
-                    onChange={(e) => setSkillDraft({ ...skillDraft, skill_id: e.target.value })}>
-                    <option value="">اختر مهارة…</option>
-                    {availableSkills.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
-                  </select>
+                  <SkillPicker
+                    className="flex-1"
+                    options={availableSkills}
+                    value={skillDraft.skill_id}
+                    placeholder="اختر مهارة…"
+                    onSelect={(id) => setSkillDraft({ ...skillDraft, skill_id: String(id) })}
+                  />
                   <select className="field w-32" value={skillDraft.efficiency} aria-label="مستوى المهارة"
                     onChange={(e) => setSkillDraft({ ...skillDraft, efficiency: e.target.value })}>
                     {EFF_OPTS.map((e) => <option key={e.v} value={e.v}>{e.l}</option>)}
@@ -617,10 +627,11 @@ export default function ProfileWizard() {
                 </div>
                 <Field label="صورة العمل (الغلاف)">
                   <FileUpload accept="image/*" multiple={false} label="ارفع صورة الغلاف"
+                    hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
                     onUploaded={(a) => { setPfCover(a.id); setPf((s) => ({ ...s, cover_url: a.url })); }} />
                   {pfCover && <span className="mt-1 block text-xs text-success">تم رفع الصورة ✓</span>}
                 </Field>
-                <Field label="وصف العمل" hint={`${pf.description.length.toLocaleString("ar-EG")}/1000`}>
+                <Field label="وصف العمل" hint={`${pf.description.length.toLocaleString("en-US")}/1000`}>
                   <textarea className="field min-h-24" maxLength={1000} value={pf.description}
                     placeholder="اشرح أهداف المشروع ودورك فيه والنتائج…"
                     onChange={(e) => setPf({ ...pf, description: e.target.value })} />
@@ -737,7 +748,7 @@ export default function ProfileWizard() {
 
         {step === S_DETAILS && (
           <div className="mt-6 space-y-5">
-            <Field label="سعر الساعة (بالدولار)">
+            <Field label="سعر الساعة (بالدولار الأمريكي)">
               <div className="flex items-center gap-2">
                 <span className="grid h-9 w-12 place-content-center rounded-m bg-tint text-sm font-bold text-primary-dark">USD</span>
                 <input type="number" min={0} className="field" value={draft.hourly_rate}
@@ -760,11 +771,11 @@ export default function ProfileWizard() {
               <input type="number" min={0} max={168} className="field" value={draft.weekly_hours}
                 placeholder="مثال: 30" onChange={(e) => set({ weekly_hours: e.target.value })} />
             </Field>
-            <Field label="ملاحظات للعملاء (اختياري)" hint={`${draft.client_notes.length.toLocaleString("ar-EG")}/300`}>
+            <Field label="ملاحظات للعملاء (اختياري)" hint={`${draft.client_notes.length.toLocaleString("en-US")}/300`}>
               <textarea className="field min-h-20" maxLength={300} value={draft.client_notes}
                 placeholder="اكتب أي تفاصيل مهمة تريد أن يعرفها العملاء عن طريقة عملك…"
                 onChange={(e) => set({ client_notes: e.target.value })} />
-              <ContactHint text={draft.client_notes} />
+              <ContactHint text={draft.client_notes} mode="review" />
             </Field>
           </div>
         )}
@@ -864,23 +875,23 @@ export default function ProfileWizard() {
         {step === S_REVIEW && (
           <div className="mt-6 space-y-4">
             <div className="rounded-l border border-success/30 bg-success-t p-4 text-sm font-medium text-success">
-              ملفك جاهز بنسبة {pct.toLocaleString("ar-EG")}٪ — راجعه ثم أرسله لمراجعة الإدارة قبل النشر
+              ملفك جاهز بنسبة {pct.toLocaleString("en-US")}٪ — راجعه ثم أرسله لمراجعة الإدارة قبل النشر
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <SummaryCard title="البيانات الشخصية" onEdit={() => setStep(S_PERSONAL)}>
                 {draft.display_name || "—"} · {draft.overview ? "نبذة مضافة" : "بدون نبذة"}
               </SummaryCard>
               <SummaryCard title="العمل والمهارات" onEdit={() => setStep(S_WORK)}>
-                {draft.bio_title || "—"} · {skills.length.toLocaleString("ar-EG")} مهارة
+                {draft.bio_title || "—"} · {skills.length.toLocaleString("en-US")} مهارة
               </SummaryCard>
               <SummaryCard title="معرض الأعمال" onEdit={() => setStep(S_PORTFOLIO)}>
-                {portfolio.length.toLocaleString("ar-EG")} عمل
+                {portfolio.length.toLocaleString("en-US")} عمل
               </SummaryCard>
               <SummaryCard title="الشهادات والتدريب" onEdit={() => setStep(S_CERTS)}>
-                {certificates.length.toLocaleString("ar-EG")} شهادة
+                {certificates.length.toLocaleString("en-US")} شهادة
               </SummaryCard>
               <SummaryCard title="تفاصيل العمل" onEdit={() => setStep(S_DETAILS)}>
-                <span dir="ltr">${draft.hourly_rate || "—"}</span> /س · {AVAIL.find((a) => a.v === draft.availability)?.t}
+                <span>{draft.hourly_rate ? formatUSD(draft.hourly_rate) : "—"}</span> /س · {AVAIL.find((a) => a.v === draft.availability)?.t}
               </SummaryCard>
               <SummaryCard title="التحقق" onEdit={() => setStep(S_VERIFY)}>
                 {me.email_verified ? "البريد ✓ " : ""}{phoneOk ? "الجوال ✓" : "الجوال غير مُحقق"}

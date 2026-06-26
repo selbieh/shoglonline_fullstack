@@ -8,6 +8,7 @@ import { signinHereHref } from "@/lib/nav";
 import { tagTone } from "@/lib/tags";
 import { ArrowLeftIcon, HeartIcon, SparklesIcon } from "@/components/icons";
 import StatusTabs from "@/components/StatusTabs";
+import { formatUSD, formatUSDRange } from "@/lib/currency";
 
 /* Favourites across all four kinds (ppt slide-43). Services use the dedicated ServiceFavorite
    table; jobs / freelancers / portfolio use the generic Favorite. Each tab fetches its own list. */
@@ -89,7 +90,7 @@ export default function MyFavoritesPage() {
   function subtitleFor(it: FavItem): string {
     if (tab === "services") return it.worker_name || "";
     if (tab === "freelancers") return it.bio_title || "";
-    if (tab === "jobs") return [it.budget_min, it.budget_max].filter(Boolean).join(" – ");
+    if (tab === "jobs") return (it.budget_min || it.budget_max) ? formatUSDRange(it.budget_min, it.budget_max) : "";
     return "";
   }
 
@@ -158,7 +159,7 @@ export default function MyFavoritesPage() {
                     )}
                     {sub && <p className="mt-1 text-sm text-sub">{sub}</p>}
                     {tab === "freelancers" && it.rating_avg != null && (
-                      <p className="mt-1 text-xs text-sub">التقييم: {Number(it.rating_avg).toLocaleString("ar-EG")}</p>
+                      <p className="mt-1 text-xs text-sub">التقييم: {Number(it.rating_avg).toLocaleString("en-US")}</p>
                     )}
                     {it.category_name && (
                       <div className="mt-2.5"><span className={`tag-soft ${tagTone(it.category_name)}`}>{it.category_name}</span></div>
@@ -171,7 +172,7 @@ export default function MyFavoritesPage() {
                   {tab === "services" && it.base_price ? (
                     <span className="inline-flex items-baseline gap-1.5">
                       <span className="text-[11px] text-sub">يبدأ من</span>
-                      <span className="text-xl font-extrabold text-primary" dir="ltr">${it.base_price}</span>
+                      <span className="text-xl font-extrabold text-primary">{formatUSD(it.base_price)}</span>
                     </span>
                   ) : <span />}
                   <div className="flex items-center gap-2">

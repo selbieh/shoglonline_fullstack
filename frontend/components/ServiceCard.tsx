@@ -1,4 +1,5 @@
 import { StarIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 /* Service offer card (ppt slides 11/12/17/18 grids). Cover with hover-zoom + gradient fallback,
    title, 2-line description, delivery + rating footer, "يبدأ من" price, and a «عرض الخدمة» button —
@@ -34,19 +35,19 @@ export default function ServiceCard({ service }: { service: ServiceCardData }) {
         {s.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-sub">{s.description}</p>}
 
         <div className="mt-3 flex items-center justify-between text-xs text-sub">
-          <span>{s.delivery_days.toLocaleString("ar-EG")} أيام</span>
+          <span>{s.delivery_days.toLocaleString("en-US")} أيام</span>
           {s.rating != null && s.rating > 0 && (
             <span className="inline-flex items-center gap-0.5 text-star" dir="ltr">
               <StarIcon filled className="text-[12px]" />
               <span className="font-bold text-ink">{s.rating.toFixed(1)}</span>
-              {s.rating_count ? <span className="text-sub"> ({s.rating_count.toLocaleString("ar-EG")})</span> : null}
+              {s.rating_count ? <span className="text-sub"> ({s.rating_count.toLocaleString("en-US")})</span> : null}
             </span>
           )}
         </div>
 
         <p className="mt-1 text-sm">
           <span className="text-sub">يبدأ من </span>
-          <span className="font-extrabold text-primary" dir="ltr">${s.base_price}</span>
+          <span className="font-extrabold text-primary">{formatUSD(s.base_price)}</span>
         </p>
 
         <a href={href} className="mt-3 inline-flex w-full items-center justify-center rounded-m border border-primary/30 px-3 py-2 text-sm font-bold text-primary-dark transition hover:bg-primary hover:text-white">

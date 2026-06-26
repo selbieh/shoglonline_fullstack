@@ -7,6 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
+import SkillPicker from "@/components/SkillPicker";
 import type { PortfolioItem, PortfolioMediaType, WorkerEducation, WorkerEmployment, WorkerLanguage } from "@/lib/types";
 import { ExternalLinkIcon, GridIcon, ImageIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
@@ -47,7 +48,7 @@ type Idv = { status: "none" | "pending" | "approved" | "rejected"; reject_reason
 
 const LEVELS: Record<string, string> = { entry: "مبتدئ", intermediate: "متوسط", expert: "خبير" };
 const EFF: Record<string, string> = { beginner: "مبتدئ", intermediate: "متوسط", advanced: "متقدم", expert: "خبير" };
-const PROF: Record<string, string> = { basic: "أساسي", advanced: "متقدم", native: "لغة الأم" };
+const PROF: Record<string, string> = { basic: "أساسي", advanced: "متقدم", native: "اللغة الأم" };
 const AVAIL: Record<string, string> = { available_now: "متاح الآن", available_soon: "متاح قريبًا", unavailable: "غير متاح" };
 // ppt slide-02: private contact (platform/admin only — never rendered on any public profile).
 const CONTACT_CHANNELS = [
@@ -265,6 +266,7 @@ export default function ProfileEditPage() {
           <div className="flex-1">
             <span className="mb-1 block text-sm font-bold">الصورة الشخصية</span>
             <FileUpload accept="image/*" multiple={false} label="تغيير الصورة"
+              hint="يُفضَّل صورة مربعة (مثل 512×512 بكسل) لأن الصورة الشخصية تظهر داخل دائرة"
               onUploaded={(a) => setMe({ ...me, avatar_url: a.url })} />
           </div>
         </div>
@@ -308,7 +310,7 @@ export default function ProfileEditPage() {
         <label className="block text-sm font-bold">نبذة
           <textarea className={`mt-1 min-h-24 ${inputCls}`} value={profile.overview}
             onChange={(e) => setProfile({ ...profile, overview: e.target.value })} />
-          <ContactHint text={profile.overview} />
+          <ContactHint text={profile.overview} mode="review" />
         </label>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -326,7 +328,7 @@ export default function ProfileEditPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-bold">سعر الساعة ($)
+          <label className="text-sm font-bold">سعر الساعة (بالدولار الأمريكي)
             <input className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
               onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value })} />
           </label>
@@ -394,17 +396,15 @@ export default function ProfileEditPage() {
           {profile.skills.length === 0 && <li className="text-sm text-sub">لا مهارات بعد</li>}
         </ul>
         {available.length > 0 && (
-          <select className="field mt-3" defaultValue=""
-            aria-label="أضف مهارة"
-            onChange={(e) => {
-              const id = Number(e.target.value);
+          <SkillPicker
+            className="mt-3"
+            options={available}
+            value=""
+            onSelect={(id) => {
               const skill = catalog.find((c) => c.id === id);
               if (skill) saveSkills([...profile.skills, { skill_id: id, name: skill.name_ar, efficiency: "intermediate" }]);
-              e.target.value = "";
-            }}>
-            <option value="" disabled>+ أضف مهارة</option>
-            {available.map((c) => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
-          </select>
+            }}
+          />
         )}
       </section>
 
@@ -682,6 +682,7 @@ function PortfolioSection({
         {draft.media_type === "image" ? (
           <div className="space-y-2">
             <FileUpload accept="image/*" multiple={false} label="ارفع صورة العمل"
+              hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
               onUploaded={(a) => submit({ attachment_ids: [a.id] })} />
             <p className="text-center text-xs text-sub">أو</p>
             <div className="flex gap-2">

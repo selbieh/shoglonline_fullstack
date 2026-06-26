@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from apps.core.contact_guard import contains_contact_info
 from apps.core.models import AuditLog
 from apps.core.services import get_setting
 
@@ -22,8 +23,18 @@ def submit_profile_for_publication(profile: WorkerProfile) -> WorkerProfile:
 
     Mirrors jobs/services.submit_for_publication: with the flag ON the profile goes live with no
     admin review; with it OFF it waits in PENDING_REVIEW for review_profile_publish(). Callers gate
-    on the admin-tunable `profiles.publish_min_completeness` threshold before invoking this."""
-    if get_setting("profiles.auto_publish", False):
+    on the admin-tunable `profiles.publish_min_completeness` threshold before invoking this.
+
+    Contact-info guard is a *soft gate*: a profile whose public free text (overview / job title /
+    client notes) looks like it shares external contact details is diverted to admin review even when
+    auto-publish is ON, instead of being hard-rejected — so a false positive never blocks publishing,
+    it only adds a short review wait."""
+    flagged = (
+        contains_contact_info(profile.overview)
+        or contains_contact_info(profile.bio_title)
+        or contains_contact_info(profile.client_notes)
+    )
+    if get_setting("profiles.auto_publish", False) and not flagged:
         profile.publish_state = WorkerProfile.PublishState.PUBLISHED
     else:
         profile.publish_state = WorkerProfile.PublishState.PENDING_REVIEW

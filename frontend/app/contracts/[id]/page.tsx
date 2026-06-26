@@ -8,6 +8,7 @@ import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
 import { apiError } from "@/lib/errors";
 import ReviewsSection from "@/components/ReviewsSection";
 import { ChatIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 type Submission = {
   id: number;
@@ -155,15 +156,15 @@ export default function ContractDetailPage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="card">
           <p className="text-sm text-sub">قيمة العقد</p>
-          <p className="mt-1 text-2xl font-extrabold" dir="ltr">${c.budget}</p>
+          <p className="mt-1 text-2xl font-extrabold">{formatUSD(c.budget)}</p>
         </div>
         <div className="card">
           <p className="text-sm text-sub">صافي أرباح المستقل</p>
-          <p className="mt-1 text-2xl font-extrabold text-success" dir="ltr">${c.worker_earning}</p>
+          <p className="mt-1 text-2xl font-extrabold text-success">{formatUSD(c.worker_earning)}</p>
         </div>
         <div className="card">
           <p className="text-sm text-sub">عمولة المنصة ({c.commission_pct}%)</p>
-          <p className="mt-1 text-2xl font-extrabold text-sub" dir="ltr">${c.commission_amount}</p>
+          <p className="mt-1 text-2xl font-extrabold text-sub">{formatUSD(c.commission_amount)}</p>
         </div>
       </div>
 
@@ -182,8 +183,8 @@ export default function ContractDetailPage() {
           {isEmployer ? (
             <>
               <p className="mt-1 text-sm text-sub">
-                يُحجز مبلغ ${c.budget} من رصيدك المتاح في الضمان لتفعيل العقد. إن لم يُموَّل قبل
-                {c.funding_deadline ? ` ${new Date(c.funding_deadline).toLocaleString("ar")}` : " انتهاء المهلة"} يُلغى تلقائيًا.
+                يُحجز مبلغ {formatUSD(c.budget)} من رصيدك المتاح في الضمان لتفعيل العقد. إن لم يُموَّل قبل
+                {c.funding_deadline ? ` ${new Date(c.funding_deadline).toLocaleString("ar-u-nu-latn")}` : " انتهاء المهلة"} يُلغى تلقائيًا.
               </p>
               <div className="mt-3 flex gap-2">
                 <button className="btn-primary" disabled={busy} onClick={() => act(`/contracts/${id}/fund`, undefined, "فُعّل العقد بعد حجز الضمان")}>
@@ -254,8 +255,8 @@ export default function ContractDetailPage() {
         <section className="card mt-4 bg-success-t">
           <h2 className="font-bold text-success">اكتمل العقد</h2>
           <p className="mt-1 text-sm text-primary-deep">
-            تتحرر أرباح المستقل (${c.worker_earning}) إلى الرصيد المتاح تلقائيًا بنهاية فترة الضمان:{" "}
-            {new Date(c.warranty_ends_at).toLocaleDateString("ar")}.
+            تتحرر أرباح المستقل ({formatUSD(c.worker_earning)}) إلى الرصيد المتاح تلقائيًا بنهاية فترة الضمان:{" "}
+            {new Date(c.warranty_ends_at).toLocaleDateString("ar-u-nu-latn")}.
           </p>
           {c.resolution_note && <p className="mt-1 text-xs text-sub">{c.resolution_note}</p>}
         </section>
@@ -291,7 +292,7 @@ export default function ContractDetailPage() {
                 <h2 className="font-bold">طلب تعديل الشروط</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <input className="w-36 field" dir="ltr"
-                    placeholder="ميزانية جديدة" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
+                    placeholder="ميزانية جديدة (بالدولار الأمريكي)" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
                   <input type="date" className="field"
                     value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
                   <button className="btn-secondary" disabled={busy || (!newBudget && !newDeadline)}
@@ -322,7 +323,7 @@ export default function ContractDetailPage() {
         <section className="card mt-4 border border-primary">
           <h2 className="font-bold">طلب تعديل بانتظار ردّك</h2>
           <p className="mt-1 text-sm">
-            {pendingUpdate.new_budget && <>ميزانية جديدة: <b dir="ltr">${pendingUpdate.new_budget}</b> · </>}
+            {pendingUpdate.new_budget && <>ميزانية جديدة: <b>{formatUSD(pendingUpdate.new_budget)}</b> · </>}
             {pendingUpdate.new_deadline && <>موعد جديد: <b>{pendingUpdate.new_deadline}</b></>}
           </p>
           <div className="mt-2 flex gap-2">
@@ -340,7 +341,7 @@ export default function ContractDetailPage() {
             {submissions.map((s) => (
               <li key={s.id} className="rounded-m bg-bg p-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-sub">{new Date(s.created_at).toLocaleString("ar")}</span>
+                  <span className="text-xs text-sub">{new Date(s.created_at).toLocaleString("ar-u-nu-latn")}</span>
                   <span className={`rounded-full px-2 py-0.5 text-xs ${SUB_CHIP[s.status]}`}>
                     {s.status === "open" ? "قيد المراجعة" : s.status === "accepted" ? "مقبول" : "مرفوض"}
                   </span>
@@ -364,7 +365,7 @@ export default function ContractDetailPage() {
             {events.map((e) => (
               <li key={e.id} className="flex justify-between gap-3">
                 <span>{e.detail || e.kind}</span>
-                <span>{new Date(e.created_at).toLocaleDateString("ar")}</span>
+                <span>{new Date(e.created_at).toLocaleDateString("ar-u-nu-latn")}</span>
               </li>
             ))}
           </ul>

@@ -85,6 +85,27 @@ class TestPublication:
         job2 = make_job(employer, category)
         assert job2.status == Job.Status.PENDING_REVIEW
 
+    def _job(self, employer, category, *, description):
+        return Job.objects.create(
+            employer=employer, title="تصميم هوية بصرية", description=description,
+            category=category, budget_min=100, budget_max=200,
+        )
+
+    def test_contact_info_diverts_autopublish_to_review(self, employer, category):
+        """Soft gate: a post that looks like it shares contact info goes to review even when
+        auto-publish is ON — but it is never hard-rejected (no failed submission)."""
+        set_setting("jobs.auto_publish", True)
+        job = self._job(employer, category, description="للتواصل راسلني على واتساب 0501234567")
+        flagged = services.submit_for_publication(job)
+        assert flagged.status == Job.Status.PENDING_REVIEW
+
+    def test_clean_description_with_digital_word_still_autopublishes(self, employer, category):
+        """Regression: 'الرقمية' (digital) must not trip the contact guard (was a false positive)."""
+        set_setting("jobs.auto_publish", True)
+        job = self._job(employer, category, description="تصميم شعار يصلح للمنصات الرقمية والمطبوعات")
+        published = services.submit_for_publication(job)
+        assert published.status == Job.Status.PUBLISHED
+
     def test_admin_approval_publishes_and_fans_out(self, employer, category, worker):
         set_setting("jobs.auto_publish", False)
         CategorySubscription.objects.create(user=worker, category=category)

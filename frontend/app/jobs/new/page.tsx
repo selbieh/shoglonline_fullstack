@@ -7,7 +7,8 @@ import { api, API_URL, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import type { Category, Skill } from "@/lib/types";
 import ContactHint from "@/components/ContactHint";
-import { InfoIcon, CheckIcon } from "@/components/icons";
+import { InfoIcon, CheckIcon, SearchIcon } from "@/components/icons";
+import { normalizeArabic } from "@/lib/arabic";
 
 /**
  * Map Arabic-Indic (٠-٩) and Persian (۰-۹) digits to ASCII so `Number()` can parse them.
@@ -82,6 +83,7 @@ export default function NewJobPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [skillIds, setSkillIds] = useState<number[]>([]);
+  const [skillQuery, setSkillQuery] = useState("");
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -103,6 +105,14 @@ export default function NewJobPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Published (not queued for review) → show the success message briefly, then open the live job.
+  useEffect(() => {
+    if (done && !done.pending) {
+      const t = setTimeout(() => router.push(`/jobs/${done.slug}`), 1600);
+      return () => clearTimeout(t);
+    }
+  }, [done, router]);
+
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm({ ...form, [key]: value });
   }
@@ -111,6 +121,11 @@ export default function NewJobPage() {
   const selectedCat = categories.find((c) => String(c.id) === form.category);
   const subIds = new Set((selectedCat?.children ?? []).map((s) => s.id));
   const availableSkills = form.category ? skills.filter((s) => subIds.has(s.subcategory_id)) : [];
+  // Filter the chip list as the user types; selected skills stay visible regardless.
+  const nq = normalizeArabic(skillQuery);
+  const shownSkills = nq
+    ? availableSkills.filter((s) => skillIds.includes(s.id) || normalizeArabic(s.name_ar).includes(nq))
+    : availableSkills;
 
   function toggleSkill(id: number) {
     setSkillIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -121,6 +136,7 @@ export default function NewJobPage() {
     const cat = categories.find((c) => String(c.id) === value);
     const valid = new Set((cat?.children ?? []).map((s) => s.id));
     setSkillIds((ids) => ids.filter((id) => skills.some((s) => s.id === id && valid.has(s.subcategory_id))));
+    setSkillQuery("");
     set("category", value);
   }
 
@@ -184,11 +200,13 @@ export default function NewJobPage() {
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-success-t text-success">
             <CheckIcon className="text-[40px]" />
           </span>
-          <h1 className="text-3xl font-extrabold">شكرًا لك! تم بنجاح 🎉</h1>
+          <h1 className="text-3xl font-extrabold">
+            {done.pending ? "تم الإرسال للمراجعة 📝" : "تم النشر بنجاح 🎉"}
+          </h1>
           <p className="max-w-md text-sub">
             {done.pending
               ? "أُرسلت وظيفتك لمراجعة الإدارة — ستُنشر فور الموافقة، ويصل بريد للمشتركين في الفئة."
-              : "تم نشر وظيفتك بنجاح، وأصبحت ظاهرة للمستقلين. وسيصل بريد للمشتركين في الفئة."}
+              : "تم نشر وظيفتك بنجاح، وأصبحت ظاهرة للمستقلين. جارٍ تحويلك إلى صفحة الوظيفة…"}
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
             <Link href="/" className="btn-primary px-6 py-3">العودة إلى الرئيسية</Link>
@@ -226,7 +244,7 @@ export default function NewJobPage() {
           وصف الوظيفة <span className="text-danger">*</span>
           <textarea className={`${input} min-h-32`} value={form.description}
             onChange={(e) => set("description", e.target.value)} />
-          <ContactHint text={form.description} />
+          <ContactHint text={form.description} mode="review" />
         </label>
 
         <div className="block text-sm font-bold">
@@ -236,17 +254,30 @@ export default function NewJobPage() {
           ) : availableSkills.length === 0 ? (
             <p className="mt-1 text-xs font-normal text-sub">لا توجد مهارات مرتبطة بهذه الفئة.</p>
           ) : (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {availableSkills.map((s) => {
-                const on = skillIds.includes(s.id);
-                return (
-                  <button key={s.id} type="button" onClick={() => toggleSkill(s.id)}
-                    className={`chip font-normal transition ${on ? "bg-primary text-white" : "hover:bg-tint"}`}>
-                    {on ? "✓ " : ""}{s.name_ar}
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              {availableSkills.length > 8 && (
+                <div className="relative mt-2">
+                  <input value={skillQuery} onChange={(e) => setSkillQuery(e.target.value)}
+                    placeholder="ابحث عن مهارة…"
+                    className="w-full field pe-9 font-normal" />
+                  <SearchIcon className="pointer-events-none absolute inset-y-0 end-3 my-auto text-[17px] text-sub" />
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {shownSkills.map((s) => {
+                  const on = skillIds.includes(s.id);
+                  return (
+                    <button key={s.id} type="button" onClick={() => toggleSkill(s.id)}
+                      className={`chip font-normal transition ${on ? "bg-primary text-white" : "hover:bg-tint"}`}>
+                      {on ? "✓ " : ""}{s.name_ar}
+                    </button>
+                  );
+                })}
+                {shownSkills.length === 0 && (
+                  <p className="text-xs font-normal text-sub">لا توجد مهارة مطابقة.</p>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -297,7 +328,7 @@ export default function NewJobPage() {
         <div className="flex items-start gap-2 rounded-m bg-warn-t p-3 text-sm text-warn">
           <InfoIcon className="mt-0.5 shrink-0 text-[16px]" />
           <span>قد تخضع الوظيفة لمراجعة الإدارة قبل النشر. عند النشر يصل بريد فوري للمشتركين في الفئة،
-          وتُغلق تلقائيًا بعد ٣٠ يومًا إن لم تُرسَّ.</span>
+          وتُغلق تلقائيًا بعد 30 يومًا إن لم تُرسَّ.</span>
         </div>
 
         <button className="btn-primary w-full py-3" disabled={busy} onClick={submit}>

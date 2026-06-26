@@ -46,7 +46,7 @@ export function ListingFooter({
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3.5">
       <span className="inline-flex items-baseline gap-1.5">
         <span className="text-[11px] text-sub">{priceLabel}</span>
-        <span className="text-xl font-extrabold text-primary" dir="ltr">{priceValue}</span>
+        <span className="text-xl font-extrabold text-primary" dir="auto">{priceValue}</span>
         {priceSuffix && <span className="text-xs font-medium text-sub">{priceSuffix}</span>}
       </span>
       <div className="flex items-center gap-2">{children}</div>

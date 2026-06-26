@@ -96,7 +96,7 @@ export default function NotificationsBell() {
                   <a href={n.deep_link || "#"} className="block px-4 py-2.5 hover:bg-bg">
                     <p className="text-sm font-medium">{n.title}</p>
                     {n.body && <p className="mt-0.5 truncate text-xs text-sub">{n.body}</p>}
-                    <p className="mt-0.5 text-[10px] text-sub">{new Date(n.created_at).toLocaleString("ar")}</p>
+                    <p className="mt-0.5 text-[10px] text-sub">{new Date(n.created_at).toLocaleString("ar-u-nu-latn")}</p>
                   </a>
                 </li>
               ))

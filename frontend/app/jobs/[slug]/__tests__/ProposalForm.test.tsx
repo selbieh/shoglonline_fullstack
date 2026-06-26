@@ -29,7 +29,7 @@ describe("ProposalForm — bids ON (default)", () => {
     render(<ProposalForm job={job} />);
 
     expect(await screen.findByText(/سيُخصم عرض واحد/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /يُخصم ١ من رصيدك/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /يُخصم 1 من رصيدك/ })).toBeInTheDocument();
   });
 });
 

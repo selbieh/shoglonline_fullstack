@@ -18,6 +18,7 @@ import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import SubscribeCategoryButton from "@/components/SubscribeCategoryButton";
+import { formatUSDRange } from "@/lib/currency";
 
 const PAGE = 12; // load-more page size (server caps limit at 100)
 
@@ -167,7 +168,7 @@ export default function JobsClient({
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">الوظائف</h1>
             <p className="animate-fade-up delay-200 mt-2 text-tint">
-              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("ar-EG")} وظيفة متاحة الآن`}
+              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("en-US")} وظيفة متاحة الآن`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -310,7 +311,7 @@ export default function JobsClient({
                           <span key={s} className={`tag-soft ${tagTone(s)}`}>{s}</span>
                         ))}
                         {skills.length > 5 && (
-                          <span className="tag-soft bg-bg text-sub">+{(skills.length - 5).toLocaleString("ar-EG")}</span>
+                          <span className="tag-soft bg-bg text-sub">+{(skills.length - 5).toLocaleString("en-US")}</span>
                         )}
                       </div>
                     )}
@@ -318,14 +319,14 @@ export default function JobsClient({
                 </div>
                 {/* stats strip: proposals · location · category */}
                 <ListingStats>
-                  <ListingStat icon={<UsersIcon />} label="العروض" value={job.proposals_count.toLocaleString("ar-EG")} />
+                  <ListingStat icon={<UsersIcon />} label="العروض" value={job.proposals_count.toLocaleString("en-US")} />
                   <ListingStat icon={<MapPinIcon />} label="الموقع"
                     value={`${LOCATION_LABEL[job.location_type] ?? job.location_type}${job.city ? ` · ${job.city}` : ""}`} />
                   <ListingStat icon={<BriefcaseIcon />} label="الفئة" value={job.category_name} />
                 </ListingStats>
 
                 {/* footer: budget + apply CTA */}
-                <ListingFooter priceLabel="الميزانية" priceValue={`$${job.budget_min}–$${job.budget_max}`}>
+                <ListingFooter priceLabel="الميزانية" priceValue={formatUSDRange(job.budget_min, job.budget_max)}>
                   <Link href={`/jobs/${job.slug}`} className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
                     قدّم عرضك
                     <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />

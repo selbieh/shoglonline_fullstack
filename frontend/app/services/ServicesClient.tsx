@@ -11,6 +11,7 @@ import FilterPanel from "@/components/FilterPanel";
 import CardActions from "@/components/CardActions";
 import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
+import { formatUSD } from "@/lib/currency";
 
 export type Service = {
   id: number;
@@ -137,7 +138,7 @@ export default function ServicesClient({
             </span>
             <h1 className="animate-fade-up delay-100 text-3xl font-extrabold drop-shadow-sm md:text-4xl">الخدمات الخاصة</h1>
             <p className="animate-fade-up delay-200 mt-2 text-tint">
-              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("ar-EG")} خدمة جاهزة بسعر ثابت — اطلبها واشترِها مباشرة.`}
+              {loading ? "جارٍ التحميل…" : `${count.toLocaleString("en-US")} خدمة جاهزة بسعر ثابت — اطلبها واشترِها مباشرة.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -285,13 +286,13 @@ export default function ServicesClient({
 
                     {/* stats strip: delivery · category · favorites */}
                     <ListingStats>
-                      <ListingStat icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("ar-EG")} يوم`} />
+                      <ListingStat icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
                       <ListingStat icon={<BriefcaseIcon />} label="الفئة" value={s.category_name || "—"} />
-                      <ListingStat icon={<HeartIcon />} label="المفضلة" value={s.favorites_count.toLocaleString("ar-EG")} />
+                      <ListingStat icon={<HeartIcon />} label="المفضلة" value={s.favorites_count.toLocaleString("en-US")} />
                     </ListingStats>
 
                     {/* footer: starting price + order CTA */}
-                    <ListingFooter priceLabel="يبدأ من" priceValue={`$${s.base_price}`}>
+                    <ListingFooter priceLabel="يبدأ من" priceValue={formatUSD(s.base_price)}>
                       <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
                         اطلب الخدمة
                         <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />

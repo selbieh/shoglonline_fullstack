@@ -32,7 +32,7 @@ export default function StatusTabs({
             className={`tab ${isActive ? "tab-active" : ""}`}
           >
             {t.label}
-            {typeof n === "number" && <span className="tab-count">{n.toLocaleString("ar-EG")}</span>}
+            {typeof n === "number" && <span className="tab-count">{n.toLocaleString("en-US")}</span>}
           </button>
         );
       })}

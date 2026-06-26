@@ -244,14 +244,10 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ["rating_avg", "rating_count", "total_earned", "is_verified",
                             "publish_state", "publish_reject_reason"]
 
-    def validate_overview(self, v):
-        return validate_no_contact(v)
-
-    def validate_bio_title(self, v):
-        return validate_no_contact(v)
-
-    def validate_client_notes(self, v):
-        return validate_no_contact(v)
+    # No hard contact-info block on the published free text (overview / bio_title / client_notes):
+    # a match must not fail the profile save (false positives would block legitimate profiles). The
+    # soft gate lives in services.submit_profile_for_publication, which diverts a flagged profile to
+    # admin review instead of rejecting it.
 
     @transaction.atomic  # replace-all sections must be all-or-nothing (no half-wiped profile)
     def update(self, instance, validated_data):

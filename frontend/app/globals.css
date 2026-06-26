@@ -19,6 +19,14 @@
   --c-star: #fed26c;         /* brand gold — rating stars only */
 }
 
+html,
+body {
+  /* Guard against a stray full-width child expanding the document and shoving the
+     whole RTL layout off-screen on mobile (content clipped on the right, empty gap
+     on the left). `clip` — not `hidden` — so sticky/fixed headers keep working. */
+  overflow-x: clip;
+}
+
 body {
   @apply bg-bg text-ink antialiased;
 }

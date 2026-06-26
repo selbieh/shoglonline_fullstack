@@ -68,6 +68,24 @@ class TestServiceLifecycle:
         service = make_service(worker, category)
         assert service.status == Service.Status.PENDING_REVIEW
 
+    def test_contact_info_diverts_autopublish_to_review(self, worker, category):
+        """Soft gate: contact-looking text diverts to review even with auto-publish ON (no reject)."""
+        service = Service.objects.create(
+            worker=worker, title="تصميم شعار", description="راسلني واتساب 0501234567",
+            category=category, base_price=Decimal("100"), delivery_days=5,
+        )
+        gs.submit_service(service)
+        assert service.status == Service.Status.PENDING_REVIEW
+
+    def test_clean_digital_word_still_goes_live(self, worker, category):
+        """Regression: 'الرقمية' (digital) must not trip the contact guard."""
+        service = Service.objects.create(
+            worker=worker, title="تصميم شعار", description="شعار يصلح للمنصات الرقمية",
+            category=category, base_price=Decimal("100"), delivery_days=5,
+        )
+        gs.submit_service(service)
+        assert service.status == Service.Status.LIVE
+
     def test_pause_hides_without_touching_contracts(self, worker, employer, category):
         service = make_service(worker, category, price="100")
         fund(employer, "150")
@@ -199,8 +217,22 @@ class TestServiceAPI:
         client = APIClient()
         client.force_authenticate(worker)
         res = client.post("/api/v1/me/services", {
-            "title": "كتابة محتوى", "description": "وصف", "category": category.id, "base_price": "50",
+            "title": "كتابة محتوى", "description": "وصف تفصيلي لخدمة كتابة المحتوى الاحترافي للعملاء",
+            "category": category.id, "base_price": "50",
             "delivery_days": 3,
         }, format="json")
         assert res.status_code == 201
         assert res.json()["status"] == "pending_review"  # moderation flag OFF
+
+    def test_short_description_rejected(self, worker, category):
+        """A too-short description is a 400 with a per-field error so the wizard can mark it."""
+        client = APIClient()
+        client.force_authenticate(worker)
+        res = client.post("/api/v1/me/services", {
+            "title": "كتابة محتوى", "description": "وصف", "category": category.id,
+            "base_price": "50", "delivery_days": 3,
+        }, format="json")
+        assert res.status_code == 400
+        body = res.json()
+        assert body["code"] == "validation_error"
+        assert "description" in body["fields"]

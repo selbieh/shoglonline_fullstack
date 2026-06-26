@@ -49,12 +49,12 @@ export function relativeTime(iso: string | null): string {
   const diffD = Math.floor(diffH / 24);
   if (diffD === 1) return "أمس";
   if (diffD < 7) return `منذ ${diffD} أيام`;
-  return new Date(iso).toLocaleDateString("ar", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("ar-u-nu-latn", { day: "numeric", month: "short" });
 }
 
 /** Clock time inside a bubble. */
 export function clockTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("ar-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
 }
 
 /** Human file size, e.g. "1.2 MB". */

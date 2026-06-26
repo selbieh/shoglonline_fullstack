@@ -10,6 +10,7 @@ import MediaGallery from "@/components/MediaGallery";
 import KpiCard from "@/components/KpiCard";
 import { DetailRail, RailRow } from "@/components/DetailRail";
 import { BarChartIcon, BoltIcon, ClipboardIcon, ClockIcon, GridIcon, WalletIcon } from "@/components/icons";
+import { formatUSD } from "@/lib/currency";
 
 /* Owner service detail + analytics (ppt slide-20). Hero gallery, the views/orders/conversion KPI
    panel the buyer never sees, the add-ons, status actions, and inline field editing (PATCH /me/services/<id>). */
@@ -118,8 +119,8 @@ export default function OwnerServicePage() {
           <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-sub">
             <span className={`chip ${ST_CHIP[s.status] ?? "bg-tint text-primary-dark"}`}>{ST_LABEL[s.status] ?? s.status}</span>
             {s.category_name && <span>{s.category_name}</span>}
-            <span dir="ltr" className="font-bold text-primary">${s.base_price}</span>
-            <span>· {s.delivery_days.toLocaleString("ar-EG")} يوم</span>
+            <span className="font-bold text-primary">{formatUSD(s.base_price)}</span>
+            <span>· {s.delivery_days.toLocaleString("en-US")} يوم</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -130,9 +131,9 @@ export default function OwnerServicePage() {
 
       {/* analytics KPI panel (owner-only, slide-20) */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        <KpiCard icon={<BarChartIcon />} label="عدد الزيارات" value={s.views_count.toLocaleString("ar-EG")} tone="bg-tint text-primary-dark" />
-        <KpiCard icon={<ClipboardIcon />} label="عدد الطلبات" value={s.orders_count.toLocaleString("ar-EG")} tone="bg-success-t text-success" />
-        <KpiCard icon={<BoltIcon />} label="معدل التحويل" value={`${s.conversion.toLocaleString("ar-EG")}٪`} tone="bg-warn-t text-warn" />
+        <KpiCard icon={<BarChartIcon />} label="عدد الزيارات" value={s.views_count.toLocaleString("en-US")} tone="bg-tint text-primary-dark" />
+        <KpiCard icon={<ClipboardIcon />} label="عدد الطلبات" value={s.orders_count.toLocaleString("en-US")} tone="bg-success-t text-success" />
+        <KpiCard icon={<BoltIcon />} label="معدل التحويل" value={`${s.conversion.toLocaleString("en-US")}٪`} tone="bg-warn-t text-warn" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -145,7 +146,7 @@ export default function OwnerServicePage() {
                 <input className="field mt-1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-bold">السعر الأساسي ($)
+                <label className="block text-sm font-bold">السعر الأساسي (بالدولار الأمريكي)
                   <input type="number" min={0} className="field mt-1" value={form.base_price}
                     onChange={(e) => setForm({ ...form, base_price: e.target.value })} />
                 </label>
@@ -157,12 +158,12 @@ export default function OwnerServicePage() {
               <label className="block text-sm font-bold">وصف الخدمة
                 <textarea className="field mt-1 min-h-28" value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                <ContactHint text={form.description} />
+                <ContactHint text={form.description} mode="review" />
               </label>
               <label className="block text-sm font-bold">ماذا سيحصل عليه المشتري
                 <textarea className="field mt-1 min-h-24" value={form.what_you_get}
                   onChange={(e) => setForm({ ...form, what_you_get: e.target.value })} />
-                <ContactHint text={form.what_you_get} />
+                <ContactHint text={form.what_you_get} mode="review" />
               </label>
               <label className="block text-sm font-bold">كلمات مفتاحية <span className="text-xs font-normal text-sub">(افصل بينها بفاصلة)</span>
                 <input className="field mt-1" value={form.keywords} placeholder="تصميم، شعار، هوية"
@@ -176,7 +177,7 @@ export default function OwnerServicePage() {
                     <div key={i} className="flex flex-wrap gap-2">
                       <input className="field flex-1" placeholder="عنوان الإضافة" value={a.title}
                         onChange={(e) => setAddons(addons.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-                      <input type="number" min={0} className="field w-24" placeholder="السعر" value={a.price}
+                      <input type="number" min={0} className="field w-24" placeholder="السعر (بالدولار الأمريكي)" value={a.price}
                         onChange={(e) => setAddons(addons.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))} />
                       <input type="number" min={0} className="field w-24" placeholder="أيام إضافية" value={a.extra_days}
                         onChange={(e) => setAddons(addons.map((x, j) => (j === i ? { ...x, extra_days: e.target.value } : x)))} />
@@ -224,8 +225,8 @@ export default function OwnerServicePage() {
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           {/* service info */}
           <DetailRail title="معلومات الخدمة">
-            <RailRow icon={<WalletIcon />} label="السعر الأساسي" value={<span dir="ltr">${s.base_price}</span>} />
-            <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("ar-EG")} يوم`} />
+            <RailRow icon={<WalletIcon />} label="السعر الأساسي" value={<span>{formatUSD(s.base_price)}</span>} />
+            <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
             {s.category_name && <RailRow icon={<GridIcon />} label="التصنيف" value={s.category_name} />}
           </DetailRail>
 
@@ -259,8 +260,8 @@ export default function OwnerServicePage() {
                   <li key={a.id} className="flex items-center justify-between gap-2 border-b border-line pb-2 last:border-0 last:pb-0">
                     <span className="min-w-0 truncate">{a.title}</span>
                     <span className="shrink-0 text-sub">
-                      <span dir="ltr" className="font-bold text-ink">+${a.price}</span>
-                      {a.extra_days > 0 && ` · +${a.extra_days.toLocaleString("ar-EG")} يوم`}
+                      <span className="font-bold text-ink">{formatUSD(a.price, { signed: true })}</span>
+                      {a.extra_days > 0 && ` · +${a.extra_days.toLocaleString("en-US")} يوم`}
                     </span>
                   </li>
                 ))}

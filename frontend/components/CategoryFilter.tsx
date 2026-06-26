@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import { CheckIcon, ChevronDownIcon, SearchIcon } from "@/components/icons";
+import { normalizeArabic as norm } from "@/lib/arabic";
 
 export type CatNode = {
   id: number;
@@ -29,19 +30,6 @@ export type CatNode = {
 };
 
 export type CategorySelection = { id: string; parentId: string | null } | null;
-
-/** Arabic-aware normalisation so "ابداع" matches "إبداع", diacritics are ignored, etc. */
-function norm(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[ً-ْٰ]/g, "") // tashkeel / diacritics
-    .replace(/[إأآا]/g, "ا") // unify alef forms
-    .replace(/[ىئ]/g, "ي") // alef-maqsura / hamza-on-ya → ya
-    .replace(/ؤ/g, "و")
-    .replace(/ة/g, "ه") // ta-marbuta → ha
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 export default function CategoryFilter({
   categories,

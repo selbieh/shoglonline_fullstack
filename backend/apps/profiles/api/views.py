@@ -109,6 +109,12 @@ class MyPortfolioItemView(RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return PortfolioItem.objects.filter(profile__user=self.request.user).prefetch_related("attachments")
 
+    def perform_update(self, serializer):
+        ids = serializer.validated_data.get("attachment_ids") or []
+        item = serializer.save()
+        if ids:
+            attach(ids, item, self.request.user)  # owner-only link (attachments._host_allows)
+
 
 class PublicPortfolioItemView(APIView):
     """GET /api/v1/freelancers/portfolio/<id> — public single portfolio work (ppt slide-22).
