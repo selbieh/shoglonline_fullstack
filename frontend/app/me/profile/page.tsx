@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, tokens, type Me } from "@/lib/api";
+import { api, tokens, profileCache, myProfileCache, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError, apiFieldErrors } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
@@ -102,6 +102,14 @@ export default function ProfileEditPage() {
       router.replace(signinHereHref());
       return;
     }
+    // Optimistic paint: show last-known me + profile instantly on reload so the page doesn't blank
+    // to a "جارٍ التحميل…" screen while the five cold requests below resolve. Revalidated right after.
+    const cachedMe = profileCache.read<Me>();
+    const cachedProfile = myProfileCache.read<Profile>();
+    if (cachedMe && cachedProfile) {
+      setMe(cachedMe);
+      setProfile(cachedProfile);
+    }
     Promise.all([
       api<Me>("/auth/me"),
       api<Profile>("/me/profile"),
@@ -110,8 +118,7 @@ export default function ProfileEditPage() {
       api<CatalogCategory[] | { results: CatalogCategory[] }>("/categories"),
     ])
       .then(([m, p, s, v, cats]) => {
-        setMe(m);
-        setProfile({
+        const normalized: Profile = {
           ...p,
           display_name: p.display_name ?? "",
           intro_video: p.intro_video ?? "",
@@ -130,7 +137,11 @@ export default function ProfileEditPage() {
           languages: p.languages ?? [],
           certificates: p.certificates ?? [],
           portfolio: p.portfolio ?? [],
-        });
+        };
+        setMe(m);
+        setProfile(normalized);
+        profileCache.write(m);
+        myProfileCache.write(normalized);
         setCatalog(Array.isArray(s) ? s : s?.results ?? []);
         setIdv(v);
         setCategories(Array.isArray(cats) ? cats : cats?.results ?? []);

@@ -12,6 +12,7 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000
 const ACCESS_KEY = "sh_access";
 const REFRESH_KEY = "sh_refresh";
 const PROFILE_KEY = "sh_me";
+const MY_PROFILE_KEY = "sh_profile";
 
 export const tokens = {
   get access() {
@@ -25,6 +26,7 @@ export const tokens = {
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(MY_PROFILE_KEY);
   },
   get refresh() {
     return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
@@ -32,30 +34,37 @@ export const tokens = {
 };
 
 /**
- * Lightweight cache of the signed-in user's display fields (name + avatar), kept in
- * localStorage so the header can paint the real profile on the first client frame after a
- * reload — instead of flashing the logged-out state, then a generic avatar, while /auth/me
- * is in flight. Always re-validated against /auth/me; cleared by tokens.clear() on logout.
+ * Best-effort localStorage cache, SSR-safe. Lets authed pages paint their last-known data on the
+ * first client frame after a reload — instead of a blank "loading…" screen (or a logged-out flash)
+ * while the API calls are in flight, which is most painful right after a backend restart when those
+ * requests are cold. Always re-validated against the API; cleared by tokens.clear() on logout.
  */
-export const profileCache = {
-  read<T = unknown>(): T | null {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = localStorage.getItem(PROFILE_KEY);
-      return raw ? (JSON.parse(raw) as T) : null;
-    } catch {
-      return null;
-    }
-  },
-  write(me: unknown) {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(me));
-    } catch {
-      /* quota / serialization — non-fatal, cache is best-effort */
-    }
-  },
-};
+function lsCache(key: string) {
+  return {
+    read<T = unknown>(): T | null {
+      if (typeof window === "undefined") return null;
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : null;
+      } catch {
+        return null;
+      }
+    },
+    write(value: unknown) {
+      if (typeof window === "undefined") return;
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        /* quota / serialization — non-fatal, cache is best-effort */
+      }
+    },
+  };
+}
+
+/** Signed-in user's display fields (name + avatar) — shared by the header, dashboard shell, profile page. */
+export const profileCache = lsCache(PROFILE_KEY);
+/** Full /me/profile payload, so the profile page renders instantly on reload instead of blanking. */
+export const myProfileCache = lsCache(MY_PROFILE_KEY);
 
 // The backend rotates refresh tokens and blacklists the old one after rotation
 // (SIMPLE_JWT ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION). If several requests 401 at once
