@@ -62,10 +62,10 @@ export default function SiteFooter() {
         {cols.map((col) => (
           <div key={col.h}>
             <h3 className="font-bold text-white">{col.h}</h3>
-            <ul className="mt-4 space-y-2.5 text-sm">
+            <ul className="mt-4 space-y-2.5 text-[15px]">
               {col.links.map(([label, href]) => (
                 <li key={label}>
-                  <Link href={href} className="text-white/80 transition hover:text-white">
+                  <Link href={href} className="font-medium text-white/90 transition hover:text-white">
                     {label}
                   </Link>
                 </li>
@@ -76,7 +76,7 @@ export default function SiteFooter() {
 
         <div>
           <h3 className="font-bold text-white">{t.footer.cols.contact}</h3>
-          <ul className="mt-4 space-y-2.5 text-sm text-white/80">
+          <ul className="mt-4 space-y-2.5 text-[15px] font-medium text-white/90">
             <li>
               {c.emailLabel}: <a href={`mailto:${c.email}`} className="transition hover:text-white" dir="ltr">{c.email}</a>
             </li>
