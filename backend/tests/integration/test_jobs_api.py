@@ -202,3 +202,17 @@ def test_my_proposals_listing(worker_with_bids, employer, category):
     )
     res = auth(worker_with_bids).get("/api/v1/me/proposals")
     assert res.status_code == 200 and res.json()["count"] == 1
+
+
+def test_my_proposals_filtered_by_job(worker_with_bids, employer, category):
+    """?job={id} lets the apply form detect an existing proposal on this job (one bid per job)."""
+    applied = _create_job(employer, category)
+    other = _create_job(employer, category)
+    auth(worker_with_bids).post(
+        f"/api/v1/jobs/{applied['id']}/proposals",
+        {"budget": "150", "delivery_days": 10, "description": "x"}, format="json",
+    )
+    hit = auth(worker_with_bids).get(f"/api/v1/me/proposals?job={applied['id']}")
+    assert hit.status_code == 200 and hit.json()["count"] == 1
+    miss = auth(worker_with_bids).get(f"/api/v1/me/proposals?job={other['id']}")
+    assert miss.status_code == 200 and miss.json()["count"] == 0

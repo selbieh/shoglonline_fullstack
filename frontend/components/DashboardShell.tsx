@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { api, tokens } from "@/lib/api";
+import { api, tokens, profileCache } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
@@ -55,8 +55,17 @@ export default function DashboardShell({
   const menuRef = useRef<HTMLDivElement>(null);
   const unread = useUnreadCounts();
 
+  // Optimistic profile: paint the cached avatar/name immediately on reload, then re-validate
+  // against /auth/me (see profileCache in lib/api). Avoids the empty-then-filled flash.
   useEffect(() => {
-    if (tokens.access) api<Me>("/auth/me").then(setMe).catch(() => {});
+    if (!tokens.access) return;
+    setMe((prev) => prev ?? profileCache.read<Me>());
+    api<Me>("/auth/me")
+      .then((fresh) => {
+        setMe(fresh);
+        profileCache.write(fresh);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {

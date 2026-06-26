@@ -386,7 +386,7 @@ export default function Dashboard() {
                               <span className="chip bg-tint text-primary-dark">{JOB_STATUS[j.status] ?? j.status}</span>
                             </td>
                             <td className="py-2.5">
-                              <a href="/me/jobs" className="text-xs text-primary-dark hover:underline">عرض</a>
+                              <a href={`/me/jobs/${j.id}/proposals`} className="text-xs text-primary-dark hover:underline">العروض</a>
                             </td>
                           </tr>
                         ))}

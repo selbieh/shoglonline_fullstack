@@ -8,11 +8,28 @@ import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { apiError } from "@/lib/errors";
 import { useFieldErrors, validateFields } from "@/lib/useFieldErrors";
 import { digitsOnly, toAsciiDigits } from "@/lib/arabic";
-import type { Job } from "@/lib/types";
+import { timeAgo } from "@/lib/format";
+import {
+  PROPOSAL_STATUS_LABEL,
+  type Job,
+  type Paginated,
+  type Proposal,
+} from "@/lib/types";
 import Field from "@/components/Field";
 import ContactHint from "@/components/ContactHint";
 import { TicketIcon, ClockIcon, SendIcon, CheckIcon } from "@/components/icons";
-import { formatUSDRange } from "@/lib/currency";
+import { formatUSD, formatUSDRange } from "@/lib/currency";
+
+/** Soft badge tone per proposal status — mirrors the «عروضي» list page. */
+const STATUS_TONE: Record<string, string> = {
+  pending_approval: "bg-warn-t text-warn",
+  submitted: "bg-tint text-primary-dark",
+  viewed: "bg-accent-sky text-primary-deep",
+  accepted: "bg-success-t text-success",
+  rejected: "bg-danger-t text-danger",
+  cancelled: "bg-line/50 text-sub",
+  withdrawn: "bg-line/50 text-sub",
+};
 
 /** Interactive proposal form (client island) — the surrounding job content is SSR. */
 export default function ProposalForm({ job }: { job: Job }) {
@@ -29,18 +46,30 @@ export default function ProposalForm({ job }: { job: Job }) {
   const [authed, setAuthed] = useState(false);
   const [bidsOn, setBidsOn] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  // The worker's prior proposal on this job, if any (undefined = still checking, null = none).
+  // A worker may bid only once per job (backend uniq_proposal_per_job_worker), so when one
+  // exists we show it read-only instead of the form.
+  const [existing, setExisting] = useState<Proposal | null | undefined>(undefined);
 
   useEffect(() => {
-    setAuthed(Boolean(tokens.access));
+    const isAuthed = Boolean(tokens.access);
+    setAuthed(isAuthed);
+    if (!isAuthed) {
+      setExisting(null);
+      return;
+    }
     fetchPublicSettings().then((s) => {
       const on = bidsEnabled(s);
       setBidsOn(on);
       // only fetch/show the bid balance while the bid economy is on
-      if (on && tokens.access) {
+      if (on) {
         api<{ balance: number }>("/me/bids").then((b) => setBids(b.balance)).catch(() => undefined);
       }
     });
-  }, []);
+    api<Paginated<Proposal>>(`/me/proposals?job=${job.id}`)
+      .then((r) => setExisting(r.results[0] ?? null))
+      .catch(() => setExisting(null));
+  }, [job.id]);
 
   /** Client-side per-field rules (keyed by the same names the API uses, so messages line up). */
   function clientErrors(): Record<string, string> {
@@ -111,6 +140,64 @@ export default function ProposalForm({ job }: { job: Job }) {
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           <a href="/me/proposals" className="btn-primary">عرض عروضي</a>
+          <a href="/jobs" className="btn-secondary">تصفّح وظائف أخرى</a>
+        </div>
+      </div>
+    );
+  }
+
+  // Still checking whether the worker already applied — avoid flashing an empty form.
+  if (existing === undefined) {
+    return (
+      <div className="rounded-m border border-line bg-tint/40 p-5">
+        <div className="h-5 w-2/3 animate-pulse rounded bg-line" />
+        <div className="mt-3 h-4 w-1/3 animate-pulse rounded bg-line" />
+        <div className="mt-4 h-10 w-full animate-pulse rounded bg-line" />
+      </div>
+    );
+  }
+
+  // Already applied — show the existing offer (details + status) instead of letting them re-apply.
+  if (existing) {
+    return (
+      <div className="rounded-m border border-line bg-tint/40 p-5 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="inline-flex items-center gap-1.5 font-bold text-primary-deep">
+            <CheckIcon className="text-[16px] text-success" /> قدّمت عرضًا على هذه الوظيفة من قبل
+          </p>
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${STATUS_TONE[existing.status] ?? "bg-tint text-primary-dark"}`}>
+            {PROPOSAL_STATUS_LABEL[existing.status] ?? existing.status}
+          </span>
+        </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-m bg-white p-3">
+            <dt className="text-xs text-sub">قيمة العرض</dt>
+            <dd className="mt-0.5 font-bold text-ink">{formatUSD(existing.budget)}</dd>
+          </div>
+          <div className="rounded-m bg-white p-3">
+            <dt className="text-xs text-sub">مدة التسليم</dt>
+            <dd className="mt-0.5 font-bold text-ink">{existing.delivery_days.toLocaleString("en-US")} يوم</dd>
+          </div>
+        </dl>
+
+        {existing.description && (
+          <div className="mt-3">
+            <p className="text-xs text-sub">تفاصيل العرض</p>
+            <p className="mt-1 whitespace-pre-wrap leading-6 text-primary-dark">{existing.description}</p>
+          </div>
+        )}
+
+        {existing.reject_reason && (
+          <p className="mt-3 rounded-m bg-warn-t p-2.5 text-xs text-warn">سبب الرفض: {existing.reject_reason}</p>
+        )}
+
+        {timeAgo(existing.created_at) && (
+          <p className="mt-3 text-xs text-sub">قُدّم {timeAgo(existing.created_at)}</p>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <a href="/me/proposals" className="btn-primary">إدارة عروضي</a>
           <a href="/jobs" className="btn-secondary">تصفّح وظائف أخرى</a>
         </div>
       </div>

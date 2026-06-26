@@ -191,7 +191,7 @@ class SubmitProposalView(APIView):
 
 class MyProposalsView(ListAPIView):
     serializer_class = ProposalSerializer
-    filterset_fields = ["status"]
+    filterset_fields = ["status", "job"]  # ?job={id} lets a worker check if they already applied
 
     def get_queryset(self):
         return Proposal.objects.filter(worker=self.request.user).select_related("job")

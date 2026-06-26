@@ -26,6 +26,10 @@ ERR = {
     "locked": {"code": "job_locked", "message_ar": "العنوان والوصف مقفلان بعد استلام أول عرض"},
     "screening": {"code": "screening_required", "message_ar": "أجب عن جميع الأسئلة الإلزامية"},
     "not_owner": {"code": "not_owner", "message_ar": "لا تملك صلاحية على هذه الوظيفة"},
+    "profile_not_published": {
+        "code": "profile_not_published",
+        "message_ar": "لا يمكنك التقديم على الوظائف حتى يعتمد المشرف ملفك الشخصي",
+    },
     "no_prior": {"code": "no_prior_engagement", "message_ar": "لا يوجد تعاقد سابق مكتمل مع هذا المستقل"},
     "invite_target": {"code": "worker_required", "message_ar": "حدّد المستقل المدعو"},
     "category_required": {"code": "category_required", "message_ar": "الفئة مطلوبة"},
@@ -107,6 +111,20 @@ def close_job(job: Job, *, expired: bool = False) -> Job:
 
 
 # ------------------------------------------------------------------ proposals
+def _assert_profile_published(worker) -> None:
+    """Rule D-1: a worker may only bid once an admin has published their profile.
+
+    Profiles default to PUBLISHED (so existing/auto-created profiles keep working); a worker who
+    submits for review drops to PENDING_REVIEW until an admin approves. We block only the explicit
+    not-published states — a worker with no profile row yet is left to the other onboarding gates.
+    """
+    from apps.profiles.models import WorkerProfile  # noqa: PLC0415 (avoid import cycle)
+
+    profile = WorkerProfile.objects.filter(user=worker).only("publish_state").first()
+    if profile is not None and profile.publish_state != WorkerProfile.PublishState.PUBLISHED:
+        raise PermissionDenied(ERR["profile_not_published"])
+
+
 @transaction.atomic
 def submit_proposal(*, worker, job: Job, budget, delivery_days, description, answers: dict) -> Proposal:
     """FR-JOB-5: bid check, BR-21 self-dealing, required screening answers."""
@@ -114,6 +132,7 @@ def submit_proposal(*, worker, job: Job, budget, delivery_days, description, ans
         raise PermissionDenied(ERR["self_dealing"])  # BR-21
     from apps.accounts.services import assert_active  # noqa: PLC0415 (avoid import cycle)
     assert_active(worker)  # BR-23: a frozen worker cannot bid
+    _assert_profile_published(worker)  # D-1: only an admin-approved profile may bid
     if job.status != Job.Status.PUBLISHED:
         raise ValidationError(ERR["not_open"])
     if job.proposals.filter(status=Proposal.Status.ACCEPTED).exists():
@@ -162,7 +181,7 @@ def submit_proposal(*, worker, job: Job, budget, delivery_days, description, ans
         kind=Notification.Kind.PROPOSAL,
         title="عرض جديد على وظيفتك",
         body=f"تلقّيت عرضًا جديدًا على «{job.title}».",
-        deep_link=f"/jobs/{job.slug}",
+        deep_link=f"/me/jobs/{job.id}/proposals",  # owner's proposals inbox, not the public listing
     )
     return proposal
 

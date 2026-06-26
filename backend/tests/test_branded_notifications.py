@@ -60,7 +60,7 @@ class TestEventCoverage:
         js.submit_proposal(worker=worker, job=job, budget=Decimal("100"),
                            delivery_days=7, description="عرض", answers={})
         note = Notification.objects.filter(user=employer, kind=Notification.Kind.PROPOSAL).first()
-        assert note is not None and f"/jobs/{job.slug}" == note.deep_link
+        assert note is not None and f"/me/jobs/{job.id}/proposals" == note.deep_link
         assert any(employer.email in m.to for m in mail.outbox)
 
     def test_received_review_notifies_and_emails_the_subject(self, employer, worker, category):

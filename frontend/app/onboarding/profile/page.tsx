@@ -8,6 +8,7 @@ import { apiError } from "@/lib/errors";
 import { useFieldErrors, validateFields, earliestStep, type Rule } from "@/lib/useFieldErrors";
 import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
 import { digitsOnly } from "@/lib/arabic";
+import { useKeyboardOpen } from "@/lib/useKeyboardOpen";
 import { LockIcon } from "@/components/icons";
 import Logo from "@/components/Logo";
 import Field from "@/components/Field";
@@ -77,7 +78,6 @@ const EFF_OPTS = [
   { v: "advanced", l: "متقدم" },
   { v: "expert", l: "خبير" },
 ];
-const EFF: Record<string, string> = Object.fromEntries(EFF_OPTS.map((e) => [e.v, e.l]));
 
 const STEPS: WizardStep[] = [
   { id: "personal", label: "البيانات الشخصية" },
@@ -126,7 +126,6 @@ export default function ProfileWizard() {
   // skills (slide-04)
   const [catalog, setCatalog] = useState<CatalogSkill[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [skillDraft, setSkillDraft] = useState<{ skill_id: string; efficiency: string }>({ skill_id: "", efficiency: "intermediate" });
   // portfolio (slide-07)
   const [portfolio, setPortfolio] = useState<PfItem[]>([]);
   const [pf, setPf] = useState(EMPTY_PF);
@@ -323,12 +322,18 @@ export default function ProfileWizard() {
     }
   }
 
-  function addSkill() {
-    const id = Number(skillDraft.skill_id);
+  // Pick-to-add: selecting a skill in the picker adds it immediately (matches the /me/profile
+  // skills editor). Default level is "intermediate" and is adjustable inline on each chip.
+  function addSkill(id: number) {
     const item = catalog.find((c) => c.id === id);
     if (!item) return;
-    setSkills((list) => [...list, { skill_id: id, name: item.name_ar, efficiency: skillDraft.efficiency }]);
-    setSkillDraft({ skill_id: "", efficiency: "intermediate" });
+    setSkills((list) =>
+      list.some((s) => s.skill_id === id) ? list : [...list, { skill_id: id, name: item.name_ar, efficiency: "intermediate" }],
+    );
+  }
+
+  function setSkillEfficiency(id: number, efficiency: string) {
+    setSkills((list) => list.map((s) => (s.skill_id === id ? { ...s, efficiency } : s)));
   }
 
   async function addPortfolio() {
@@ -461,6 +466,8 @@ export default function ProfileWizard() {
   const phoneOk = phoneVerified || me.phone_verified;
   // rule D-1: publishing now submits the profile for admin review (not instant publish).
   const primaryLabel = busy ? "جارٍ الحفظ…" : step === S_REVIEW ? "إرسال للمراجعة" : "التالي";
+  // Hide the sticky bottom bar while the mobile keyboard is open so it never overlaps the focused field.
+  const keyboardOpen = useKeyboardOpen();
 
   return (
     <main dir="rtl" className="flex min-h-screen flex-col bg-bg">
@@ -562,35 +569,35 @@ export default function ProfileWizard() {
                 placeholder="مثال: 5" onChange={(e) => set({ years_experience: e.target.value })} />
             </Field>
 
-            {/* ppt slide-04: skills with efficiency level */}
+            {/* ppt slide-04: skills with efficiency level — pick to add, adjust the level inline on each chip */}
             <Field label="المهارات">
               <div className="space-y-2">
                 {skills.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {skills.map((s) => (
-                      <span key={s.skill_id} className="inline-flex items-center gap-1.5 rounded-full bg-tint px-3 py-1 text-sm text-primary-dark">
-                        {s.name} <span className="text-xs text-sub">({EFF[s.efficiency] ?? s.efficiency})</span>
-                        <button type="button" aria-label={`حذف ${s.name}`} className="text-danger"
+                      <span key={s.skill_id} className="inline-flex items-center gap-1.5 rounded-full bg-tint py-1 pe-3 ps-1 text-sm text-primary-dark">
+                        <button type="button" aria-label={`حذف ${s.name}`}
+                          className="grid h-5 w-5 place-content-center rounded-full text-danger hover:bg-danger/10"
                           onClick={() => setSkills(skills.filter((x) => x.skill_id !== s.skill_id))}>×</button>
+                        <span className="font-medium">{s.name}</span>
+                        <select aria-label={`مستوى ${s.name}`} value={s.efficiency}
+                          className="rounded-full bg-white/70 px-2 py-0.5 text-xs text-sub"
+                          onChange={(e) => setSkillEfficiency(s.skill_id, e.target.value)}>
+                          {EFF_OPTS.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
+                        </select>
                       </span>
                     ))}
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
-                  <SkillPicker
-                    className="flex-1"
-                    options={availableSkills}
-                    value={skillDraft.skill_id}
-                    placeholder="اختر مهارة…"
-                    onSelect={(id) => setSkillDraft({ ...skillDraft, skill_id: String(id) })}
-                  />
-                  <select className="field w-32" value={skillDraft.efficiency} aria-label="مستوى المهارة"
-                    onChange={(e) => setSkillDraft({ ...skillDraft, efficiency: e.target.value })}>
-                    {EFF_OPTS.map((e) => <option key={e.v} value={e.v}>{e.l}</option>)}
-                  </select>
-                  <button type="button" className="btn-secondary whitespace-nowrap" disabled={!skillDraft.skill_id}
-                    onClick={addSkill}>إضافة مهارة</button>
-                </div>
+                <SkillPicker
+                  options={availableSkills}
+                  value=""
+                  placeholder="اختر مهارة لإضافتها…"
+                  onSelect={addSkill}
+                />
+                {availableSkills.length === 0 && skills.length > 0 && (
+                  <p className="text-xs text-sub">أضفت كل المهارات المتاحة.</p>
+                )}
               </div>
             </Field>
 
@@ -608,7 +615,7 @@ export default function ProfileWizard() {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
-                  <input className="field flex-1" placeholder="اللغة (مثال: العربية)" value={langDraft.name}
+                  <input className="field grow basis-full sm:basis-0" placeholder="اللغة (مثال: العربية)" value={langDraft.name}
                     onChange={(e) => setLangDraft({ ...langDraft, name: e.target.value })} />
                   <select className="field w-32" value={langDraft.proficiency} aria-label="مستوى اللغة"
                     onChange={(e) => setLangDraft({ ...langDraft, proficiency: e.target.value })}>
@@ -937,7 +944,9 @@ export default function ProfileWizard() {
         {formError && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
       </section>
 
-      <footer className="sticky bottom-0 border-t border-line bg-white/95 backdrop-blur">
+      <footer
+        className={`sticky bottom-0 border-t border-line bg-white/95 backdrop-blur ${keyboardOpen ? "hidden" : ""}`}
+      >
         <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div className="w-full sm:w-64">
             <WizardStepper steps={STEPS} current={step} percent={pct} />

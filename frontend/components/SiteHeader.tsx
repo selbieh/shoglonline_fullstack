@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { api, tokens } from "@/lib/api";
+import { api, tokens, profileCache } from "@/lib/api";
 import { signinHref } from "@/lib/nav";
 import { getMessages } from "@/lib/i18n";
 import Logo from "@/components/Logo";
@@ -30,10 +30,24 @@ export default function SiteHeader() {
   const menuRef = useRef<HTMLDivElement>(null);
   const unread = useUnreadCounts();
 
+  // Optimistic auth: read token + cached profile synchronously after mount so the header paints
+  // the real avatar/name on the first frame instead of flashing sign-in → generic avatar while
+  // /auth/me is in flight (especially noticeable after a backend restart). /auth/me still
+  // re-validates and refreshes the cache; a 401 there clears tokens via the api() client.
   useEffect(() => {
     const ok = !!tokens.access;
     setAuthed(ok);
-    if (ok) api<Me>("/auth/me").then(setMe).catch(() => {});
+    if (!ok) {
+      setMe(null);
+      return;
+    }
+    setMe((prev) => prev ?? profileCache.read<Me>());
+    api<Me>("/auth/me")
+      .then((fresh) => {
+        setMe(fresh);
+        profileCache.write(fresh);
+      })
+      .catch(() => {});
   }, [pathname]);
 
   useEffect(() => {

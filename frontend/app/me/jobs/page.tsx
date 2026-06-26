@@ -122,7 +122,10 @@ export default function MyJobsPage() {
                   {STATUS_LABEL[job.status] ?? job.status} · {job.proposals_count} عرض · <span dir="ltr">{job.budget_min}–{job.budget_max}$</span>
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <a href={`/me/jobs/${job.id}/proposals`} className="btn-secondary text-sm">
+                  العروض{job.proposals_count > 0 ? ` (${job.proposals_count})` : ""}
+                </a>
                 <a href={`/jobs/${job.slug}`} className="text-sm text-primary-dark">عرض</a>
                 <button className="btn-secondary text-sm" onClick={() => openRepost(job)}>إعادة نشر</button>
               </div>

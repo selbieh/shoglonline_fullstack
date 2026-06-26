@@ -35,6 +35,10 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
     "DASHBOARD_CALLBACK": "apps.core.analytics.dashboard_callback",  # ADM-2 KPI cards
+    # Extra admin CSS (mobile fix for the bulk-action toolbar, FR-ADM-1)
+    "STYLES": [
+        lambda request: static("css/admin_overrides.css"),
+    ],
     "COLORS": {
         "primary": PRIMARY,
         # Neutral surface tuned slightly cool to match the FE bg (#F6F7FD / ink #23263F)

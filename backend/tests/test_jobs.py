@@ -159,6 +159,37 @@ class TestProposals:
         )
         assert res.status_code == 403  # BR-21
 
+    def test_unpublished_profile_blocked(self, employer, worker, category):
+        """D-1: a worker whose profile is still awaiting admin approval cannot bid."""
+        from apps.profiles.models import WorkerProfile
+
+        WorkerProfile.objects.create(
+            user=worker, publish_state=WorkerProfile.PublishState.PENDING_REVIEW
+        )
+        job = make_job(employer, category)
+        res = auth(worker).post(
+            f"/api/v1/jobs/{job.pk}/proposals",
+            {"budget": "150", "delivery_days": 10, "description": "x"},
+            format="json",
+        )
+        assert res.status_code == 403
+        assert "profile_not_published" in str(res.json())
+        assert bid_balance(worker) == 5  # no bid consumed on a blocked submission
+
+    def test_published_profile_can_bid(self, employer, worker, category):
+        from apps.profiles.models import WorkerProfile
+
+        WorkerProfile.objects.create(
+            user=worker, publish_state=WorkerProfile.PublishState.PUBLISHED
+        )
+        job = make_job(employer, category)
+        res = auth(worker).post(
+            f"/api/v1/jobs/{job.pk}/proposals",
+            {"budget": "150", "delivery_days": 10, "description": "خطة العمل"},
+            format="json",
+        )
+        assert res.status_code == 201
+
     def test_no_bids_blocks_submission(self, employer, category):
         broke = User.objects.create_user(email="broke@example.com")
         job = make_job(employer, category)
