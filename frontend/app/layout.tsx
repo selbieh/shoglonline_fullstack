@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { JsonLd, SITE_URL, organizationLd, websiteLd } from "@/lib/seo";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import NavProgress from "@/components/NavProgress";
 import "./globals.css";
 
 const DESC =
@@ -59,6 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans">
         {/* site-wide identity for search engines (Knowledge Panel + sitelinks search box) */}
         <JsonLd data={[organizationLd(), websiteLd()]} />
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         <SiteHeader />
         {children}
         <SiteFooter />

@@ -23,6 +23,12 @@ export default function SiteHeader() {
   const pathname = usePathname() || "/";
   const isLanding = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
+  // `mounted` gates the account area: the server can't read the localStorage token, so its HTML
+  // (and the first client render, which must match it) is unavoidably "signed-out". Rendering the
+  // sign-in button straight away makes a logged-in user flash signed-out on every reload — most
+  // visible in dev while the bundle loads. So until mounted we show a neutral skeleton, then swap
+  // to the real avatar-or-sign-in once the token is known on the client.
+  const [mounted, setMounted] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,6 +40,8 @@ export default function SiteHeader() {
   // the real avatar/name on the first frame instead of flashing sign-in → generic avatar while
   // /auth/me is in flight (especially noticeable after a backend restart). /auth/me still
   // re-validates and refreshes the cache; a 401 there clears tokens via the api() client.
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     const ok = !!tokens.access;
     setAuthed(ok);
@@ -155,7 +163,16 @@ export default function SiteHeader() {
           })}
         </div>
 
-        {authed ? (
+        {!mounted ? (
+          // Neutral skeleton while the client determines auth — never the signed-out button.
+          // Shaped like the authed cluster (two action buttons + avatar) to avoid layout shift,
+          // since a reloading user is almost always signed in.
+          <div className="flex animate-pulse items-center gap-1.5" aria-hidden>
+            <span className={`h-10 w-10 rounded-full ${transparent ? "bg-white/20" : "bg-line/50"}`} />
+            <span className={`h-10 w-10 rounded-full ${transparent ? "bg-white/20" : "bg-line/50"}`} />
+            <span className={`h-9 w-9 rounded-full ${transparent ? "bg-white/25" : "bg-line/60"}`} />
+          </div>
+        ) : authed ? (
           <div className="flex items-center gap-1.5">
             <Link href="/messages" aria-label="الرسائل" className={`relative grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
               <EnvelopeIcon />
