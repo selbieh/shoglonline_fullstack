@@ -182,7 +182,8 @@ export default function PayoutsPage() {
             </label>
             {active.egyptOnly && <p className="text-xs text-sub">هذه الوسيلة متاحة داخل مصر فقط.</p>}
             {msg && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
-            <button className="btn-primary" disabled={busy} onClick={add}>{busy ? "جارٍ الحفظ…" : "حفظ الوسيلة"}</button>
+            <button className="btn-primary" disabled={busy || active.fields.some((f) => !(details[f.k] ?? "").trim())}
+              onClick={add}>{busy ? "جارٍ الحفظ…" : "حفظ الوسيلة"}</button>
           </div>
         )}
       </section>

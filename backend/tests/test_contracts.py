@@ -275,7 +275,7 @@ class TestUpdateRequests:
         from rest_framework.exceptions import ValidationError
         contract = make_contract(employer, worker, category, budget="100")  # available 50
         ur = cs.request_update(contract, employer, new_budget=Decimal("500"))
-        cs.respond_update(ur, worker, accept=True)  # parks (insufficient funds)
+        ur = cs.respond_update(ur, worker, accept=True)  # parks (insufficient funds)
         assert ur.status == "pending_funding"
         # contract completes before the employer tops up
         sub = cs.submit_deliverable(contract, worker, notes="done")

@@ -12,7 +12,7 @@ export default function StarRating({
   size?: string;
   className?: string;
 }) {
-  const full = Math.round(value);
+  const full = Math.floor(value); // floor, not round — a 4.5 must not fill 5 stars while the label reads "4.5"
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
       <span className="flex text-star" dir="ltr" aria-hidden>

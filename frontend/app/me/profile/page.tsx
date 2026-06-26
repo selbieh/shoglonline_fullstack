@@ -4,12 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError } from "@/lib/errors";
+import { apiError, apiFieldErrors } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
 import SkillPicker from "@/components/SkillPicker";
 import type { PortfolioItem, PortfolioMediaType, WorkerEducation, WorkerEmployment, WorkerLanguage } from "@/lib/types";
-import { ExternalLinkIcon, GridIcon, ImageIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { ExternalLinkIcon, GridIcon, ImageIcon, LockIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
+
+/** Prefer the backend's per-field reasons (joined) over the generic envelope message,
+ * so a save failure names what's wrong (e.g. "الوصف قصير جدًا") instead of "تحقّق من الحقول". */
+function errText(e: unknown): string {
+  const parts = Object.values(apiFieldErrors(e)).filter(Boolean);
+  return parts.length ? parts.join("، ") : apiError(e).message_ar;
+}
 
 type Skill = { skill_id: number; name: string; efficiency: string };
 type Certificate = {
@@ -85,6 +92,10 @@ export default function ProfileEditPage() {
   const [idv, setIdv] = useState<Idv>({ status: "none" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Local object-URL previews for just-picked images (the server url is auth-scoped and can't
+  // render in a plain <img>). Cleared/replaced on each new pick.
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [idPreview, setIdPreview] = useState<string>("");
 
   useEffect(() => {
     if (!tokens.access) {
@@ -154,7 +165,7 @@ export default function ProfileEditPage() {
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
       setMsg({ ok: true, text: "✅ حُفظ ملفك" });
     } catch (e) {
-      setMsg({ ok: false, text: apiError(e).message_ar });
+      setMsg({ ok: false, text: errText(e) });
     } finally {
       setBusy(false);
     }
@@ -171,7 +182,7 @@ export default function ProfileEditPage() {
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
     } catch (e) {
       if (prev) setProfile((p) => (p ? { ...p, skills: prev } : p));  // don't leave the UI lying
-      setMsg({ ok: false, text: apiError(e).message_ar });
+      setMsg({ ok: false, text: errText(e) });
     }
   }
 
@@ -185,7 +196,7 @@ export default function ProfileEditPage() {
       setMsg({ ok: true, text: "✅ تم الحفظ" });
     } catch (e) {
       if (prev !== undefined) setProfile((p) => (p ? { ...p, [key]: prev } : p));
-      setMsg({ ok: false, text: apiError(e).message_ar });
+      setMsg({ ok: false, text: errText(e) });
     }
   }
 
@@ -196,8 +207,14 @@ export default function ProfileEditPage() {
   }
 
   async function deletePortfolio(id: number) {
-    await api(`/me/portfolio/${id}`, { method: "DELETE" }).catch(() => undefined);
-    setProfile((p) => (p ? { ...p, portfolio: p.portfolio.filter((x) => x.id !== id) } : p));
+    // Remove from state only after the server confirms — otherwise it vanishes from the UI
+    // yet reappears on the next reload, with no error shown.
+    try {
+      await api(`/me/portfolio/${id}`, { method: "DELETE" });
+      setProfile((p) => (p ? { ...p, portfolio: p.portfolio.filter((x) => x.id !== id) } : p));
+    } catch (e) {
+      setMsg({ ok: false, text: errText(e) });
+    }
   }
 
   async function addCert(cert: Record<string, unknown>) {
@@ -208,8 +225,12 @@ export default function ProfileEditPage() {
 
   async function deleteCert(id?: number) {
     if (!id) return;
-    await api(`/me/certificates/${id}`, { method: "DELETE" }).catch(() => undefined);
-    setProfile((p) => (p ? { ...p, certificates: p.certificates.filter((c) => c.id !== id) } : p));
+    try {
+      await api(`/me/certificates/${id}`, { method: "DELETE" });
+      setProfile((p) => (p ? { ...p, certificates: p.certificates.filter((c) => c.id !== id) } : p));
+    } catch (e) {
+      setMsg({ ok: false, text: errText(e) });
+    }
   }
 
   async function submitId(attachmentId: number) {
@@ -218,7 +239,7 @@ export default function ProfileEditPage() {
       setIdv(res);
       setMsg({ ok: true, text: "✅ أُرسلت هويتك للمراجعة" });
     } catch (e) {
-      setMsg({ ok: false, text: apiError(e).message_ar });
+      setMsg({ ok: false, text: errText(e) });
     }
   }
 
@@ -258,16 +279,19 @@ export default function ProfileEditPage() {
 
         <div className="flex items-center gap-4">
           <div className="grid h-16 w-16 shrink-0 place-content-center overflow-hidden rounded-full bg-tint text-lg font-bold text-primary-dark">
-            {me.avatar_url
+            {avatarPreview || me.avatar_url
               // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" />
+              ? <img src={avatarPreview || me.avatar_url} alt="" className="h-full w-full object-cover" />
               : (me.first_name?.[0] ?? "؟")}
           </div>
           <div className="flex-1">
             <span className="mb-1 block text-sm font-bold">الصورة الشخصية</span>
             <FileUpload accept="image/*" multiple={false} label="تغيير الصورة"
               hint="يُفضَّل صورة مربعة (مثل 512×512 بكسل) لأن الصورة الشخصية تظهر داخل دائرة"
-              onUploaded={(a) => setMe({ ...me, avatar_url: a.url })} />
+              onUploaded={(a, preview) => {
+                setAvatarPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return preview ?? ""; });
+                setMe({ ...me, avatar_url: a.url });
+              }} />
           </div>
         </div>
 
@@ -363,7 +387,7 @@ export default function ProfileEditPage() {
               onChange={(e) => setProfile({ ...profile, private_contact_value: e.target.value })} />
           </div>
           <p className="mt-1.5 flex items-center gap-1 text-xs text-sub">
-            <span aria-hidden>🔒</span> لن تظهر هذه الوسيلة في ملفك العام إطلاقًا — تُستخدم من إدارة المنصة عند الحاجة فقط.
+            <LockIcon aria-hidden className="inline-block align-[-2px] text-[14px]" /> لن تظهر هذه الوسيلة في ملفك العام إطلاقًا — تُستخدم من إدارة المنصة عند الحاجة فقط.
           </p>
         </div>
 
@@ -427,9 +451,18 @@ export default function ProfileEditPage() {
         <h2 className="font-bold">توثيق الهوية</h2>
         <p className="mt-1 text-sm text-sub">الحالة: {IDV_LABEL[idv.status]}{idv.status === "rejected" && idv.reject_reason ? ` — ${idv.reject_reason}` : ""}</p>
         {idv.status !== "approved" && idv.status !== "pending" && (
-          <div className="mt-3">
-            <FileUpload accept="image/*,application/pdf" multiple={false} label="ارفع صورة الهوية الوطنية"
-              onUploaded={(a) => submitId(a.id)} />
+          <div className="mt-3 flex items-start gap-4">
+            {idPreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={idPreview} alt="" className="h-24 w-24 shrink-0 rounded-m border border-line object-cover" />
+            )}
+            <div className="flex-1">
+              <FileUpload accept="image/*,application/pdf" multiple={false} label="ارفع صورة الهوية الوطنية"
+                onUploaded={(a, preview) => {
+                  setIdPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return preview ?? ""; });
+                  submitId(a.id);
+                }} />
+            </div>
           </div>
         )}
       </section>
@@ -558,7 +591,7 @@ function CertificatesSection({
       });
       setDraft(EMPTY_CERT);
     } catch (e) {
-      onError(apiError(e).message_ar);
+      onError(errText(e));
     } finally {
       setBusy(false);
     }
@@ -617,7 +650,7 @@ function PortfolioSection({
       await onAdd({ title: draft.title, description: draft.description, media_type: draft.media_type, url: draft.url, cover_url: draft.cover_url, ...extra });
       reset();
     } catch (e) {
-      onError(apiError(e).message_ar);
+      onError(errText(e));
     } finally {
       setBusy(false);
     }
@@ -630,7 +663,7 @@ function PortfolioSection({
   ];
 
   return (
-    <section className="card mt-6">
+    <section id="portfolio" className="card mt-6 scroll-mt-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-bold"><GridIcon className="text-[18px] text-primary" /> معرض الأعمال</h2>
         <a href="/me/portfolio/new" className="btn-secondary inline-flex items-center gap-1 text-sm"><PlusIcon className="text-[15px]" /> إضافة بالتفاصيل</a>

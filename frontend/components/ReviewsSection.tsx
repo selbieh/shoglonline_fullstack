@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useFieldErrors } from "@/lib/useFieldErrors";
+import Field from "@/components/Field";
 import { LockIcon } from "@/components/icons";
 
 type Review = {
@@ -37,7 +39,8 @@ export default function ReviewsSection({ contractId }: { contractId: string | nu
   const [reviews, setReviews] = useState<Review[]>([]);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
-  const [msg, setMsg] = useState("");
+  const [okMsg, setOkMsg] = useState("");
+  const { errors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -56,7 +59,8 @@ export default function ReviewsSection({ contractId }: { contractId: string | nu
 
   async function submit() {
     setBusy(true);
-    setMsg("");
+    setOkMsg("");
+    setFormError("");
     try {
       if (mine) {
         await api(`/reviews/${mine.id}`, { method: "PATCH", body: JSON.stringify({ rating, comment }) });
@@ -67,12 +71,11 @@ export default function ReviewsSection({ contractId }: { contractId: string | nu
         });
       }
       setComment("");
-      setMsg("✅ شكرًا لتقييمك");
+      setOkMsg("✅ شكرًا لتقييمك");
       await load();
     } catch (e) {
-      const raw = JSON.stringify((e as { body?: unknown }).body ?? {});
-      const m = raw.match(/"message_ar":"([^"]+)"/);
-      setMsg(`⚠️ ${m ? m[1] : "تعذّر حفظ التقييم"}`);
+      // rating/comment land on their inputs; gating errors (not-completed, locked…) show as a banner.
+      applyApiError(e);
     } finally {
       setBusy(false);
     }
@@ -107,22 +110,30 @@ export default function ReviewsSection({ contractId }: { contractId: string | nu
         <div className="mt-4 border-t border-line pt-3">
           <p className="text-sm text-sub">{mine ? "عدّل تقييمك (متاح حتى نهاية الضمان)" : "أضف تقييمك"}</p>
           <div className="mt-2 flex items-center gap-3">
-            <Stars value={rating} onPick={setRating} />
+            <Stars value={rating} onPick={(n) => { setRating(n); clearFields("rating"); }} />
           </div>
-          <textarea
-            className="mt-2 w-full field"
-            rows={2}
-            placeholder="تعليق (اختياري)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
+          {errors.rating && <p role="alert" className="mt-1 text-xs font-medium text-danger">{errors.rating}</p>}
+          <div className="mt-2">
+            <Field label="تعليق (اختياري)" error={errors.comment}
+              hint={`${comment.length.toLocaleString("en-US")}/1000`}>
+              <textarea
+                className="w-full field"
+                rows={2}
+                maxLength={1000}
+                placeholder="شارك تجربتك مع الطرف الآخر…"
+                value={comment}
+                onChange={(e) => { setComment(e.target.value); clearFields("comment"); }}
+              />
+            </Field>
+          </div>
           <button className="btn-primary mt-2" disabled={busy} onClick={submit}>
             {mine ? "تحديث التقييم" : "إرسال التقييم"}
           </button>
         </div>
       )}
       {mine?.is_locked && <p className="mt-2 inline-flex items-center gap-1 text-xs text-sub"><LockIcon className="text-[12px]" /> انتهت فترة الضمان — التقييم مقفل</p>}
-      {msg && <p className="mt-2 text-sm text-sub">{msg}</p>}
+      {formError && <p className="mt-2 rounded-m bg-danger-t p-2 text-sm text-danger">⚠️ {formError}</p>}
+      {okMsg && <p className="mt-2 text-sm text-success">{okMsg}</p>}
     </section>
   );
 }

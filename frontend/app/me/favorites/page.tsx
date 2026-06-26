@@ -41,8 +41,10 @@ export default function MyFavoritesPage() {
   const [tab, setTab] = useState("services");
   const [items, setItems] = useState<FavItem[] | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [err, setErr] = useState(false);
 
   const load = useCallback(async (t: string) => {
+    setErr(false);
     setItems(null);
     const kind = KIND[t];
     const url = kind === "service" ? "/me/favorites" : `/me/favorites?kind=${kind}`;
@@ -54,7 +56,8 @@ export default function MyFavoritesPage() {
       router.replace(signinHereHref());
       return;
     }
-    load(tab).catch(() => router.replace(signinHereHref()));
+    // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
+    load(tab).catch(() => setErr(true));
   }, [tab, load, router]);
 
   async function remove(id: number) {
@@ -115,7 +118,13 @@ export default function MyFavoritesPage() {
         <StatusTabs tabs={TABS} active={tab} onChange={setTab} />
       </div>
 
-      {items === null ? (
+      {err ? (
+        <div className="card mt-6 py-14 text-center text-sub">
+          <p className="font-bold">تعذّر تحميل المفضلة.</p>
+          <button type="button" onClick={() => load(tab).catch(() => setErr(true))}
+            className="btn-secondary mt-4 inline-block text-sm">إعادة المحاولة</button>
+        </div>
+      ) : items === null ? (
         <ul className="mt-6 space-y-3" aria-hidden>
           {Array.from({ length: 3 }).map((_, i) => (
             <li key={i} className="card-modern animate-pulse p-5">

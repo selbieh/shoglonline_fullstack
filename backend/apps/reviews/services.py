@@ -10,8 +10,24 @@ ERR = {
     "not_party": {"code": "not_a_party", "message_ar": "لست طرفًا في هذا العقد"},
     "dup": {"code": "already_reviewed", "message_ar": "قيّمت هذا العقد من قبل"},
     "locked": {"code": "review_locked", "message_ar": "انتهت فترة الضمان — لا يمكن تعديل التقييم"},
-    "rating": {"code": "bad_rating", "message_ar": "التقييم من 1 إلى 5"},
 }
+
+COMMENT_MAX = 1000
+
+
+def _clean_rating_comment(rating, comment: str) -> tuple[int, str]:
+    """Validate the two writable review fields, raising FIELD-KEYED errors so the
+    frontend can mark the offending input (rating stars / comment box)."""
+    try:
+        r = int(rating)
+    except (TypeError, ValueError):
+        raise ValidationError({"rating": "التقييم من 1 إلى 5"})
+    if not 1 <= r <= 5:
+        raise ValidationError({"rating": "التقييم من 1 إلى 5"})
+    comment = comment or ""
+    if len(comment) > COMMENT_MAX:
+        raise ValidationError({"comment": f"التعليق طويل جدًا — {COMMENT_MAX} حرف كحد أقصى"})
+    return r, comment
 
 
 def _subject_of(contract, author):
@@ -27,13 +43,12 @@ def leave_review(contract, author, *, rating: int, comment: str = "") -> Review:
         raise ValidationError(ERR["not_completed"])
     if not contract.is_party(author):
         raise PermissionDenied(ERR["not_party"])
-    if not 1 <= int(rating) <= 5:
-        raise ValidationError(ERR["rating"])
+    rating, comment = _clean_rating_comment(rating, comment)
     if Review.objects.filter(contract=contract, author=author).exists():
         raise ValidationError(ERR["dup"])
     review = Review.objects.create(
         contract=contract, author=author, subject=_subject_of(contract, author),
-        rating=int(rating), comment=comment,
+        rating=rating, comment=comment,
         # If the warranty already ended, the review is born locked (no post-hoc edits).
         is_locked=bool(contract.funds_released),
     )
@@ -58,9 +73,8 @@ def edit_review(review: Review, author, *, rating: int, comment: str = "") -> Re
         raise PermissionDenied(ERR["not_party"])
     if review.is_locked:
         raise ValidationError(ERR["locked"])
-    if not 1 <= int(rating) <= 5:
-        raise ValidationError(ERR["rating"])
-    review.rating = int(rating)
+    rating, comment = _clean_rating_comment(rating, comment)
+    review.rating = rating
     review.comment = comment
     review.save(update_fields=["rating", "comment", "updated_at"])
     _recompute_aggregates(review.subject)

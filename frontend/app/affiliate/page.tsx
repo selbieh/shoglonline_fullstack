@@ -58,9 +58,13 @@ export default function AffiliatePage() {
           <button
             className="btn-secondary"
             onClick={() => {
-              navigator.clipboard?.writeText(link);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
+              // only flip to "✓ نُسخ" if the copy actually succeeded (clipboard can be blocked / absent)
+              navigator.clipboard?.writeText(link)
+                .then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                })
+                .catch(() => {});
             }}
           >
             {copied ? "✓ نُسخ" : "نسخ"}

@@ -27,6 +27,24 @@ body {
   overflow-x: clip;
 }
 
+/* Fluid root scale — the whole UI is rem-based, so nudging the root font-size
+   scales text, spacing, and components together. The design is tuned for ~1440px
+   laptops; on large/hi-DPI monitors that leaves everything looking small ("zoomed
+   out") with wide empty gutters. These breakpoints (real CSS-px widths, so retina
+   laptops at ~1512 CSS-px are untouched) grow the UI proportionally on big screens. */
+html {
+  font-size: 16px;
+}
+@media (min-width: 1680px) {
+  html { font-size: 17px; }
+}
+@media (min-width: 1920px) {
+  html { font-size: 18px; }
+}
+@media (min-width: 2560px) {
+  html { font-size: 20px; }
+}
+
 body {
   @apply bg-bg text-ink antialiased;
 }

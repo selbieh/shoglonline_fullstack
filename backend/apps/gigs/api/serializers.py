@@ -110,6 +110,12 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
     keywords = serializers.ListField(child=serializers.CharField(max_length=40), required=False)
     addons = AddonWriteSerializer(many=True, required=False)
     base_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    # Mirror the wizard's client-side rule (≥ 1 day) so it can't be bypassed via the API,
+    # and so the failure comes back field-keyed for per-input display.
+    delivery_days = serializers.IntegerField(
+        min_value=1, max_value=365,
+        error_messages={"min_value": "أدخل مدة تسليم لا تقل عن يوم"},
+    )
     # Require a real description (mirrors the wizard's client-side min) so it can't be
     # bypassed via the API; the frontend surfaces this per-field via apiFieldErrors.
     description = serializers.CharField(

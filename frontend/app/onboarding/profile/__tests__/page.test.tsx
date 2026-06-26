@@ -112,7 +112,8 @@ describe("ProfileWizard", () => {
     // personal step is mandatory — التالي with empty fields must not advance
     await screen.findByRole("heading", { name: "البيانات الشخصية" });
     await user.click(screen.getByRole("button", { name: "التالي" }));
-    expect(await screen.findByText(/حقل إلزامي/)).toBeInTheDocument();
+    // the required fields now flag inline (per-field), and the step does not advance
+    expect(await screen.findByText("الاسم الظاهر للعملاء مطلوب")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "البيانات الشخصية" })).toBeInTheDocument();
   });
 

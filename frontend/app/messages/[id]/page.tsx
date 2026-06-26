@@ -121,6 +121,7 @@ export default function ThreadPage() {
       }
     } catch (e) {
       setErr(apiError(e).message_ar);
+      throw e; // let the composer keep the typed text so a failed send isn't lost
     }
   }
 

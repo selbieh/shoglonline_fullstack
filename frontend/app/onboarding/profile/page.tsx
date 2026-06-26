@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
+import { useFieldErrors, validateFields, earliestStep, type Rule } from "@/lib/useFieldErrors";
 import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
+import { digitsOnly } from "@/lib/arabic";
+import { LockIcon } from "@/components/icons";
 import Logo from "@/components/Logo";
+import Field from "@/components/Field";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
 import SkillPicker from "@/components/SkillPicker";
@@ -117,7 +121,7 @@ export default function ProfileWizard() {
   const [langDraft, setLangDraft] = useState<Lang>({ name: "", proficiency: "basic" });
   const [categories, setCategories] = useState<Category[]>([]);
   const [me, setMe] = useState<Me>({ email: "", email_verified: false, phone_verified: false, avatar_url: "" });
-  const [msg, setMsg] = useState("");
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   const [busy, setBusy] = useState(false);
   // skills (slide-04)
   const [catalog, setCatalog] = useState<CatalogSkill[]>([]);
@@ -199,7 +203,37 @@ export default function ProfileWizard() {
     fetchPublicSettings().then((s) => setPhoneVerifyOn(phoneVerifyEnabled(s))).catch(() => {});
   }, [router]);
 
-  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  const set = (patch: Partial<Draft>) => {
+    setDraft((d) => ({ ...d, ...patch }));
+    clearFields(...Object.keys(patch));
+  };
+
+  // Which mandatory step owns each draft field — used to bounce back to the step holding a
+  // failed field (client-side gate OR a field-keyed error returned by PATCH /me/profile).
+  const FIELD_STEP: Record<string, number> = {
+    display_name: S_PERSONAL, overview: S_PERSONAL, intro_video: S_PERSONAL,
+    private_contact_channel: S_PERSONAL, private_contact_value: S_PERSONAL,
+    bio_title: S_WORK, main_category: S_WORK, specialization: S_WORK,
+    expertise_level: S_WORK, years_experience: S_WORK, skills: S_WORK, languages: S_WORK,
+    hourly_rate: S_DETAILS, availability: S_DETAILS, weekly_hours: S_DETAILS, client_notes: S_DETAILS,
+  };
+  // Required fields enforced when leaving each mandatory step (ppt slide-2/10 — no skip).
+  const STEP_REQUIRED: Record<number, string[]> = {
+    [S_PERSONAL]: ["display_name", "overview", "private_contact_channel", "private_contact_value"],
+    [S_WORK]: ["bio_title", "main_category", "expertise_level"],
+    [S_DETAILS]: ["hourly_rate", "availability"],
+  };
+  const RULES: Record<string, Rule> = {
+    display_name: () => (draft.display_name.trim() ? "" : "الاسم الظاهر للعملاء مطلوب"),
+    overview: () => (draft.overview.trim() ? "" : "النبذة القصيرة عنك مطلوبة"),
+    private_contact_channel: () => (draft.private_contact_channel ? "" : "اختر وسيلة التواصل"),
+    private_contact_value: () => (draft.private_contact_value.trim() ? "" : "أدخل وسيلة تواصل واحدة على الأقل"),
+    bio_title: () => (draft.bio_title.trim() ? "" : "المسمى الوظيفي مطلوب"),
+    main_category: () => (draft.main_category ? "" : "اختر المجال الرئيسي"),
+    expertise_level: () => (draft.expertise_level ? "" : "اختر مستوى الخبرة"),
+    hourly_rate: () => (draft.hourly_rate.trim() ? "" : "سعر الساعة مطلوب"),
+    availability: () => (draft.availability ? "" : "اختر حالة التوفر للعمل"),
+  };
 
   const core = [draft.display_name, draft.overview, draft.bio_title, draft.expertise_level, draft.hourly_rate, draft.availability, skills.length ? "1" : ""];
   const pct = Math.round((core.filter(Boolean).length / core.length) * 100);
@@ -232,46 +266,41 @@ export default function ProfileWizard() {
     });
   }
 
-  // ppt slide-2/10: mandatory steps (personal / work / details) — required fields enforced, no skip.
-  function stepError(): string {
-    if (step === S_PERSONAL) {
-      if (!draft.display_name.trim()) return "الاسم الظاهر للعملاء مطلوب (حقل إلزامي).";
-      if (!draft.overview.trim()) return "النبذة القصيرة عنك مطلوبة (حقل إلزامي).";
-      if (!draft.private_contact_channel) return "اختر وسيلة التواصل (حقل إلزامي).";
-      if (!draft.private_contact_value.trim()) return "أدخل وسيلة تواصل واحدة على الأقل (حقل إلزامي).";
+  // Map a thrown API error to its inputs and bounce to the step that owns the first failure.
+  function handleApiError(e: unknown) {
+    const keys = applyApiError(e);
+    if (keys.length) {
+      setStep(earliestStep(keys, FIELD_STEP, step));
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
     }
-    if (step === S_WORK) {
-      if (!draft.bio_title.trim()) return "المسمى الوظيفي مطلوب (حقل إلزامي).";
-      if (!draft.main_category) return "اختر المجال الرئيسي (حقل إلزامي).";
-      if (!draft.expertise_level) return "اختر مستوى الخبرة (حقل إلزامي).";
-    }
-    if (step === S_DETAILS) {
-      if (!draft.hourly_rate.trim()) return "سعر الساعة مطلوب (حقل إلزامي).";
-      if (!draft.availability) return "اختر حالة التوفر للعمل (حقل إلزامي).";
-    }
-    return "";
   }
 
   async function saveAndExit() {
     setBusy(true);
-    setMsg("");
+    setFormError("");
     try {
       await saveProfile();
       router.push("/me/profile");
     } catch (e) {
-      setMsg(apiError(e).message_ar);
+      handleApiError(e);
     } finally {
       setBusy(false);
     }
   }
 
   async function goNext() {
+    setFormError("");
+    // ppt slide-2/10: block leaving a mandatory step until its required fields are valid.
     if (MANDATORY.includes(step)) {
-      const err = stepError();
-      if (err) { setMsg(err); return; }  // block: required fields must be filled (slide-2)
+      const found = validateFields(RULES, STEP_REQUIRED[step] ?? []);
+      if (Object.keys(found).length) {
+        setErrors(found);
+        setFormError("يرجى تعبئة الحقول الإلزامية المظلَّلة بالأحمر.");
+        return;
+      }
     }
+    setErrors({});
     setBusy(true);
-    setMsg("");
     try {
       if (step === S_REVIEW) {
         await saveProfile();
@@ -288,7 +317,7 @@ export default function ProfileWizard() {
       if (MANDATORY.includes(step)) await saveProfile();
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
     } catch (e) {
-      setMsg(apiError(e).message_ar);
+      handleApiError(e);
     } finally {
       setBusy(false);
     }
@@ -464,11 +493,11 @@ export default function ProfileWizard() {
                   onUploaded={(a) => set({ avatar_url: a.url })} />
               </div>
             </div>
-            <Field label="الاسم الظاهر للعملاء">
+            <Field label="الاسم الظاهر للعملاء" required error={errors.display_name}>
               <input className="field" value={draft.display_name} placeholder="مثال: أحمد محمد"
                 onChange={(e) => set({ display_name: e.target.value })} />
             </Field>
-            <Field label="نبذة قصيرة عنك" hint={`${draft.overview.length.toLocaleString("en-US")}/500`}>
+            <Field label="نبذة قصيرة عنك" required error={errors.overview} hint={`${draft.overview.length.toLocaleString("en-US")}/500`}>
               <textarea className="field min-h-28" maxLength={500} value={draft.overview}
                 placeholder="اكتب نبذة مختصرة عنك، خبراتك، وما يميزك عن غيرك من المستقلين…"
                 onChange={(e) => set({ overview: e.target.value })} />
@@ -480,7 +509,7 @@ export default function ProfileWizard() {
             </Field>
 
             {/* ppt slide-02: REQUIRED private contact — for the platform only, never shown on the profile */}
-            <Field label="وسيلة تواصل (إلزامي)">
+            <Field label="وسيلة تواصل" required error={errors.private_contact_channel || errors.private_contact_value}>
               <div className="flex flex-wrap gap-2">
                 <select className="field w-36" value={draft.private_contact_channel} aria-label="نوع وسيلة التواصل"
                   onChange={(e) => set({ private_contact_channel: e.target.value })}>
@@ -491,7 +520,7 @@ export default function ProfileWizard() {
                   onChange={(e) => set({ private_contact_value: e.target.value })} />
               </div>
               <p className="mt-1.5 flex items-center gap-1 text-xs text-sub">
-                <span aria-hidden>🔒</span> للمنصة فقط — لن تظهر هذه الوسيلة في ملفك العام إطلاقًا.
+                <LockIcon aria-hidden className="inline-block align-[-2px] text-[14px]" /> للمنصة فقط — لن تظهر هذه الوسيلة في ملفك العام إطلاقًا.
               </p>
             </Field>
           </div>
@@ -499,12 +528,12 @@ export default function ProfileWizard() {
 
         {step === S_WORK && (
           <div className="mt-6 space-y-5">
-            <Field label="المسمى الوظيفي">
+            <Field label="المسمى الوظيفي" required error={errors.bio_title}>
               <input className="field" value={draft.bio_title} placeholder="مثال: مصمم واجهات مستخدم"
                 onChange={(e) => set({ bio_title: e.target.value })} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="المجال الرئيسي">
+              <Field label="المجال الرئيسي" required error={errors.main_category}>
                 <select className="field" value={draft.main_category}
                   onChange={(e) => set({ main_category: e.target.value, specialization: "" })}>
                   <option value="">اختر المجال…</option>
@@ -519,7 +548,7 @@ export default function ProfileWizard() {
                 </select>
               </Field>
             </div>
-            <Field label="مستوى الخبرة">
+            <Field label="مستوى الخبرة" required error={errors.expertise_level}>
               <div className="flex flex-wrap gap-2">
                 {LEVELS.map(({ v, l }) => (
                   <button key={v} type="button"
@@ -748,14 +777,14 @@ export default function ProfileWizard() {
 
         {step === S_DETAILS && (
           <div className="mt-6 space-y-5">
-            <Field label="سعر الساعة (بالدولار الأمريكي)">
+            <Field label="سعر الساعة (بالدولار الأمريكي)" required error={errors.hourly_rate}>
               <div className="flex items-center gap-2">
                 <span className="grid h-9 w-12 place-content-center rounded-m bg-tint text-sm font-bold text-primary-dark">USD</span>
                 <input type="number" min={0} className="field" value={draft.hourly_rate}
                   placeholder="أدخل سعر الساعة" onChange={(e) => set({ hourly_rate: e.target.value })} />
               </div>
             </Field>
-            <Field label="التوفر للعمل">
+            <Field label="التوفر للعمل" required error={errors.availability}>
               <div className="grid gap-3 sm:grid-cols-3">
                 {AVAIL.map(({ v, t, d }) => (
                   <button key={v} type="button"
@@ -807,7 +836,7 @@ export default function ProfileWizard() {
                       <option value="+20">+20</option>
                     </select>
                     <input className="field flex-1" inputMode="tel" placeholder="50 123 4567" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => setPhone(e.target.value)} />
+                      aria-label="رقم الجوال" onChange={(e) => setPhone(digitsOnly(e.target.value))} />
                     <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>
@@ -815,7 +844,7 @@ export default function ProfileWizard() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <input className="field w-40 text-center tracking-[0.5em]" maxLength={4} inputMode="numeric"
                         placeholder="● ● ● ●" value={code} aria-label="رمز التحقق"
-                        onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+                        onChange={(e) => setCode(digitsOnly(e.target.value))} />
                       <button type="button" className="btn-primary" disabled={otpBusy || code.length < 4}
                         onClick={verifyOtp}>تأكيد</button>
                       <button type="button" className="text-sm font-medium text-primary-dark disabled:opacity-40"
@@ -905,7 +934,7 @@ export default function ProfileWizard() {
           </div>
         )}
 
-        {msg && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
+        {formError && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
       </section>
 
       <footer className="sticky bottom-0 border-t border-line bg-white/95 backdrop-blur">
@@ -942,18 +971,6 @@ export default function ProfileWizard() {
         </div>
       </footer>
     </main>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 flex items-center justify-between text-sm font-medium text-ink">
-        <span>{label}</span>
-        {hint && <span className="text-xs font-normal text-sub">{hint}</span>}
-      </span>
-      {children}
-    </label>
   );
 }
 

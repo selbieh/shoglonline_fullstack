@@ -66,6 +66,10 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
         body: JSON.stringify({ quantity: qty, description: desc, addon_ids: picked }),
       });
       setMsg({ ok: true, text: "✅ أُرسل طلب الشراء — بانتظار قبول المستقل" });
+      // reset so the user can't immediately re-submit the same order
+      setQty(1);
+      setPicked([]);
+      setDesc("");
     } catch (e) {
       setMsg({ ok: false, text: `⚠️ ${apiError(e).message_ar}` });
     } finally {

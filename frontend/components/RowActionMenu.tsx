@@ -17,14 +17,22 @@ export type RowAction = {
 export default function RowActionMenu({ actions, label = "إجراءات" }: { actions: RowAction[]; label?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
+    };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const visible = actions.filter((a) => !a.hidden);
@@ -33,6 +41,7 @@ export default function RowActionMenu({ actions, label = "إجراءات" }: { a
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         aria-haspopup="menu"

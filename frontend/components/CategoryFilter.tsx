@@ -224,34 +224,37 @@ export default function CategoryFilter({
                 const isExpanded = !nq && expanded.has(g.parent.id);
                 return (
                   <div key={pid}>
-                    <Row
-                      index={pIndex}
-                      active={active === pIndex}
-                      selected={selectedId === pid}
-                      onActivate={() => setActive(pIndex)}
-                      onClick={() => choose({ id: pid, parentId: null })}
-                    >
-                      <CategoryIcon icon={g.parent.icon} slug={g.parent.slug} className="shrink-0 text-[17px] text-primary" />
-                      <span className="flex-1 truncate font-semibold">{g.parent.name_ar}</span>
+                    {/* Toggle is a sibling of the row button (positioned over its end), not a child —
+                        nesting an interactive control inside a <button> is invalid HTML. */}
+                    <div className="relative">
+                      <Row
+                        index={pIndex}
+                        active={active === pIndex}
+                        selected={selectedId === pid}
+                        onActivate={() => setActive(pIndex)}
+                        onClick={() => choose({ id: pid, parentId: null })}
+                      >
+                        <CategoryIcon icon={g.parent.icon} slug={g.parent.slug} className="shrink-0 text-[17px] text-primary" />
+                        <span className="flex-1 truncate font-semibold">{g.parent.name_ar}</span>
+                        {!nq && g.kids.length > 0 && <span className="w-6 shrink-0" aria-hidden />}
+                      </Row>
                       {!nq && g.kids.length > 0 && (
-                        <span
-                          role="button"
-                          tabIndex={-1}
+                        <button
+                          type="button"
                           aria-label={isExpanded ? "إخفاء التخصصات" : "عرض التخصصات"}
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() =>
                             setExpanded((prev) => {
                               const next = new Set(prev);
                               next.has(g.parent.id) ? next.delete(g.parent.id) : next.add(g.parent.id);
                               return next;
-                            });
-                          }}
-                          className="-me-1 grid h-6 w-6 shrink-0 place-content-center rounded text-sub transition hover:bg-bg hover:text-primary"
+                            })
+                          }
+                          className="absolute end-3 top-1/2 grid h-6 w-6 -translate-y-1/2 place-content-center rounded text-sub transition hover:bg-bg hover:text-primary"
                         >
                           <ChevronDownIcon className={`text-[16px] transition ${isExpanded ? "rotate-180" : ""}`} />
-                        </span>
+                        </button>
                       )}
-                    </Row>
+                    </div>
 
                     {g.shownKids.map((c) => {
                       const cid = String(c.id);

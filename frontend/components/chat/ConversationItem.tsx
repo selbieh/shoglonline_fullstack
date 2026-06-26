@@ -9,12 +9,14 @@ import type { Conversation } from "./types";
 export default function ConversationItem({ conv, active }: { conv: Conversation; active: boolean }) {
   const ctxTitle = conv.context?.title;
   return (
-    <a
-      href={`/messages/${conv.id}`}
-      className={`group flex items-center gap-3 border-b border-line px-4 py-3 transition ${
+    // Row is a div with a stretched-link overlay so the navigation anchor never wraps the
+    // interactive report button + its modal (nested interactive content is invalid HTML).
+    <div
+      className={`group relative flex items-center gap-3 border-b border-line px-4 py-3 transition ${
         active ? "bg-tint" : "hover:bg-bg"
       } ${conv.read_only ? "opacity-70" : ""}`}
     >
+      <a href={`/messages/${conv.id}`} aria-label={conv.other.name} className="absolute inset-0 z-[1]" />
       <Avatar name={conv.other.name} src={conv.other.avatar || null} className="h-11 w-11 shrink-0" textClassName="text-sm" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
@@ -39,8 +41,8 @@ export default function ConversationItem({ conv, active }: { conv: Conversation;
       </div>
       <ChatReportButton
         conversationId={conv.id}
-        className="grid h-8 w-8 shrink-0 place-content-center rounded-full text-[15px] text-sub/70 transition hover:bg-danger-t hover:text-danger"
+        className="relative z-[2] grid h-8 w-8 shrink-0 place-content-center rounded-full text-[15px] text-sub/70 transition hover:bg-danger-t hover:text-danger"
       />
-    </a>
+    </div>
   );
 }

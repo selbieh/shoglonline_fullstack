@@ -1,5 +1,6 @@
 import { StarIcon } from "@/components/icons";
 import { formatUSD } from "@/lib/currency";
+import { pluralizeDays } from "@/lib/arabic";
 
 /* Service offer card (ppt slides 11/12/17/18 grids). Cover with hover-zoom + gradient fallback,
    title, 2-line description, delivery + rating footer, "يبدأ من" price, and a «عرض الخدمة» button —
@@ -35,7 +36,7 @@ export default function ServiceCard({ service }: { service: ServiceCardData }) {
         {s.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-sub">{s.description}</p>}
 
         <div className="mt-3 flex items-center justify-between text-xs text-sub">
-          <span>{s.delivery_days.toLocaleString("en-US")} أيام</span>
+          <span>{pluralizeDays(s.delivery_days)}</span>
           {s.rating != null && s.rating > 0 && (
             <span className="inline-flex items-center gap-0.5 text-star" dir="ltr">
               <StarIcon filled className="text-[12px]" />

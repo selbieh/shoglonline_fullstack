@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import FavoriteButton from "@/components/FavoriteButton";
 import ReportButton, { type ReportKind } from "@/components/ReportButton";
 import { ShareIcon } from "@/components/icons";
@@ -32,6 +32,8 @@ export default function CardActions({
   variant?: "inline" | "overlay";
   className?: string;
 }) {
+  const [copied, setCopied] = useState(false);
+
   function share(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -39,7 +41,13 @@ export default function CardActions({
     if (typeof navigator !== "undefined" && navigator.share) {
       navigator.share({ url, title: shareTitle }).catch(() => {});
     } else {
-      navigator?.clipboard?.writeText(url).catch(() => {});
+      // No native share (desktop): copy to clipboard and confirm so the click isn't silent.
+      navigator?.clipboard?.writeText(url)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        })
+        .catch(() => {});
     }
   }
 
@@ -57,15 +65,22 @@ export default function CardActions({
           className={`${base} ${skin} text-danger hover:bg-danger-t`}
         />
       )}
-      <button
-        type="button"
-        onClick={share}
-        title="مشاركة"
-        aria-label="مشاركة"
-        className={`${base} ${skin} text-sub hover:bg-tint hover:text-primary`}
-      >
-        <ShareIcon />
-      </button>
+      <span className="relative">
+        <button
+          type="button"
+          onClick={share}
+          title="مشاركة"
+          aria-label="مشاركة"
+          className={`${base} ${skin} text-sub hover:bg-tint hover:text-primary`}
+        >
+          <ShareIcon />
+        </button>
+        {copied && (
+          <span role="status" className="absolute -top-7 start-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-0.5 text-[11px] text-white shadow">
+            تم نسخ الرابط
+          </span>
+        )}
+      </span>
     </div>
   );
 }

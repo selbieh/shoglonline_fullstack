@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
+import { useFieldErrors } from "@/lib/useFieldErrors";
 import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
+import { digitsOnly } from "@/lib/arabic";
 import Logo from "@/components/Logo";
+import Field from "@/components/Field";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
 
 /* Employer profile setup (أنشئ ملفك كصاحب عمل — ppt slides 26/27): basic data + optional
@@ -25,7 +28,7 @@ export default function EmployerWizard() {
   const [form, setForm] = useState({ company_name: "", field: "", country: "", city: "", timezone: "", logo_url: "" });
   const [me, setMe] = useState<Me>({ email: "", email_verified: false, phone_verified: false });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   // verify
   const [cc, setCc] = useState("+966");
   const [phone, setPhone] = useState("");
@@ -58,22 +61,32 @@ export default function EmployerWizard() {
     fetchPublicSettings().then((s) => setPhoneVerifyOn(phoneVerifyEnabled(s))).catch(() => {});
   }, [router]);
 
-  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+  const set = (patch: Partial<typeof form>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    clearFields(...Object.keys(patch));
+  };
   const phoneOk = phoneVerified || me.phone_verified;
 
   async function goNext() {
+    setFormError("");
+    if (step === 0 && !form.company_name.trim()) {
+      setErrors({ company_name: "أدخل اسم الشركة / الجهة" });
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      return;
+    }
+    setErrors({});
     setBusy(true);
-    setMsg("");
     try {
       if (step === 0) {
-        if (!form.company_name) { setMsg("أدخل اسم الشركة / الجهة"); setBusy(false); return; }
         await api("/me/employer-profile", { method: "PATCH", body: JSON.stringify(form) });
         setStep(1);
       } else {
         router.push("/dashboard");
       }
     } catch (e) {
-      setMsg(apiError(e).message_ar);
+      // field-keyed errors (company_name, logo_url, …) mark their inputs; the rest is a banner.
+      const keys = applyApiError(e);
+      if (keys.length) setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
     } finally {
       setBusy(false);
     }
@@ -115,29 +128,29 @@ export default function EmployerWizard() {
         {step === 0 && (
           <div className="mt-6 space-y-5">
             <p className="text-sm text-sub">عرّف شركتك ليسهل على المستقلين التواصل معك وتنفيذ المشاريع.</p>
-            <Field label="الاسم (الشركة / الجهة)">
+            <Field label="الاسم (الشركة / الجهة)" required error={errors.company_name}>
               <input className="field" value={form.company_name} placeholder="اكتب اسم الشركة / الجهة"
                 onChange={(e) => set({ company_name: e.target.value })} />
             </Field>
-            <Field label="المجال">
+            <Field label="المجال" error={errors.field}>
               <input className="field" value={form.field} placeholder="اختر المجال الذي يصف عملك"
                 onChange={(e) => set({ field: e.target.value })} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="الدولة">
+              <Field label="الدولة" error={errors.country}>
                 <input className="field" value={form.country} placeholder="الدولة"
                   onChange={(e) => set({ country: e.target.value })} />
               </Field>
-              <Field label="المدينة">
+              <Field label="المدينة" error={errors.city}>
                 <input className="field" value={form.city} placeholder="المدينة"
                   onChange={(e) => set({ city: e.target.value })} />
               </Field>
             </div>
-            <Field label="المنطقة الزمنية">
+            <Field label="المنطقة الزمنية" error={errors.timezone}>
               <input className="field" value={form.timezone} placeholder="اختر منطقتك الزمنية"
                 onChange={(e) => set({ timezone: e.target.value })} />
             </Field>
-            <Field label="رابط شعار الشركة (اختياري)">
+            <Field label="رابط شعار الشركة (اختياري)" error={errors.logo_url}>
               <input className="field" dir="ltr" value={form.logo_url} placeholder="https://…"
                 onChange={(e) => set({ logo_url: e.target.value })} />
             </Field>
@@ -170,7 +183,7 @@ export default function EmployerWizard() {
                       <option value="+20">+20</option>
                     </select>
                     <input className="field flex-1" inputMode="tel" placeholder="5XXXXXXXX" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => setPhone(e.target.value)} />
+                      aria-label="رقم الجوال" onChange={(e) => setPhone(digitsOnly(e.target.value))} />
                     <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>
@@ -178,7 +191,7 @@ export default function EmployerWizard() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <input className="field w-40 text-center tracking-[0.5em]" maxLength={4} inputMode="numeric"
                         placeholder="● ● ● ●" value={code} aria-label="رمز التحقق"
-                        onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+                        onChange={(e) => setCode(digitsOnly(e.target.value))} />
                       <button type="button" className="btn-primary" disabled={otpBusy || code.length < 4}
                         onClick={verifyOtp}>تأكيد</button>
                     </div>
@@ -192,7 +205,7 @@ export default function EmployerWizard() {
           </div>
         )}
 
-        {msg && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
+        {formError && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
       </section>
 
       <footer className="sticky bottom-0 border-t border-line bg-white/95 backdrop-blur">
@@ -214,11 +227,3 @@ export default function EmployerWizard() {
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
-      {children}
-    </label>
-  );
-}

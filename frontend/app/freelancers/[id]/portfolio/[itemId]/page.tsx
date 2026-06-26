@@ -110,7 +110,7 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
   return (
     <main className="bg-bg">
       <JsonLd data={jsonLd} />
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-screen-2xl px-6 py-8">
         {/* breadcrumb */}
         <nav className="flex flex-wrap items-center gap-1.5 text-xs text-sub" aria-label="مسار التنقل">
           <a href="/" className="hover:text-primary-dark">الرئيسية</a>

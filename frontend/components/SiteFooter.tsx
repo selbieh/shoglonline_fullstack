@@ -58,7 +58,7 @@ export default function SiteFooter() {
 
   return (
     <footer className="bg-primary text-white">
-      <div className="mx-auto grid max-w-6xl gap-8 px-6 py-14 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto grid max-w-screen-2xl gap-8 px-6 py-14 sm:grid-cols-2 lg:grid-cols-3">
         {cols.map((col) => (
           <div key={col.h}>
             <h3 className="font-bold text-white">{col.h}</h3>
@@ -89,7 +89,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="border-t border-white/15">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-6 py-6 sm:flex-row">
+        <div className="mx-auto flex max-w-screen-2xl flex-col items-center justify-between gap-5 px-6 py-6 sm:flex-row">
           <div className="flex items-center gap-3">
             <Logo tone="light" className="h-7 w-auto" />
             <span className="text-sm text-white/80">{new Date().getFullYear()}</span>

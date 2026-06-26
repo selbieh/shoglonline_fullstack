@@ -108,8 +108,10 @@ class TestEventCoverage:
         assert any(employer.email in m.to for m in mail.outbox)
 
     def test_buying_request_notifies_and_emails_the_service_owner(self, worker, employer, category):
+        from apps.core.services import set_setting
         from apps.gigs import services as gs
         from apps.gigs.models import Service
+        set_setting("services.auto_publish", True)  # submit_service only auto-publishes when this is on
         service = Service.objects.create(worker=worker, title="تصميم شعار", description="وصف",
                                          category=category, base_price=Decimal("100"), delivery_days=5)
         gs.submit_service(service)  # → LIVE (mirrors the gigs test helper)

@@ -5,77 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, API_URL, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { useFieldErrors, validateFields, type Rule } from "@/lib/useFieldErrors";
 import type { Category, Skill } from "@/lib/types";
+import Field from "@/components/Field";
 import ContactHint from "@/components/ContactHint";
 import { InfoIcon, CheckIcon, SearchIcon } from "@/components/icons";
-import { normalizeArabic } from "@/lib/arabic";
-
-/**
- * Map Arabic-Indic (٠-٩) and Persian (۰-۹) digits to ASCII so `Number()` can parse them.
- * Users on Arabic keyboards type "١٠"; without this, every numeric field reads as NaN and
- * validation wrongly rejects valid budgets.
- */
-function toAsciiDigits(s: string): string {
-  return s.replace(/[٠-٩۰-۹]/g, (d) => {
-    const code = d.charCodeAt(0);
-    return String(code >= 0x06F0 ? code - 0x06F0 : code - 0x0660);
-  });
-}
-
-/** Numeric-only input filter: normalize Arabic/Persian digits, then drop everything that isn't 0-9. */
-function digitsOnly(s: string): string {
-  return toAsciiDigits(s).replace(/\D/g, "");
-}
-
-/** Arabic labels for backend field errors, so we can show the real reason instead of a blanket message. */
-const FIELD_LABELS: Record<string, string> = {
-  title: "عنوان الوظيفة",
-  description: "وصف الوظيفة",
-  category: "الفئة",
-  budget_min: "الميزانية الدنيا",
-  budget_max: "الميزانية العليا",
-  expected_days: "مدة التنفيذ المتوقعة",
-  screening_questions: "أسئلة الفرز",
-};
-
-/** Pull a readable message out of one field's error value (string | [msg] | nested object/array). */
-function fieldMessage(val: unknown): string | null {
-  if (Array.isArray(val)) {
-    const msgs = val.map(fieldMessage).filter(Boolean);
-    return msgs.length ? msgs.join("، ") : null;
-  }
-  if (typeof val === "string") return val;
-  if (typeof val === "number") return String(val);
-  if (val && typeof val === "object") {
-    const msgs = Object.values(val as Record<string, unknown>).map(fieldMessage).filter(Boolean);
-    return msgs.length ? msgs.join("، ") : null;
-  }
-  return null;
-}
-
-/**
- * Turn the backend error envelope into a single readable Arabic line.
- * The API normalizes validation failures to {code, message_ar, fields: {field: [msg]}},
- * so we must descend into `fields` for the real per-field reasons — iterating the top-level
- * object would just echo the code ("validation_error") and the generic message.
- */
-function describeError(body: unknown): string | null {
-  if (!body || typeof body !== "object") return null;
-  const env = body as Record<string, unknown>;
-  // Prefer the per-field detail; fall back to a flat DRF body ({field: [msg]}) if there's no envelope.
-  const fields = (env.fields && typeof env.fields === "object" ? env.fields : env) as Record<string, unknown>;
-  const parts: string[] = [];
-  for (const [key, val] of Object.entries(fields)) {
-    if (key === "code" || key === "message_ar" || key === "retry_after") continue;
-    const msg = fieldMessage(val);
-    if (!msg) continue;
-    const label = FIELD_LABELS[key];
-    parts.push(label ? `${label}: ${msg}` : msg);
-  }
-  if (parts.length) return parts.join(" — ");
-  // No usable field detail — surface the human message_ar rather than the raw code.
-  return typeof env.message_ar === "string" ? env.message_ar : null;
-}
+import { normalizeArabic, digitsOnly } from "@/lib/arabic";
 
 /** Post a job (FR-JOB-1/2) — moderation flag may queue it for admin review. Remote-only platform. */
 export default function NewJobPage() {
@@ -93,15 +28,22 @@ export default function NewJobPage() {
     expected_days: "",
   });
   const [questions, setQuestions] = useState<{ question: string; is_required: boolean }[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   const [busy, setBusy] = useState(false);
   // When set, the form is replaced by a thank-you screen. `pending` distinguishes "queued for review" from "published".
   const [done, setDone] = useState<{ slug: string; pending: boolean } | null>(null);
 
   useEffect(() => {
     if (!tokens.access) router.replace(signinHereHref());
-    fetch(`${API_URL}/categories`).then(async (r) => setCategories(await r.json()));
-    fetch(`${API_URL}/skills`).then(async (r) => setSkills(await r.json()));
+    // Guard against non-OK responses / error-object bodies: an array is required or .map/.filter throws at render.
+    fetch(`${API_URL}/categories`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setCategories(Array.isArray(d) ? d : []))
+      .catch(() => setCategories([]));
+    fetch(`${API_URL}/skills`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setSkills(Array.isArray(d) ? d : []))
+      .catch(() => setSkills([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,6 +57,7 @@ export default function NewJobPage() {
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm({ ...form, [key]: value });
+    clearFields(key);
   }
 
   // Skills hang off subcategories; show only those under the chosen top-level category.
@@ -140,32 +83,35 @@ export default function NewJobPage() {
     set("category", value);
   }
 
-  /** Client-side gate: name the exact required fields that are missing or invalid, before hitting the API. */
-  function clientErrors(): string[] {
-    const errs: string[] = [];
-    if (!form.title.trim()) errs.push("عنوان الوظيفة");
-    if (!form.category) errs.push("الفئة");
-    if (!form.description.trim()) errs.push("وصف الوظيفة");
-    if (!form.budget_min.trim()) errs.push("الميزانية الدنيا");
-    if (!form.budget_max.trim()) errs.push("الميزانية العليا");
-    const min = Number(form.budget_min), max = Number(form.budget_max);
-    if (form.budget_min.trim() && Number.isNaN(min)) errs.push("الميزانية الدنيا يجب أن تكون رقمًا");
-    if (form.budget_max.trim() && Number.isNaN(max)) errs.push("الميزانية العليا يجب أن تكون رقمًا");
-    return errs;
-  }
+  /** Client-side per-field rules, keyed by the same names the API reports (so messages line up). */
+  const RULES: Record<string, Rule> = {
+    title: () => (form.title.trim() ? "" : "أدخل عنوان الوظيفة"),
+    category: () => (form.category ? "" : "اختر الفئة"),
+    description: () => (form.description.trim() ? "" : "اكتب وصف الوظيفة"),
+    budget_min: () => {
+      if (!form.budget_min.trim()) return "أدخل الميزانية الدنيا";
+      if (Number.isNaN(Number(form.budget_min))) return "أدخل رقمًا صحيحًا";
+      return "";
+    },
+    budget_max: () => {
+      if (!form.budget_max.trim()) return "أدخل الميزانية العليا";
+      if (Number.isNaN(Number(form.budget_max))) return "أدخل رقمًا صحيحًا";
+      if (form.budget_min.trim() && Number(form.budget_min) > Number(form.budget_max))
+        return "العليا يجب ألا تقل عن الدنيا";
+      return "";
+    },
+  };
 
   async function submit() {
-    const missing = clientErrors();
-    if (missing.length) {
-      setMsg(`⚠️ يرجى تعبئة/تصحيح الحقول الإلزامية: ${missing.join("، ")}`);
+    setFormError("");
+    const found = validateFields(RULES, Object.keys(RULES));
+    if (Object.keys(found).length) {
+      setErrors(found);
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
       return;
     }
-    if (Number(form.budget_min) > Number(form.budget_max)) {
-      setMsg("⚠️ الميزانية الدنيا يجب ألا تتجاوز العليا");
-      return;
-    }
+    setErrors({});
     setBusy(true);
-    setMsg(null);
     try {
       // Remote-only platform — location is fixed server-side via the model default.
       const payload: Record<string, unknown> = {
@@ -182,14 +128,14 @@ export default function NewJobPage() {
       });
       setDone({ slug: job.slug, pending: job.status === "pending_review" });
     } catch (e: unknown) {
-      const detail = describeError((e as { body?: unknown })?.body);
-      setMsg(detail ? `⚠️ ${detail}` : "⚠️ تعذّر نشر الوظيفة — تحقّق من الحقول وحاول مجددًا");
+      // Field-keyed errors (budget_min/max, deadline, title…) mark their inputs; the rest is a banner.
+      const keys = applyApiError(e);
+      if (keys.length) setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
     } finally {
       setBusy(false);
     }
   }
 
-  const input = "mt-1 w-full field";
   const optional = <span className="font-normal text-sub">(اختياري)</span>;
 
   // Success screen — replaces the form once the job is created.
@@ -226,26 +172,22 @@ export default function NewJobPage() {
         الحقول المعلّمة بـ <span className="text-danger">*</span> إلزامية، والباقي اختياري.
       </p>
       <div className="card mt-6 space-y-4">
-        <label className="block text-sm font-bold">
-          عنوان الوظيفة <span className="text-danger">*</span>
-          <input className={input} value={form.title} onChange={(e) => set("title", e.target.value)} />
-          <span className="text-xs font-normal text-sub">يُقفل التعديل عليه بعد استلام أول عرض</span>
-        </label>
-        <label className="block text-sm font-bold">
-          الفئة <span className="text-danger">*</span>
-          <select className={input} value={form.category} onChange={(e) => pickCategory(e.target.value)}>
+        <Field label="عنوان الوظيفة" required error={errors.title} hint="يُقفل التعديل عليه بعد استلام أول عرض">
+          <input className="w-full field" value={form.title} onChange={(e) => set("title", e.target.value)} />
+        </Field>
+        <Field label="الفئة" required error={errors.category}>
+          <select className="w-full field" value={form.category} onChange={(e) => pickCategory(e.target.value)}>
             <option value="">اختر…</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.icon} {c.name_ar}</option>
             ))}
           </select>
-        </label>
-        <label className="block text-sm font-bold">
-          وصف الوظيفة <span className="text-danger">*</span>
-          <textarea className={`${input} min-h-32`} value={form.description}
+        </Field>
+        <Field label="وصف الوظيفة" required error={errors.description}>
+          <textarea className="w-full field min-h-32" value={form.description}
             onChange={(e) => set("description", e.target.value)} />
           <ContactHint text={form.description} mode="review" />
-        </label>
+        </Field>
 
         <div className="block text-sm font-bold">
           المهارات المطلوبة {optional}
@@ -282,22 +224,21 @@ export default function NewJobPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <label className="text-sm font-bold">الميزانية من <span className="text-danger">*</span>
-            <input className={input} inputMode="numeric" value={form.budget_min} onChange={(e) => set("budget_min", digitsOnly(e.target.value))} />
-            <span className="text-xs font-normal text-sub">بالدولار الأمريكي (USD)</span>
-          </label>
-          <label className="text-sm font-bold">إلى <span className="text-danger">*</span>
-            <input className={input} inputMode="numeric" value={form.budget_max} onChange={(e) => set("budget_max", digitsOnly(e.target.value))} />
-            <span className="text-xs font-normal text-sub">بالدولار الأمريكي (USD)</span>
-          </label>
-          <label className="text-sm font-bold">مدة التنفيذ المتوقعة {optional}
-            <div className="relative mt-1">
+          <Field label="الميزانية من" required error={errors.budget_min} hint="USD">
+            <input className="w-full field" inputMode="numeric" value={form.budget_min}
+              onChange={(e) => set("budget_min", digitsOnly(e.target.value))} />
+          </Field>
+          <Field label="إلى" required error={errors.budget_max} hint="USD">
+            <input className="w-full field" inputMode="numeric" value={form.budget_max}
+              onChange={(e) => set("budget_max", digitsOnly(e.target.value))} />
+          </Field>
+          <Field label="مدة التنفيذ المتوقعة" hint="بالأيام (اختياري)" error={errors.expected_days}>
+            <div className="relative">
               <input className="w-full field pe-12" inputMode="numeric" value={form.expected_days}
                 onChange={(e) => set("expected_days", digitsOnly(e.target.value))} />
               <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-sub">يوم</span>
             </div>
-            <span className="text-xs font-normal text-sub">المدة المتوقعة لإنجاز العمل بالأيام</span>
-          </label>
+          </Field>
         </div>
 
         <div className="flex items-center gap-2 rounded-m bg-bg p-3 text-sm text-sub">
@@ -316,10 +257,10 @@ export default function NewJobPage() {
                   onChange={(e) => setQuestions(questions.map((x, j) => (j === i ? { ...x, is_required: e.target.checked } : x)))} />
                 إلزامي
               </label>
-              <button className="text-danger" onClick={() => setQuestions(questions.filter((_, j) => j !== i))}>✕</button>
+              <button type="button" aria-label="حذف السؤال" className="text-danger" onClick={() => setQuestions(questions.filter((_, j) => j !== i))}>✕</button>
             </div>
           ))}
-          <button className="mt-2 text-sm text-primary-dark"
+          <button type="button" className="mt-2 text-sm text-primary-dark"
             onClick={() => setQuestions([...questions, { question: "", is_required: true }])}>
             + أضف سؤالًا
           </button>
@@ -334,7 +275,7 @@ export default function NewJobPage() {
         <button className="btn-primary w-full py-3" disabled={busy} onClick={submit}>
           {busy ? "جارٍ النشر…" : "تأكيد الفئة ونشر الوظيفة"}
         </button>
-        {msg && <p className="rounded-m bg-tint p-3 text-sm text-primary-dark">{msg}</p>}
+        {formError && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">⚠️ {formError}</p>}
       </div>
     </main>
   );

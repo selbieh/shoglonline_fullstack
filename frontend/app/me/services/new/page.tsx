@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError, apiFieldErrors } from "@/lib/errors";
+import { useFieldErrors, validateFields, earliestStep } from "@/lib/useFieldErrors";
+import { toAsciiDigits, digitsOnly } from "@/lib/arabic";
+import Field from "@/components/Field";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
 import ContactHint from "@/components/ContactHint";
 import FileUpload from "@/components/FileUpload";
@@ -43,9 +45,8 @@ export default function ServiceCreateWizard() {
   });
   const [addons, setAddons] = useState<Addon[]>([]);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-  // Per-field validation messages (keyed by form field) — drives the red outline + inline note.
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Per-field validation messages + global banner + API-error mapping live in the shared hook.
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   // When set, the wizard is replaced by a result screen. `pending` = queued for review vs. live.
   const [done, setDone] = useState<{ slug: string; pending: boolean } | null>(null);
 
@@ -70,12 +71,7 @@ export default function ServiceCreateWizard() {
   const set = (patch: Partial<typeof form>) => {
     setForm((f) => ({ ...f, ...patch }));
     // editing a field clears its (and only its) error so the red mark goes away as you type
-    setErrors((e) => {
-      if (!Object.keys(patch).some((k) => k in e)) return e;
-      const next = { ...e };
-      for (const k of Object.keys(patch)) delete next[k];
-      return next;
-    });
+    clearFields(...Object.keys(patch));
   };
   const subcats = cats.find((c) => String(c.id) === form.category)?.children ?? [];
   const keywords = form.keywords.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
@@ -111,24 +107,20 @@ export default function ServiceCreateWizard() {
     ["title", "category", "base_price", "delivery_days", "description"],
   ];
 
-  function validate(fields: string[]): Record<string, string> {
-    const found: Record<string, string> = {};
-    for (const f of fields) {
-      const m = errorFor(f);
-      if (m) found[f] = m;
-    }
-    return found;
-  }
+  // Per-field rules keyed by field name, consumed by validateFields().
+  const RULES = Object.fromEntries(
+    ["title", "category", "base_price", "delivery_days", "description"].map((f) => [f, () => errorFor(f)]),
+  );
 
   async function goNext() {
-    setMsg("");
+    setFormError("");
     const isFinal = step === STEPS.length - 1;
-    const found = validate(STEP_REQUIRED[step]);
+    const found = validateFields(RULES, STEP_REQUIRED[step]);
     if (Object.keys(found).length) {
       setErrors(found);
       // jump to the earliest step that has a problem (matters on the review step)
-      setStep(Math.min(...Object.keys(found).map((k) => FIELD_STEP[k] ?? step)));
-      setMsg("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      setStep(earliestStep(Object.keys(found), FIELD_STEP, step));
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
       return;
     }
     setErrors({});
@@ -156,13 +148,10 @@ export default function ServiceCreateWizard() {
       setDone({ slug: created.slug, pending: created.status !== "live" });
     } catch (e) {
       // Surface field-level validation from the API: mark each input and jump to its step.
-      const fieldErrors = apiFieldErrors(e);
-      if (Object.keys(fieldErrors).length) {
-        setErrors(fieldErrors);
-        setStep(Math.min(...Object.keys(fieldErrors).map((k) => FIELD_STEP[k] ?? step)));
-        setMsg("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
-      } else {
-        setMsg(apiError(e).message_ar);
+      const keys = applyApiError(e);
+      if (keys.length) {
+        setStep(earliestStep(keys, FIELD_STEP, step));
+        setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
       }
     } finally {
       setBusy(false);
@@ -232,15 +221,16 @@ export default function ServiceCreateWizard() {
                 </select>
               </Field>
               <Field label="سعر الخدمة (بالدولار الأمريكي)" error={errors.base_price}>
-                <input type="number" min={0} className="field" value={form.base_price}
-                  placeholder="مثال: 100" onChange={(e) => set({ base_price: e.target.value })} />
+                <input inputMode="decimal" className="field" value={form.base_price}
+                  placeholder="مثال: 100"
+                  onChange={(e) => set({ base_price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "") })} />
               </Field>
               <Field label="مدة التسليم (أيام)" error={errors.delivery_days}>
-                <input type="number" min={1} className="field" value={form.delivery_days}
-                  onChange={(e) => set({ delivery_days: e.target.value })} />
+                <input inputMode="numeric" className="field" value={form.delivery_days}
+                  onChange={(e) => set({ delivery_days: digitsOnly(e.target.value) })} />
               </Field>
             </div>
-            <Field label="كلمات مفتاحية" hint="افصل بينها بفاصلة">
+            <Field label="كلمات مفتاحية" error={errors.keywords} hint="افصل بينها بفاصلة">
               <input className="field" value={form.keywords} placeholder="تصميم، شعار، هوية بصرية"
                 onChange={(e) => set({ keywords: e.target.value })} />
               {keywords.length > 0 && (
@@ -254,7 +244,7 @@ export default function ServiceCreateWizard() {
 
         {step === 1 && (
           <div className="mt-6 space-y-5">
-            <Field label="صورة الخدمة الأساسية (اختياري)">
+            <Field label="صورة الخدمة الأساسية (اختياري)" error={errors.cover_image}>
               <FileUpload accept="image/*" multiple={false} label="ارفع صورة الغلاف"
                 hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
                 onUploaded={(a) => set({ cover_image: a.url })} />
@@ -281,7 +271,7 @@ export default function ServiceCreateWizard() {
                 onChange={(e) => set({ description: e.target.value })} />
               <ContactHint text={form.description} mode="review" />
             </Field>
-            <Field label="ماذا سيحصل عليه المشتري" hint={`${form.what_you_get.length.toLocaleString("en-US")}/1000`}>
+            <Field label="ماذا سيحصل عليه المشتري" error={errors.what_you_get} hint={`${form.what_you_get.length.toLocaleString("en-US")}/1000`}>
               <textarea className="field min-h-24" maxLength={1000} value={form.what_you_get}
                 placeholder="اكتب بالتفصيل ما سيحصل عليه العميل عند شراء خدمتك…"
                 onChange={(e) => set({ what_you_get: e.target.value })} />
@@ -299,12 +289,12 @@ export default function ServiceCreateWizard() {
                     onChange={(e) => setAddon(i, { title: e.target.value })} />
                 </Field>
                 <Field label="السعر (بالدولار الأمريكي)">
-                  <input type="number" min={0} className="field" value={a.price}
-                    onChange={(e) => setAddon(i, { price: e.target.value })} />
+                  <input inputMode="decimal" className="field" value={a.price}
+                    onChange={(e) => setAddon(i, { price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "") })} />
                 </Field>
                 <Field label="أيام إضافية">
-                  <input type="number" min={0} className="field" value={a.extra_days}
-                    onChange={(e) => setAddon(i, { extra_days: e.target.value })} />
+                  <input inputMode="numeric" className="field" value={a.extra_days}
+                    onChange={(e) => setAddon(i, { extra_days: digitsOnly(e.target.value) })} />
                 </Field>
                 <button type="button" onClick={() => removeAddon(i)}
                   className="mb-1 grid h-9 w-9 place-content-center rounded-full text-danger transition hover:bg-danger-t" aria-label="حذف">
@@ -334,7 +324,7 @@ export default function ServiceCreateWizard() {
           </div>
         )}
 
-        {msg && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
+        {formError && <p className="mt-5 rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
       </section>
 
       <footer className="sticky bottom-0 border-t border-line bg-white/95 backdrop-blur">
@@ -350,20 +340,6 @@ export default function ServiceCreateWizard() {
         </div>
       </footer>
     </main>
-  );
-}
-
-function Field({ label, hint, error, children }:
-  { label: string; hint?: string; error?: string; children: ReactNode }) {
-  return (
-    <label className={`block ${error ? "[&_.field]:border-danger [&_.field]:ring-1 [&_.field]:ring-danger" : ""}`}>
-      <span className="mb-1.5 flex items-center justify-between text-sm font-medium text-ink">
-        <span>{label}</span>
-        {hint && <span className="text-xs font-normal text-sub">{hint}</span>}
-      </span>
-      {children}
-      {error && <span className="mt-1 block text-xs font-medium text-danger">{error}</span>}
-    </label>
   );
 }
 

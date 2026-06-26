@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
+import { apiError } from "@/lib/errors";
+import { useFieldErrors, validateFields } from "@/lib/useFieldErrors";
+import { digitsOnly, toAsciiDigits } from "@/lib/arabic";
 import type { Job } from "@/lib/types";
+import Field from "@/components/Field";
 import ContactHint from "@/components/ContactHint";
 import { TicketIcon, ClockIcon, SendIcon, CheckIcon } from "@/components/icons";
 import { formatUSDRange } from "@/lib/currency";
@@ -18,7 +22,9 @@ export default function ProposalForm({ job }: { job: Job }) {
   const [days, setDays] = useState("14");
   const [description, setDescription] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [msg, setMsg] = useState<{ ok: boolean; text: string; href?: string } | null>(null);
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
+  // The one global error that carries a call-to-action link (buy a bid package).
+  const [buyBidsHref, setBuyBidsHref] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [bidsOn, setBidsOn] = useState(true);
@@ -36,10 +42,32 @@ export default function ProposalForm({ job }: { job: Job }) {
     });
   }, []);
 
+  /** Client-side per-field rules (keyed by the same names the API uses, so messages line up). */
+  function clientErrors(): Record<string, string> {
+    const e: Record<string, string> = {};
+    const b = Number(toAsciiDigits(budget).replace(/[^\d.]/g, ""));
+    if (!budget.trim()) e.budget = "أدخل قيمة العرض";
+    else if (!(b > 0)) e.budget = "أدخل قيمة أكبر من صفر";
+    if (!(Number(days) >= 1)) e.delivery_days = "أدخل مدة تسليم لا تقل عن يوم";
+    if (!description.trim()) e.description = "اكتب تفاصيل عرضك";
+    // required screening questions are keyed by their id (client-side only — the API reports these globally)
+    for (const sq of job.screening_questions ?? []) {
+      if (sq.is_required && !(answers[sq.id] ?? "").trim()) e[`q_${sq.id}`] = "هذا السؤال إلزامي";
+    }
+    return e;
+  }
+
   async function submit() {
     if (!tokens.access) return router.push(signinHereHref());
+    setFormError("");
+    setBuyBidsHref(null);
+    const found = clientErrors();
+    if (Object.keys(found).length) {
+      setErrors(found);
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      return;
+    }
     setBusy(true);
-    setMsg(null);
     try {
       await api(`/jobs/${job.id}/proposals`, {
         method: "POST",
@@ -47,21 +75,10 @@ export default function ProposalForm({ job }: { job: Job }) {
       });
       setSubmitted(true);
     } catch (e) {
-      const raw = JSON.stringify((e as { body?: unknown }).body ?? {});
-      const outOfBids = raw.includes("insufficient_bids");
-      setMsg({
-        ok: false,
-        href: outOfBids ? "/bids" : undefined,
-        text: raw.includes("self_dealing")
-          ? "⚠️ لا يمكنك التقديم على وظيفتك الخاصة"
-          : outOfBids
-            ? "⚠️ رصيد العروض غير كافٍ — اشترِ باقة"
-            : raw.includes("screening_required")
-              ? "⚠️ أجب عن جميع الأسئلة الإلزامية (*)"
-              : raw.includes("duplicate")
-                ? "⚠️ قدّمت عرضًا على هذه الوظيفة من قبل"
-                : "تعذّر إرسال العرض — تحقق من الحقول",
-      });
+      // Field-keyed API errors (budget / delivery_days / description) land on the inputs;
+      // domain errors (self-dealing, duplicate, out-of-bids, screening) fall back to the banner.
+      const keys = applyApiError(e);
+      if (!keys.length && apiError(e).code === "insufficient_bids") setBuyBidsHref("/bids");
     } finally {
       setBusy(false);
     }
@@ -109,42 +126,36 @@ export default function ProposalForm({ job }: { job: Job }) {
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <label>
-          <span className="field-label">قيمة العرض (بالدولار الأمريكي) <span className="text-danger">*</span></span>
-          <span className="relative block">
-            <input className="field" inputMode="decimal" placeholder="0"
-              value={budget} onChange={(e) => setBudget(e.target.value)} />
-          </span>
-          <span className="mt-1 block text-xs text-sub">{`الميزانية: ${formatUSDRange(job.budget_min, job.budget_max)}`}</span>
-        </label>
-        <label>
-          <span className="field-label">مدة التسليم <span className="text-danger">*</span></span>
+        <Field label="قيمة العرض (بالدولار الأمريكي)" required error={errors.budget}
+          hint={`الميزانية: ${formatUSDRange(job.budget_min, job.budget_max)}`}>
+          <input className="field" inputMode="decimal" placeholder="0"
+            value={budget}
+            onChange={(e) => { setBudget(toAsciiDigits(e.target.value).replace(/[^\d.]/g, "")); clearFields("budget"); }} />
+        </Field>
+        <Field label="مدة التسليم" required error={errors.delivery_days} hint="المدة المقدّرة للإنجاز">
           <span className="relative block">
             <input className="field pl-12" inputMode="numeric"
-              value={days} onChange={(e) => setDays(e.target.value)} />
+              value={days} onChange={(e) => { setDays(digitsOnly(e.target.value)); clearFields("delivery_days"); }} />
             <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-sub">يوم</span>
           </span>
-          <span className="mt-1 block text-xs text-sub">المدة المقدّرة للإنجاز</span>
-        </label>
+        </Field>
       </div>
-      <label className="block">
-        <span className="field-label">تفاصيل العرض <span className="text-danger">*</span></span>
+      <Field label="تفاصيل العرض" required error={errors.description}>
         <textarea className="field field-area"
           placeholder="اشرح كيف ستنفّذ المشروع وما يميز عرضك…"
-          value={description} onChange={(e) => setDescription(e.target.value)} />
+          value={description} onChange={(e) => { setDescription(e.target.value); clearFields("description"); }} />
         <ContactHint text={description} />
-      </label>
+      </Field>
 
       {(job.screening_questions?.length ?? 0) > 0 && (
         <div className="space-y-3 rounded-m border border-line bg-bg p-4">
           <p className="text-sm font-bold text-ink">أسئلة صاحب العمل</p>
           {job.screening_questions!.map((sq) => (
-            <label key={sq.id} className="block text-sm">
-              <span className="mb-1 block font-medium text-ink">{sq.question} {sq.is_required && <span className="text-danger">*</span>}</span>
+            <Field key={sq.id} label={sq.question} required={sq.is_required} error={errors[`q_${sq.id}`]}>
               <input className="field"
                 value={answers[sq.id] ?? ""}
-                onChange={(e) => setAnswers({ ...answers, [sq.id]: e.target.value })} />
-            </label>
+                onChange={(e) => { setAnswers({ ...answers, [sq.id]: e.target.value }); clearFields(`q_${sq.id}`); }} />
+            </Field>
           ))}
         </div>
       )}
@@ -157,11 +168,11 @@ export default function ProposalForm({ job }: { job: Job }) {
           </span>
         )}
       </button>
-      {msg && (
-        <p className={`rounded-m p-3 text-sm ${msg.ok ? "bg-success-t text-success" : "bg-warn-t text-warn"}`}>
-          {msg.text}
-          {msg.href && (
-            <a href={msg.href} className="mr-1 font-bold underline">اشترِ باقة عروض ←</a>
+      {formError && (
+        <p className="rounded-m bg-warn-t p-3 text-sm text-warn">
+          ⚠️ {formError}
+          {buyBidsHref && (
+            <a href={buyBidsHref} className="mr-1 font-bold underline">اشترِ باقة عروض ←</a>
           )}
         </p>
       )}

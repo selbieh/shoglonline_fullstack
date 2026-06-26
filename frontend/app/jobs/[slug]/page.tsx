@@ -82,7 +82,7 @@ export default async function JobDetailPage({ params }: { params: { slug: string
       <JsonLd data={jsonLd} />
       {/* gradient hero band */}
       <section className="bg-hero bg-spotlight text-white">
-        <div className="mx-auto max-w-6xl px-6 pb-12 pt-8">
+        <div className="mx-auto max-w-screen-2xl px-6 pb-12 pt-8">
           <p className="text-sm text-tint">
             <a href="/jobs" className="hover:underline">الوظائف</a>
             <span className="mx-1 opacity-60">/</span>
@@ -102,7 +102,7 @@ export default async function JobDetailPage({ params }: { params: { slug: string
         </div>
       </section>
 
-      <div className="mx-auto -mt-6 flex max-w-6xl flex-col gap-6 px-6 pb-12 lg:flex-row lg:items-start">
+      <div className="mx-auto -mt-6 flex max-w-screen-2xl flex-col gap-6 px-6 pb-12 lg:flex-row lg:items-start">
         {/* ── job details (enriched) ── */}
         <div className="flex-1 space-y-6">
           {/* overview facts */}

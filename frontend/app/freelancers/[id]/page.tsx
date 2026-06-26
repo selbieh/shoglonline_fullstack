@@ -96,7 +96,7 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
           { name: f.name, path: `/freelancers/${f.id}` },
         ]),
       ]} />
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-screen-2xl px-4 py-8 sm:px-6">
         <a href="/freelancers" className="text-sm font-medium text-primary-dark hover:underline">← كل المستقلين</a>
 
         {/* ── HERO (deck slide-12: clean white card, identity on the right, stats + actions on the left) ── */}
@@ -107,7 +107,7 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
               <div className="relative shrink-0">
                 <Avatar name={f.name} src={f.avatar_url} className="h-20 w-20 ring-2 ring-line" textClassName="text-2xl" />
                 {f.availability === "available_now" && (
-                  <span className="absolute bottom-0.5 left-0.5 h-4 w-4 rounded-full border-2 border-white bg-success" title="متاح الآن" />
+                  <span className="absolute bottom-0.5 start-0.5 h-4 w-4 rounded-full border-2 border-white bg-success" title="متاح الآن" />
                 )}
               </div>
               <div className="min-w-0">

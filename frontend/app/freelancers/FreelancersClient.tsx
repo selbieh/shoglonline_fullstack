@@ -129,7 +129,7 @@ export default function FreelancersClient({
       {/* gradient header band */}
       <section className="bg-hero bg-spotlight relative overflow-hidden text-white">
         <div className="dots pointer-events-none absolute inset-0 opacity-[0.10]" aria-hidden />
-        <div className="relative mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
+        <div className="relative mx-auto flex max-w-screen-2xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
           <div>
             <span className="glass animate-fade-up mb-3 inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-white">
               <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
@@ -162,7 +162,7 @@ export default function FreelancersClient({
         </div>
       </section>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
+      <div className="mx-auto flex max-w-screen-2xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
         <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {hasFilters && (
@@ -357,7 +357,7 @@ function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean })
           <div className="relative shrink-0">
             <Avatar name={f.name} src={f.avatar_url} className="h-16 w-16" textClassName="text-xl" />
             {f.availability === "available_now" && (
-              <span className="absolute bottom-0.5 left-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-success" title="متاح الآن" />
+              <span className="absolute bottom-0.5 start-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-success" title="متاح الآن" />
             )}
           </div>
           <div className="min-w-0">

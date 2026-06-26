@@ -7,7 +7,9 @@ import { apiError } from "@/lib/errors";
 import { PaperclipIcon } from "@/components/icons";
 
 type Props = {
-  onUploaded: (attachment: Attachment) => void;
+  // `previewUrl` is a local object URL for the just-picked image (instant preview without a network
+  // round-trip). It's only set for image files; revoke it when you no longer render it.
+  onUploaded: (attachment: Attachment, previewUrl?: string) => void;
   accept?: string; // e.g. "image/*,application/pdf"
   maxMb?: number; // client-side pre-check only — the server is the source of truth
   multiple?: boolean;
@@ -36,20 +38,29 @@ export default function FileUpload({
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setError("");
-    for (const file of Array.from(files)) {
-      if (file.size > maxMb * 1024 * 1024) {
-        setError(`حجم «${file.name}» يتجاوز ${maxMb}MB`);
-        continue;
+    // Toggle busy once around the whole batch (not per file, which flickers the label) and
+    // collect every failure so one rejected file doesn't overwrite the others' messages.
+    const failures: string[] = [];
+    setBusy(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > maxMb * 1024 * 1024) {
+          failures.push(`حجم «${file.name}» يتجاوز ${maxMb}MB`);
+          continue;
+        }
+        try {
+          // Render a local preview from the picked file: the server `url` is a scoped, auth-only
+          // download endpoint that a plain <img> can't load (no Bearer header), so it'd show broken.
+          const preview = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+          onUploaded(await uploadFile(file), preview);
+        } catch (e) {
+          failures.push(`«${file.name}»: ${apiError(e).message_ar}`);
+        }
       }
-      setBusy(true);
-      try {
-        onUploaded(await uploadFile(file));
-      } catch (e) {
-        setError(apiError(e).message_ar);
-      } finally {
-        setBusy(false);
-      }
+    } finally {
+      setBusy(false);
     }
+    if (failures.length) setError(failures.join(" · "));
     if (inputRef.current) inputRef.current.value = "";
   }
 

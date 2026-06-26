@@ -143,18 +143,26 @@ export default function GalleryClient({
 
   // Live search: debounced auto-apply (consistent with the jobs/freelancers filters).
   const qMounted = useRef(false);
+  const qTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!qMounted.current) {
       qMounted.current = true;
       return;
     }
-    const t = setTimeout(() => {
+    qTimer.current = setTimeout(() => {
       syncUrl();
       load(0);
     }, 350);
-    return () => clearTimeout(t);
+    return () => { if (qTimer.current) clearTimeout(qTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
+
+  // Explicit search (Enter / button): cancel the pending debounce so we don't fire twice.
+  function runSearch() {
+    if (qTimer.current) clearTimeout(qTimer.current);
+    syncUrl();
+    load(0);
+  }
 
   // Skill cloud — the most common skills across the loaded works, as quick toggle-filters.
   const skillCloud = useMemo(() => {
@@ -179,7 +187,7 @@ export default function GalleryClient({
       {/* gradient header band */}
       <section className="bg-hero bg-spotlight relative overflow-hidden text-white">
         <div className="dots pointer-events-none absolute inset-0 opacity-[0.10]" aria-hidden />
-        <div className="relative mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
+        <div className="relative mx-auto flex max-w-screen-2xl flex-wrap items-end justify-between gap-4 px-6 pb-10 pt-10">
           <div>
             <span className="glass animate-fade-up mb-3 inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-white">
               <GridIcon className="text-[14px]" /> معرض الأعمال
@@ -204,7 +212,7 @@ export default function GalleryClient({
         </div>
       </section>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
+      <div className="mx-auto flex max-w-screen-2xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
         <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
           {anyFilter && (
@@ -331,11 +339,11 @@ export default function GalleryClient({
                 placeholder="ابحث في الأعمال أو المستقلين…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load(0)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
               />
               <button
                 type="button"
-                onClick={() => load(0)}
+                onClick={runSearch}
                 aria-label="بحث"
                 className="absolute inset-y-0 end-2 my-auto grid h-7 w-7 place-content-center text-[18px] text-sub transition hover:text-primary"
               >

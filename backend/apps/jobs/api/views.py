@@ -239,10 +239,14 @@ class RateProposalView(APIView):
 
     def post(self, request, pk):
         proposal = get_object_or_404(Proposal, pk=pk, job__employer=request.user)
-        rating = int(request.data.get("rating", 0))
+        from rest_framework.exceptions import ValidationError
+        try:
+            rating = int(request.data.get("rating", 0))
+        except (TypeError, ValueError):
+            rating = 0
         if not 1 <= rating <= 5:
-            from apps.core.api.errors import api_error
-            raise api_error("invalid_rating", "التقييم يجب أن يكون بين 1 و5")
+            # field-keyed so the frontend can mark the rating stars (not just a banner)
+            raise ValidationError({"rating": "التقييم يجب أن يكون بين 1 و5"})
         proposal.employer_private_rating = rating
         proposal.save(update_fields=["employer_private_rating"])
         return Response({"rating": rating})
@@ -268,8 +272,8 @@ class RejectProposalView(APIView):
         proposal = get_object_or_404(Proposal, pk=pk, job__employer=request.user)
         reason = (request.data.get("reason") or "").strip()
         if not reason:
-            from apps.core.api.errors import api_error
-            raise api_error("reason_required", "السبب إلزامي")  # FR-JOB-9
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"reason": "السبب إلزامي"})  # FR-JOB-9 (field-keyed)
         services.reject_proposal(proposal, reason)
         return Response(EmployerProposalSerializer(proposal).data)
 

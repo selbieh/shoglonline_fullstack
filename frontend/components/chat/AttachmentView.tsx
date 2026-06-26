@@ -7,9 +7,9 @@ import { fmtSize, type ChatAttachment } from "@/lib/chatFormat";
 import { useAttachmentUrl } from "@/lib/useAttachmentUrl";
 import AudioPlayer from "./AudioPlayer";
 
-function ImageAttachment({ att }: { att: ChatAttachment }) {
+function ImageAttachment({ att, mine }: { att: ChatAttachment; mine: boolean }) {
   const { url, loading, error } = useAttachmentUrl(att.id);
-  if (error) return <FileChip att={att} mine={false} />;
+  if (error) return <FileChip att={att} mine={mine} />;
   if (loading || !url) return <div className="h-40 w-40 animate-pulse rounded-m bg-black/10" />;
   return (
     <a href={url} target="_blank" rel="noreferrer">
@@ -60,7 +60,7 @@ function FileChip({ att, mine }: { att: ChatAttachment; mine: boolean }) {
 /** Render one message attachment by kind: voice pill, image, click-to-load video, or file chip. */
 export default function AttachmentView({ att, mine }: { att: ChatAttachment; mine: boolean }) {
   if (att.kind === "audio") return <AudioPlayer id={att.id} mine={mine} />;
-  if (att.kind === "image") return <ImageAttachment att={att} />;
+  if (att.kind === "image") return <ImageAttachment att={att} mine={mine} />;
   if (att.kind === "video") return <VideoAttachment att={att} mine={mine} />;
   return <FileChip att={att} mine={mine} />;
 }

@@ -17,7 +17,8 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
     <div>
       <div className="relative overflow-hidden rounded-l border border-line bg-ink/5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[i]} alt={alt} className="aspect-video w-full object-cover" />
+        <img src={images[i]} alt={alt} className="aspect-video w-full bg-tint object-cover"
+          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
         {many && (
           <>
             <button type="button" onClick={() => go(-1)} aria-label="السابق"
@@ -38,7 +39,8 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
             <button key={j} type="button" onClick={() => setI(j)} aria-label={`صورة ${j + 1}`}
               className={`h-16 w-24 shrink-0 overflow-hidden rounded-m border-2 transition ${j === i ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full object-cover" />
+              <img src={src} alt="" className="h-full w-full bg-tint object-cover"
+                onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
             </button>
           ))}
         </div>

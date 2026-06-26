@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
+import { digitsOnly } from "@/lib/arabic";
 
-type Job = { id: number; title: string; slug: string; status: string; budget_min: string; budget_max: string; proposals_count: number };
+type Job ={ id: number; title: string; slug: string; status: string; budget_min: string; budget_max: string; proposals_count: number };
 type Contract = { id: number; status: string; my_role: string; counterpart: { id: number; name: string } };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -22,6 +23,7 @@ export default function MyJobsPage() {
   const [form, setForm] = useState({ title: "", budget_min: "", budget_max: "", visibility: "public", worker_id: "" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(false);
 
   const load = useCallback(async () => {
     const [j, c] = await Promise.all([
@@ -39,9 +41,16 @@ export default function MyJobsPage() {
       router.replace(signinHereHref());
       return;
     }
-    load().catch(() => router.replace(signinHereHref()));
+    // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
+    load().catch(() => setErr(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function retry() {
+    setErr(false);
+    setJobs(null);
+    load().catch(() => setErr(true));
+  }
 
   function openRepost(job: Job) {
     setRepostId(job.id);
@@ -82,6 +91,12 @@ export default function MyJobsPage() {
     }
   }
 
+  if (err) return (
+    <main className="grid min-h-screen place-content-center gap-3 text-center text-sub">
+      <p>تعذّر تحميل وظائفك.</p>
+      <button type="button" onClick={retry} className="font-bold text-primary-dark underline">إعادة المحاولة</button>
+    </main>
+  );
   if (!jobs) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
 
   return (
@@ -104,7 +119,7 @@ export default function MyJobsPage() {
               <div>
                 <p className="font-bold">{job.title}</p>
                 <p className="mt-0.5 text-xs text-sub">
-                  {STATUS_LABEL[job.status] ?? job.status} · {job.proposals_count} عرض · {job.budget_min}–{job.budget_max}$
+                  {STATUS_LABEL[job.status] ?? job.status} · {job.proposals_count} عرض · <span dir="ltr">{job.budget_min}–{job.budget_max}$</span>
                 </p>
               </div>
               <div className="flex gap-2">
@@ -118,10 +133,10 @@ export default function MyJobsPage() {
                 <input className="w-full field" aria-label="العنوان"
                   value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 <div className="flex gap-2">
-                  <input className="w-32 field" aria-label="أدنى ميزانية"
-                    value={form.budget_min} onChange={(e) => setForm({ ...form, budget_min: e.target.value })} />
-                  <input className="w-32 field" aria-label="أعلى ميزانية"
-                    value={form.budget_max} onChange={(e) => setForm({ ...form, budget_max: e.target.value })} />
+                  <input className="w-32 field" inputMode="numeric" aria-label="أدنى ميزانية"
+                    value={form.budget_min} onChange={(e) => setForm({ ...form, budget_min: digitsOnly(e.target.value) })} />
+                  <input className="w-32 field" inputMode="numeric" aria-label="أعلى ميزانية"
+                    value={form.budget_max} onChange={(e) => setForm({ ...form, budget_max: digitsOnly(e.target.value) })} />
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   <label className="flex items-center gap-1">

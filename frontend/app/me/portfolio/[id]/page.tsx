@@ -14,6 +14,7 @@ type Item = {
   id: number; title: string; description: string; project_type?: string; cover_url?: string;
   project_link?: string; duration_value?: number | null; duration_unit?: string;
   skills?: string[]; completed_at?: string | null; image_url?: string;
+  budget?: string | number | null; features?: string[];
 };
 
 export default function PortfolioManagePage() {
@@ -22,6 +23,7 @@ export default function PortfolioManagePage() {
   const [f, setF] = useState({
     title: "", project_type: "", cover_url: "", description: "", project_link: "",
     skills: "", duration_value: "", duration_unit: "month", completed_at: "",
+    budget: "", features: "",
   });
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,6 +44,8 @@ export default function PortfolioManagePage() {
       duration_value: it.duration_value != null ? String(it.duration_value) : "",
       duration_unit: it.duration_unit || "month",
       completed_at: it.completed_at ?? "",
+      budget: it.budget != null ? String(it.budget) : "",
+      features: (it.features ?? []).join("\n"),
     });
     setExistingImage(it.image_url ?? "");
     setLoaded(true);
@@ -57,6 +61,7 @@ export default function PortfolioManagePage() {
 
   const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
   const skills = f.skills.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
+  const features = f.features.split(/[\n]/).map((s) => s.trim()).filter(Boolean);
 
   async function save() {
     setBusy(true);
@@ -74,6 +79,8 @@ export default function PortfolioManagePage() {
           duration_unit: f.duration_value ? f.duration_unit : "",
           skills,
           completed_at: f.completed_at || null,
+          budget: f.budget || null,
+          features,
           attachment_ids: coverAtt ? [coverAtt] : undefined,
         }),
       });
@@ -151,11 +158,28 @@ export default function PortfolioManagePage() {
             <input type="date" className="field" value={f.completed_at} onChange={(e) => set({ completed_at: e.target.value })} />
           </Field>
         </div>
+        <Field label="ميزانية المشروع (اختياري، بالدولار الأمريكي)">
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-12 place-content-center rounded-m bg-tint text-sm font-bold text-primary-dark">USD</span>
+            <input type="number" min={0} className="field" value={f.budget}
+              placeholder="مثال: 1500" onChange={(e) => set({ budget: e.target.value })} />
+          </div>
+        </Field>
+        <Field label="مميزات المشروع (اختياري)" hint="ميزة في كل سطر">
+          <textarea className="field min-h-24" value={f.features}
+            placeholder={"تصميم واجهة عصرية ومتجاوبة\nسرعة تحميل عالية\nتحسين محركات البحث (SEO)"}
+            onChange={(e) => set({ features: e.target.value })} />
+          {features.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {features.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
+            </div>
+          )}
+        </Field>
         <Field label="المهارات المستخدمة" hint="افصل بينها بفاصلة">
           <input className="field" value={f.skills} onChange={(e) => set({ skills: e.target.value })} />
           {skills.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {skills.map((s) => <span key={s} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
+              {skills.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
             </div>
           )}
         </Field>

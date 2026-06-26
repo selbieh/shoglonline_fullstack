@@ -78,7 +78,7 @@ export default function PaymentMethods() {
             <span>
               {m.type === "paypal" ? "PayPal" : `${m.brand || "بطاقة"} ••••${m.last4}`}
               {m.label && <span className="text-sub"> — {m.label}</span>}
-              {m.is_default && <span className="mr-2 rounded-full bg-success-t px-2 py-0.5 text-xs text-success">افتراضي</span>}
+              {m.is_default && <span className="ms-2 rounded-full bg-success-t px-2 py-0.5 text-xs text-success">افتراضي</span>}
             </span>
             <span className="flex gap-3">
               {!m.is_default && (

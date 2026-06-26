@@ -38,6 +38,6 @@ class InvoiceRequest(models.Model):
 
 class InvoiceLine(models.Model):
     invoice = models.ForeignKey(InvoiceRequest, on_delete=models.CASCADE, related_name="lines")
-    contract = models.ForeignKey("contracts.Contract", on_delete=models.PROTECT, related_name="+")
+    contract = models.ForeignKey("contracts.Contract", on_delete=models.PROTECT, related_name="invoice_lines")
     description = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=12, decimal_places=2)  # worker earning for that contract

@@ -328,7 +328,7 @@ export default function ContractDetailPage() {
           </p>
           <div className="mt-2 flex gap-2">
             <button className="btn-primary" disabled={busy} onClick={() => act(`/update-requests/${pendingUpdate.id}/respond`, { accept: true }, "قُبل التعديل")}>قبول</button>
-            <button className="btn-secondary" disabled={busy} onClick={() => { const r = prompt("سبب الرفض:"); act(`/update-requests/${pendingUpdate.id}/respond`, { accept: false, reason: r || "" }, "رُفض التعديل"); }}>رفض</button>
+            <button className="btn-secondary" disabled={busy} onClick={() => { const r = prompt("سبب الرفض:"); if (r === null) return; act(`/update-requests/${pendingUpdate.id}/respond`, { accept: false, reason: r }, "رُفض التعديل"); }}>رفض</button>
           </div>
         </section>
       )}

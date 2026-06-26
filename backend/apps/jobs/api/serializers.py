@@ -121,7 +121,10 @@ class EmployerProposalSerializer(ProposalSerializer):
 
 
 class ProposalCreateSerializer(serializers.Serializer):
-    budget = serializers.DecimalField(max_digits=10, decimal_places=2)
+    budget = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=1,
+        error_messages={"min_value": "أدخل قيمة أكبر من صفر"},
+    )
     delivery_days = serializers.IntegerField(min_value=1, max_value=365)
     description = serializers.CharField()
     answers = serializers.DictField(child=serializers.CharField(allow_blank=True), required=False, default=dict)

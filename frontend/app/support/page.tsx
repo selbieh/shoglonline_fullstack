@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { apiError } from "@/lib/errors";
 
 type Ticket = {
   id: number;
@@ -40,8 +41,11 @@ export default function SupportPage() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadErr, setLoadErr] = useState(false);
+  const [formErr, setFormErr] = useState("");
 
   const load = useCallback(async () => {
+    setLoadErr(false);
     try {
       const [t, ty] = await Promise.all([
         api<{ results: Ticket[] }>("/me/tickets"),
@@ -50,9 +54,10 @@ export default function SupportPage() {
       setTickets(t.results);
       setTypes(ty.results.filter((x) => !x.is_dispute)); // disputes are opened from a contract
     } catch {
-      router.replace(signinHereHref());
+      // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
+      setLoadErr(true);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!tokens.access) {
@@ -65,6 +70,7 @@ export default function SupportPage() {
   async function create() {
     if (!typeId || !title.trim() || !message.trim()) return;
     setBusy(true);
+    setFormErr("");
     try {
       await api("/tickets", {
         method: "POST",
@@ -75,6 +81,9 @@ export default function SupportPage() {
       setMessage("");
       setTypeId("");
       await load();
+    } catch (e) {
+      // keep the form open with the typed values so the user can retry
+      setFormErr(apiError(e).message_ar);
     } finally {
       setBusy(false);
     }
@@ -116,11 +125,17 @@ export default function SupportPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-          <button className="btn-primary" disabled={busy} onClick={create}>إرسال</button>
+          {formErr && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">⚠️ {formErr}</p>}
+          <button className="btn-primary" disabled={busy} onClick={create}>{busy ? "جارٍ الإرسال…" : "إرسال"}</button>
         </section>
       )}
 
-      {tickets === null ? (
+      {loadErr ? (
+        <div className="mt-8 rounded-m bg-danger-t p-8 text-center text-danger">
+          تعذّر تحميل التذاكر.
+          <button type="button" onClick={load} className="ms-2 font-bold underline">إعادة المحاولة</button>
+        </div>
+      ) : tickets === null ? (
         <p className="mt-10 text-center text-sub">جارٍ التحميل…</p>
       ) : tickets.length === 0 ? (
         <div className="mt-8 rounded-m bg-tint p-8 text-center text-sub">لا تذاكر بعد</div>
@@ -133,7 +148,7 @@ export default function SupportPage() {
                   <p className="truncate font-bold">{t.title}</p>
                   <p className="mt-0.5 text-xs text-sub">{t.type_name}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs ${ST_CHIP[t.status]}`}>{ST_LABEL[t.status]}</span>
+                <span className={`rounded-full px-3 py-1 text-xs ${ST_CHIP[t.status] ?? "bg-bg text-sub"}`}>{ST_LABEL[t.status] ?? t.status}</span>
               </a>
             </li>
           ))}

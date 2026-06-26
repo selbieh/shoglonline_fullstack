@@ -8,6 +8,8 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
+import CountBadge from "@/components/CountBadge";
+import { useUnreadCounts } from "@/lib/useUnreadCounts";
 import {
   BarChartIcon, BellIcon, BriefcaseIcon, ClipboardIcon, CloseIcon, CompassIcon, EnvelopeIcon, GearIcon,
   GridIcon, HeadsetIcon, MenuIcon, SendIcon, ShieldIcon, SparklesIcon, StarIcon, UserIcon, WalletIcon,
@@ -28,7 +30,7 @@ const NAV: { key: string; label: string; href: string; Icon: IconCmp }[] = [
   { key: "activity", label: "طلباتي ونشاطي", href: "/me/activity", Icon: SendIcon },
   { key: "tasks", label: "مهامي", href: "/contracts", Icon: BriefcaseIcon },
   { key: "services", label: "خدماتي المميزة", href: "/me/services", Icon: SparklesIcon },
-  { key: "portfolio", label: "معرض أعمالي", href: "/me/profile", Icon: GridIcon },
+  { key: "portfolio", label: "معرض أعمالي", href: "/me/profile#portfolio", Icon: GridIcon },
   { key: "messages", label: "الرسائل", href: "/messages", Icon: EnvelopeIcon },
   { key: "wallet", label: "المحفظة", href: "/wallet", Icon: WalletIcon },
   { key: "ratings", label: "التقييمات", href: "/me/profile", Icon: StarIcon },
@@ -51,6 +53,7 @@ export default function DashboardShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const unread = useUnreadCounts();
 
   useEffect(() => {
     if (tokens.access) api<Me>("/auth/me").then(setMe).catch(() => {});
@@ -99,12 +102,16 @@ export default function DashboardShell({
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-4">
           {NAV.map((n) => {
             const on = active === n.key;
+            const badge = n.key === "messages" ? unread.messages : n.key === "notifications" ? unread.notifications : 0;
             return (
               <Link key={n.key} href={n.href} title={n.label}
                 className={`flex items-center justify-center gap-0 rounded-m px-3 py-2.5 text-sm font-medium transition group-hover:justify-start group-hover:gap-3 ${
                   on ? "bg-tint text-primary-dark" : "text-sub hover:bg-bg hover:text-ink"
                 }`}>
-                <n.Icon className={`shrink-0 text-[18px] ${on ? "text-primary" : "text-sub"}`} />
+                <span className="relative shrink-0">
+                  <n.Icon className={`text-[18px] ${on ? "text-primary" : "text-sub"}`} />
+                  <CountBadge count={badge} />
+                </span>
                 <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100">{n.label}</span>
               </Link>
             );
@@ -135,6 +142,7 @@ export default function DashboardShell({
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
               {NAV.map((n) => {
                 const on = active === n.key;
+                const badge = n.key === "messages" ? unread.messages : n.key === "notifications" ? unread.notifications : 0;
                 return (
                   <Link key={n.key} href={n.href}
                     className={`flex items-center gap-3 rounded-m px-3 py-2.5 text-sm font-medium transition ${
@@ -142,6 +150,11 @@ export default function DashboardShell({
                     }`}>
                     <n.Icon className={`text-[18px] ${on ? "text-primary" : "text-sub"}`} />
                     {n.label}
+                    {badge > 0 && (
+                      <span className="ms-auto grid h-5 min-w-5 place-content-center rounded-full bg-danger px-1.5 text-[11px] font-bold text-white">
+                        {badge > 9 ? "9+" : badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -173,11 +186,13 @@ export default function DashboardShell({
             </Link>
           </div>
           <div className="flex items-center gap-1.5">
-            <Link href="/notifications" aria-label="الإشعارات" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
+            <Link href="/notifications" aria-label="الإشعارات" className="relative grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <BellIcon />
+              <CountBadge count={unread.notifications} />
             </Link>
-            <Link href="/messages" aria-label="الرسائل" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
+            <Link href="/messages" aria-label="الرسائل" className="relative grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <EnvelopeIcon />
+              <CountBadge count={unread.messages} />
             </Link>
             <Link href="/support" aria-label="المساعدة" className="grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">
               <HeadsetIcon />

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { USD_LABEL } from "@/lib/currency";
+import { toAsciiDigits } from "@/lib/arabic";
 import { AlertIcon, ClockIcon, LockIcon, ReceiptIcon, ShieldIcon, WalletIcon } from "@/components/icons";
 import KpiCard from "@/components/KpiCard";
 
@@ -101,7 +102,11 @@ function WalletInner() {
       api("/wallet/charge/confirm", { method: "POST", body: JSON.stringify({ order_id: orderId }) })
         .then(() => setMsg({ ok: true, text: "✅ تم شحن المحفظة بنجاح عبر PayPal" }))
         .catch(() => setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" }))
-        .finally(load);
+        .finally(() => {
+          // Drop ?token so a manual refresh doesn't re-trigger the capture (banner state survives).
+          window.history.replaceState(null, "", "/wallet");
+          load();
+        });
     } else {
       load();
     }
@@ -153,7 +158,7 @@ function WalletInner() {
   const cur = wallet.currency === "USD" ? USD_LABEL : wallet.currency;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
+    <main className="mx-auto max-w-screen-2xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">محفظتي</h1>
         <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
@@ -194,7 +199,7 @@ function WalletInner() {
           </div>
           <div className="flex gap-2">
             <input className="w-32 field" inputMode="decimal" value={chargeAmount}
-              onChange={(e) => setChargeAmount(e.target.value)} />
+              onChange={(e) => setChargeAmount(toAsciiDigits(e.target.value))} />
             <button className="btn-primary flex-1" disabled={busy || !(Number(chargeAmount) > 0)} onClick={charge}>
               المتابعة للدفع عبر PayPal
             </button>
@@ -252,8 +257,8 @@ function WalletInner() {
               <a href="/settings/payouts" className="inline-block text-xs font-medium text-primary-dark hover:underline">إدارة وسائل الاستلام ←</a>
 
               <div className="flex flex-wrap gap-2">
-                <input className="w-32 field" placeholder="المبلغ"
-                  value={wdAmount} onChange={(e) => setWdAmount(e.target.value)} />
+                <input className="w-32 field" placeholder="المبلغ" inputMode="decimal"
+                  value={wdAmount} onChange={(e) => setWdAmount(toAsciiDigits(e.target.value))} />
                 <input className="min-w-48 flex-1 field" dir="auto" type="email" inputMode="email"
                   placeholder="بريد PayPal (افتراضيًا بريد حسابك)"
                   value={wdEmail} onChange={(e) => setWdEmail(e.target.value)} />

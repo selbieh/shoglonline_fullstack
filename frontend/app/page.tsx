@@ -114,7 +114,7 @@ function Hero({ s }: { s: Section }) {
     <section className="relative overflow-hidden bg-hero bg-spotlight text-white">
       <Blobs />
       <div className="dots pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 pb-28 pt-20 lg:grid-cols-2">
+      <div className="relative mx-auto grid max-w-screen-2xl items-center gap-10 px-6 pb-28 pt-20 lg:grid-cols-2">
         <div>
           <span className="glass animate-fade-up inline-flex items-center gap-2 px-4 py-1 text-sm">
             <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_2px_rgba(27,138,90,0.45)]" />
@@ -175,7 +175,7 @@ function StatsBand() {
     { n: "24/7", t: "محادثات وإشعارات", icon: "💬", color: "text-primary" },
   ];
   return (
-    <section className="relative z-10 mx-auto mt-6 max-w-5xl px-6">
+    <section className="relative z-10 mx-auto mt-6 max-w-6xl px-6">
       <div className="relative grid grid-cols-2 gap-px overflow-hidden rounded-l border border-line bg-line/70 shadow-glow sm:grid-cols-4">
         {/* gradient hairline along the very top of the band */}
         <span className="bg-hero absolute inset-x-0 top-0 z-10 h-1" aria-hidden />
@@ -201,7 +201,7 @@ function StatsBand() {
 function Cards({ s }: { s: Section }) {
   const heading = s.heading || "كل ما تحتاجه في منصّة واحدة";
   return (
-    <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20">
+    <section id="features" className="mx-auto max-w-screen-2xl scroll-mt-24 px-6 py-20">
       <div className="mb-12 text-center">
         <span className="chip"><SparklesIcon className="text-[14px]" /> لماذا شغل أونلاين</span>
         <h2 className="mt-4 text-3xl font-extrabold gradient-text">{heading}</h2>
@@ -254,7 +254,7 @@ function Categories({ s, cats }: { s: Section; cats: Cat[] }) {
   const fallback = s.cards.map((c) => ({ icon: c.icon, title: c.title, link: c.link || "/jobs" }));
   return (
     <section id="categories" className="bg-mesh scroll-mt-24 py-16">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-screen-2xl px-6">
         <div className="flex items-end justify-between">
           <h2 className="text-2xl font-extrabold">{s.heading}</h2>
           <Link href="/jobs" className="text-sm font-medium text-primary-dark hover:text-primary-deep">كل الفئات ←</Link>
@@ -267,7 +267,7 @@ function Categories({ s, cats }: { s: Section; cats: Cat[] }) {
 
 function Steps({ s }: { s: Section }) {
   return (
-    <section id="how" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
+    <section id="how" className="mx-auto max-w-screen-2xl scroll-mt-24 px-6 py-16">
       <h2 className="text-center text-2xl font-extrabold gradient-text">{s.heading}</h2>
       <div className="relative mt-12 grid gap-8 md:grid-cols-3">
         {/* gradient connector that links the numbered steps (desktop) */}
@@ -306,7 +306,7 @@ function Testimonials() {
   ];
   return (
     <section className="bg-mesh py-16">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-screen-2xl px-6">
         <h2 className="text-center text-2xl font-extrabold gradient-text">ماذا يقول مستخدمونا</h2>
         <p className="mt-2 text-center text-sub">تجارب من أصحاب أعمال ومستقلين على المنصّة</p>
         <div className="mt-10 grid gap-5 md:grid-cols-3">

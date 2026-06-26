@@ -238,9 +238,13 @@ export default function ActivityPage() {
                 <li key={r.id} className="card-modern p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <a href={r.service_slug ? `/services/${r.service_slug}` : "#"} className="font-bold leading-snug hover:text-primary-dark">
-                        {r.service_title}
-                      </a>
+                      {r.service_slug ? (
+                        <a href={`/services/${r.service_slug}`} className="font-bold leading-snug hover:text-primary-dark">
+                          {r.service_title}
+                        </a>
+                      ) : (
+                        <span className="font-bold leading-snug">{r.service_title}</span>
+                      )}
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                         <span>المستقل: <span className="text-ink">{r.worker_name ?? "—"}</span></span>
                         <span className="font-bold text-ink">{formatUSD(r.total_price)}</span>

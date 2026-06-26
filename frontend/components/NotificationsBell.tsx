@@ -62,6 +62,15 @@ export default function NotificationsBell() {
     setNotes((prev) => prev.map((n) => ({ ...n, is_read: true })));
   }
 
+  // Mark a single notification read on click so its badge/highlight clears immediately
+  // instead of waiting for the next 20s poll.
+  function markOne(n: Note) {
+    if (n.is_read) return;
+    setNotes((prev) => prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)));
+    setUnread((u) => Math.max(0, u - 1));
+    api(`/notifications/${n.id}/read`, { method: "POST" }).catch(() => undefined);
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -93,7 +102,7 @@ export default function NotificationsBell() {
             ) : (
               notes.map((n) => (
                 <li key={n.id} className={`border-b border-line ${n.is_read ? "" : "bg-tint"}`}>
-                  <a href={n.deep_link || "#"} className="block px-4 py-2.5 hover:bg-bg">
+                  <a href={n.deep_link || "#"} onClick={() => markOne(n)} className="block px-4 py-2.5 hover:bg-bg">
                     <p className="text-sm font-medium">{n.title}</p>
                     {n.body && <p className="mt-0.5 truncate text-xs text-sub">{n.body}</p>}
                     <p className="mt-0.5 text-[10px] text-sub">{new Date(n.created_at).toLocaleString("ar-u-nu-latn")}</p>

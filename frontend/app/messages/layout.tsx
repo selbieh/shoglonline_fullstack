@@ -15,7 +15,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const onThread = activeId !== null;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-5">
+    <main className="mx-auto w-full max-w-screen-2xl px-4 py-5">
       <div className="flex h-[calc(100vh-160px)] min-h-[520px] gap-4">
         <div className={`${onThread ? "hidden md:flex" : "flex"} w-full md:w-auto`}>
           <ConversationList activeId={activeId} />

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError } from "@/lib/errors";
+import { useFieldErrors } from "@/lib/useFieldErrors";
+import Field from "@/components/Field";
 import FileUpload from "@/components/FileUpload";
 import { TrashIcon } from "@/components/icons";
 
@@ -21,21 +22,34 @@ export default function AddPortfolioPage() {
   const [ownership, setOwnership] = useState(false);
   const [coverAtt, setCoverAtt] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [ready, setReady] = useState(false);
+  const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
 
   useEffect(() => {
+    // Gate the form on the auth check so it doesn't flash for one paint before redirecting.
     if (!tokens.access) router.replace(signinHereHref());
+    else setReady(true);
   }, [router]);
 
-  const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
+  const set = (patch: Partial<typeof f>) => {
+    setF((s) => ({ ...s, ...patch }));
+    clearFields(...Object.keys(patch));
+  };
   const skills = f.skills.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
   const features = f.features.split(/[\n]/).map((s) => s.trim()).filter(Boolean);
 
   async function submit() {
-    if (!f.title) { setMsg("أدخل عنوان العمل"); return; }
-    if (!ownership) { setMsg("يجب تأكيد ملكيتك للعمل قبل النشر"); return; }
+    setFormError("");
+    const found: Record<string, string> = {};
+    if (!f.title.trim()) found.title = "أدخل عنوان العمل";
+    if (!ownership) found.ownership_confirmed = "يجب تأكيد ملكيتك للعمل قبل النشر";
+    if (Object.keys(found).length) {
+      setErrors(found);
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      return;
+    }
+    setErrors({});
     setBusy(true);
-    setMsg("");
     try {
       await api("/me/portfolio", {
         method: "POST",
@@ -59,11 +73,15 @@ export default function AddPortfolioPage() {
       });
       router.push("/me/profile");
     } catch (e) {
-      setMsg(apiError(e).message_ar);
+      // field-keyed errors (title, description, url…) mark their inputs; the rest is a banner.
+      const keys = applyApiError(e);
+      if (keys.length) setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
     } finally {
       setBusy(false);
     }
   }
+
+  if (!ready) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
 
   return (
     <main dir="rtl" className="mx-auto max-w-3xl px-6 py-10">
@@ -74,7 +92,7 @@ export default function AddPortfolioPage() {
       <p className="mt-1 text-sm text-sub">اعرض أفضل أعمالك وشارك إنجازاتك مع العملاء.</p>
 
       <div className="mt-6 space-y-5">
-        <Field label="عنوان العمل">
+        <Field label="عنوان العمل" required error={errors.title}>
           <input className="field" value={f.title} placeholder="اكتب عنوانًا واضحًا ومختصرًا للعمل"
             onChange={(e) => set({ title: e.target.value })} />
         </Field>
@@ -143,7 +161,7 @@ export default function AddPortfolioPage() {
             onChange={(e) => set({ features: e.target.value })} />
           {features.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {features.map((s) => <span key={s} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
+              {features.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
             </div>
           )}
         </Field>
@@ -152,18 +170,23 @@ export default function AddPortfolioPage() {
             onChange={(e) => set({ skills: e.target.value })} />
           {skills.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {skills.map((s) => <span key={s} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
+              {skills.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
             </div>
           )}
         </Field>
 
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-0.5 accent-primary" checked={ownership}
-            onChange={(e) => setOwnership(e.target.checked)} />
-          <span>أؤكد أن هذا العمل نفّذته بنفسي ولديّ الصلاحية الكاملة لنشره.</span>
-        </label>
+        <div>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-0.5 accent-primary" checked={ownership}
+              onChange={(e) => { setOwnership(e.target.checked); clearFields("ownership_confirmed"); }} />
+            <span>أؤكد أن هذا العمل نفّذته بنفسي ولديّ الصلاحية الكاملة لنشره.</span>
+          </label>
+          {errors.ownership_confirmed && (
+            <p role="alert" className="mt-1 text-xs font-medium text-danger">{errors.ownership_confirmed}</p>
+          )}
+        </div>
 
-        {msg && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
+        {formError && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
 
         <div className="flex gap-2">
           <button className="btn-primary disabled:opacity-50" disabled={busy} onClick={submit}>
@@ -173,17 +196,5 @@ export default function AddPortfolioPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 flex items-center justify-between text-sm font-medium text-ink">
-        <span>{label}</span>
-        {hint && <span className="text-xs font-normal text-sub">{hint}</span>}
-      </span>
-      {children}
-    </label>
   );
 }

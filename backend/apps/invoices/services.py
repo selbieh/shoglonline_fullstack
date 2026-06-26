@@ -39,7 +39,7 @@ def create_invoice_request(*, worker, employer, period_type: str, anchor: date =
     ).exclude(
         # Never bill the same contract on two invoices (overlapping periods would double-count the
         # same earnings into conflicting documents). Rejected invoices free their contracts again.
-        invoiceline__invoice__status__in=[InvoiceRequest.Status.REQUESTED, InvoiceRequest.Status.CONFIRMED],
+        invoice_lines__invoice__status__in=[InvoiceRequest.Status.REQUESTED, InvoiceRequest.Status.CONFIRMED],
     )
     if not contracts.exists():
         raise ValidationError(ERR["empty"])

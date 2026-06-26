@@ -37,6 +37,7 @@ export default function OwnerServicePage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [s, setS] = useState<OwnerService | null>(null);
+  const [err, setErr] = useState(false);
   const [busy, setBusy] = useState(false);
   // inline edit (ppt slide-20)
   const [edit, setEdit] = useState(false);
@@ -46,12 +47,14 @@ export default function OwnerServicePage() {
   const [addons, setAddons] = useState<{ title: string; price: string; extra_days: string }[]>([]);
 
   const load = useCallback(async () => {
+    setErr(false);
     try {
       setS(await api<OwnerService>(`/me/services/${params.id}`));
     } catch {
-      router.replace(signinHereHref());
+      // api() already bounces a real 401 to sign-in; only 404/5xx/network errors reach here.
+      setErr(true);
     }
-  }, [params.id, router]);
+  }, [params.id]);
 
   useEffect(() => {
     if (!tokens.access) {
@@ -107,6 +110,12 @@ export default function OwnerServicePage() {
     }
   }
 
+  if (err) return (
+    <main className="grid min-h-screen place-content-center gap-3 text-center text-sub">
+      <p>تعذّر تحميل الخدمة.</p>
+      <button type="button" onClick={load} className="font-bold text-primary-dark underline">إعادة المحاولة</button>
+    </main>
+  );
   if (!s) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
 
   return (

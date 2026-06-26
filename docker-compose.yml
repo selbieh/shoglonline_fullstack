@@ -85,6 +85,10 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1   # browser → backend (host)
       INTERNAL_API_URL: http://backend:8000/api/v1        # server-side SSR → backend (container)
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      # Docker Desktop for Mac doesn't forward host fs events into the container, so
+      # `next dev` never sees edits and never hot-reloads. Polling fixes that.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./frontend:/app
       - frontend_modules:/app/node_modules

@@ -37,10 +37,12 @@ export default function MessageComposer({
   async function submit() {
     const t = text.trim();
     if (!t || busy) return;
-    setText("");
     setBusy(true);
     try {
       await onSendText(t);
+      setText(""); // clear only after a successful send so a failure doesn't lose the message
+    } catch {
+      // keep the typed text so the user can retry
     } finally {
       setBusy(false);
     }

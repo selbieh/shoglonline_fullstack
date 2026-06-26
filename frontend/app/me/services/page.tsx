@@ -40,8 +40,11 @@ export default function MyServicesPage() {
   const [status, setStatus] = useState("");
   const [incoming, setIncoming] = useState<Incoming[]>([]);
   const [busyReq, setBusyReq] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(false);
 
   const load = useCallback(async () => {
+    setErr(false);
     try {
       const [s, inc] = await Promise.all([
         api<{ results: Service[]; status_counts?: Record<string, number> }>(`/me/services${status ? `?status=${status}` : ""}`),
@@ -51,9 +54,12 @@ export default function MyServicesPage() {
       if (s.status_counts) setCounts(s.status_counts);
       setIncoming(inc.results);
     } catch {
-      router.replace(signinHereHref());
+      // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
+      setErr(true);
+    } finally {
+      setLoading(false);
     }
-  }, [router, status]);
+  }, [status]);
 
   useEffect(() => {
     if (!tokens.access) {
@@ -134,7 +140,14 @@ export default function MyServicesPage() {
       )}
 
       <section className="mt-6 space-y-2">
-        {services.length === 0 ? (
+        {loading ? (
+          <div className="rounded-m bg-tint p-8 text-center text-sub">جارٍ التحميل…</div>
+        ) : err ? (
+          <div className="rounded-m bg-danger-t p-8 text-center text-danger">
+            تعذّر تحميل خدماتك.
+            <button type="button" onClick={load} className="ms-2 font-bold underline">إعادة المحاولة</button>
+          </div>
+        ) : services.length === 0 ? (
           <div className="rounded-m bg-tint p-8 text-center text-sub">لا خدمات بعد</div>
         ) : (
           services.map((s) => (

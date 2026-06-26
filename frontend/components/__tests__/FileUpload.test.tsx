@@ -42,7 +42,8 @@ describe("<FileUpload>", () => {
     const onUploaded = vi.fn();
     const { container, user } = render(<FileUpload onUploaded={onUploaded} />);
     await user.upload(fileInput(container), makeFile("doc.pdf", 10, "application/pdf"));
-    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(expect.objectContaining({ id: 7, kind: "document" })));
+    // Non-image upload → no local preview url (second arg is undefined).
+    await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(expect.objectContaining({ id: 7, kind: "document" }), undefined));
   });
 
   it("shows the Arabic error envelope when the server rejects the file", async () => {
@@ -53,6 +54,7 @@ describe("<FileUpload>", () => {
     );
     const { container, user } = render(<FileUpload onUploaded={() => {}} />);
     await user.upload(fileInput(container), makeFile("x.bin", 10, "application/octet-stream"));
-    expect(await screen.findByText("نوع الملف غير مسموح")).toBeInTheDocument();
+    // Errors are shown prefixed with the file name («x.bin»: …), so match on the message substring.
+    expect(await screen.findByText(/نوع الملف غير مسموح/)).toBeInTheDocument();
   });
 });

@@ -8,6 +8,8 @@ import { signinHref } from "@/lib/nav";
 import { getMessages } from "@/lib/i18n";
 import Logo from "@/components/Logo";
 import Avatar from "@/components/Avatar";
+import CountBadge from "@/components/CountBadge";
+import { useUnreadCounts } from "@/lib/useUnreadCounts";
 import { BellIcon, CloseIcon, EnvelopeIcon, GearIcon, MenuIcon, UserIcon, WalletIcon } from "@/components/icons";
 
 type Me = { first_name: string; last_name: string; avatar_url: string };
@@ -26,6 +28,7 @@ export default function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const unread = useUnreadCounts();
 
   useEffect(() => {
     const ok = !!tokens.access;
@@ -70,6 +73,7 @@ export default function SiteHeader() {
   if (pathname.startsWith("/me/proposals")) return null;
   if (pathname.startsWith("/me/services")) return null;
   if (pathname.startsWith("/me/activity")) return null;
+  if (pathname.startsWith("/onboarding")) return null;
   if (pathname.startsWith("/signin")) return null;
 
   const t = getMessages();
@@ -99,7 +103,7 @@ export default function SiteHeader() {
         transparent ? "bg-transparent" : "border-b border-line/70 bg-white/90 shadow-card backdrop-blur"
       }`}
     >
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+      <nav className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-6 py-3">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -115,7 +119,7 @@ export default function SiteHeader() {
           </Link>
         </div>
 
-        <div className={`hidden items-center gap-7 text-sm font-medium md:flex ${transparent ? "text-white/90" : "text-sub"}`}>
+        <div className={`hidden items-center gap-8 text-base font-semibold md:flex ${transparent ? "text-white" : "text-ink"}`}>
           {links.map((l) => {
             const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
             const activeText = transparent ? "text-white" : "text-primary-dark";
@@ -139,11 +143,13 @@ export default function SiteHeader() {
 
         {authed ? (
           <div className="flex items-center gap-1.5">
-            <Link href="/messages" aria-label="الرسائل" className={`grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
+            <Link href="/messages" aria-label="الرسائل" className={`relative grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
               <EnvelopeIcon />
+              <CountBadge count={unread.messages} />
             </Link>
-            <Link href="/notifications" aria-label="الإشعارات" className={`grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
+            <Link href="/notifications" aria-label="الإشعارات" className={`relative grid h-10 w-10 place-content-center rounded-full text-[19px] transition ${iconBtn}`}>
               <BellIcon />
+              <CountBadge count={unread.notifications} />
             </Link>
             <div className="relative" ref={menuRef}>
               <button type="button" onClick={() => setMenuOpen((o) => !o)} aria-label="حسابي" aria-expanded={menuOpen}
@@ -220,8 +226,8 @@ export default function SiteHeader() {
                 <>
                   <DrawerLink href="/me/profile" icon={<UserIcon />} label="الملف الشخصي" />
                   <DrawerLink href="/dashboard" icon={<GearIcon />} label="لوحة التحكم" />
-                  <DrawerLink href="/messages" icon={<EnvelopeIcon />} label="الرسائل" />
-                  <DrawerLink href="/notifications" icon={<BellIcon />} label="الإشعارات" />
+                  <DrawerLink href="/messages" icon={<EnvelopeIcon />} label="الرسائل" count={unread.messages} />
+                  <DrawerLink href="/notifications" icon={<BellIcon />} label="الإشعارات" count={unread.notifications} />
                   <DrawerLink href="/wallet" icon={<WalletIcon />} label="المحفظة" />
                   <DrawerLink href="/settings" icon={<GearIcon />} label="الإعدادات" />
                   <button
@@ -245,11 +251,16 @@ export default function SiteHeader() {
   );
 }
 
-function DrawerLink({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
+function DrawerLink({ href, icon, label, count = 0 }: { href: string; icon: ReactNode; label: string; count?: number }) {
   return (
     <Link href={href} className="flex items-center gap-2.5 rounded-m px-4 py-3 text-[15px] text-ink transition hover:bg-bg">
       <span className="text-[18px] text-sub">{icon}</span>
       {label}
+      {count > 0 && (
+        <span className="ms-auto grid h-5 min-w-5 place-content-center rounded-full bg-danger px-1.5 text-[11px] font-bold text-white">
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
     </Link>
   );
 }

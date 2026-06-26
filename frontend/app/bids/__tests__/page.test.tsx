@@ -45,7 +45,7 @@ describe("BidsPage", () => {
     render(<BidsPage />);
     expect(await screen.findByText("رصيد العروض")).toBeInTheDocument();
     expect(await screen.findByText("باقة ١٠")).toBeInTheDocument();
-    expect(screen.getByText(/شراء بـ 9.00\$/)).toBeInTheDocument();
+    expect(screen.getByText(/شراء بـ 9 دولار أمريكي/)).toBeInTheDocument();
   });
 
   it("purchases a plan via the right endpoint and shows success", async () => {

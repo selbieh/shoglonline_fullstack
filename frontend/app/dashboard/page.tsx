@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ModeToggle from "@/components/ModeToggle";
 import DashboardShell from "@/components/DashboardShell";
@@ -52,18 +52,23 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<ActivityItem[] | null>(null);
   const [bidsOn, setBidsOn] = useState(true);
+  // Tracks the latest requested mode so a slower earlier load can't apply stale data after a quick toggle.
+  const activeModeRef = useRef<Me["active_mode"]>("");
 
   // recent requests/invitations strip — outgoing for an employer, incoming for a worker.
   async function loadActivity(mode: Me["active_mode"]) {
+    activeModeRef.current = mode;
     setActivity(null);
     try {
       if (mode === "find_job") {
         const inv = await api<{ results?: { id: number; job_title: string; employer_name?: string; status: string }[] }>("/me/invitations");
+        if (activeModeRef.current !== mode) return;
         setActivity((inv.results ?? []).slice(0, 4).map((i) => ({
           id: i.id, title: i.job_title, sub: `دعوة من ${i.employer_name ?? "صاحب عمل"}`, status: i.status,
         })));
       } else {
         const reqs = await api<{ results?: { id: number; service_title: string; worker_name?: string; status: string }[] }>("/me/requests");
+        if (activeModeRef.current !== mode) return;
         setActivity((reqs.results ?? []).slice(0, 4).map((r) => ({
           id: r.id, title: r.service_title, sub: `طلب خدمة إلى ${r.worker_name ?? "مستقل"}`, status: r.status,
         })));
@@ -74,9 +79,12 @@ export default function Dashboard() {
   }
 
   async function loadKpis(mode: Me["active_mode"]) {
+    activeModeRef.current = mode;
     const worker = mode === "find_job";
+    const fresh = () => activeModeRef.current === mode; // bail if a newer toggle superseded this load
     try {
       const wallet = await api<Wallet>("/me/wallet");
+      if (!fresh()) return;
       if (worker) {
         const flagsOn = bidsEnabled(await fetchPublicSettings());
         setBidsOn(flagsOn);
@@ -86,23 +94,25 @@ export default function Dashboard() {
         const bidKpi: Kpi[] = flagsOn
           ? [{ label: "رصيد العروض", value: String((await api<{ balance: number }>("/me/bids")).balance), href: "/bids", Icon: TicketIcon, tone: "bg-tint text-primary-dark" }]
           : [];
+        if (!fresh()) return;
         setKpis([
           ...bidKpi,
           { label: "عقودي كمستقل", value: String(contracts.count), href: "/contracts", Icon: DocumentIcon, tone: "bg-tint text-primary-dark" },
-          { label: "أرباح معلّقة", value: `${wallet.earnings_pending}$`, href: "/wallet", Icon: WalletIcon, tone: "bg-warn-t text-warn" },
-          { label: "الرصيد المتاح", value: `${wallet.available}$`, href: "/wallet", Icon: WalletIcon, tone: "bg-success-t text-success" },
+          { label: "أرباح معلّقة", value: formatUSD(wallet.earnings_pending), href: "/wallet", Icon: WalletIcon, tone: "bg-warn-t text-warn" },
+          { label: "الرصيد المتاح", value: formatUSD(wallet.available), href: "/wallet", Icon: WalletIcon, tone: "bg-success-t text-success" },
         ]);
       } else {
         const [myJobs, contracts] = await Promise.all([
           api<{ count: number; results?: Job[] }>("/me/jobs"),
           api<{ count: number }>("/me/contracts?role=employer"),
         ]);
+        if (!fresh()) return;
         setJobs(myJobs.results ?? []);
         setKpis([
           { label: "وظائفي", value: String(myJobs.count), href: "/me/jobs", Icon: BriefcaseIcon, tone: "bg-tint text-primary-dark" },
           { label: "عقودي كصاحب عمل", value: String(contracts.count), href: "/contracts", Icon: DocumentIcon, tone: "bg-tint text-primary-dark" },
-          { label: "محجوز في الضمان", value: `${wallet.escrow_held}$`, href: "/wallet", Icon: ShieldIcon, tone: "bg-accent-sky text-primary-deep" },
-          { label: "الرصيد المتاح", value: `${wallet.available}$`, href: "/wallet", Icon: WalletIcon, tone: "bg-success-t text-success" },
+          { label: "محجوز في الضمان", value: formatUSD(wallet.escrow_held), href: "/wallet", Icon: ShieldIcon, tone: "bg-accent-sky text-primary-deep" },
+          { label: "الرصيد المتاح", value: formatUSD(wallet.available), href: "/wallet", Icon: WalletIcon, tone: "bg-success-t text-success" },
         ]);
       }
     } catch {
@@ -223,7 +233,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-bold">{worker ? "أدوات المستقل" : "أدوات صاحب العمل"}</h2>
           <span className="text-xs text-sub">{worker ? "ابحث وقدّم وأدِر أعمالك" : "وظّف وأدِر مشاريعك"}</span>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {modeLinks.map(renderLink)}
         </div>
 
@@ -367,7 +377,9 @@ export default function Dashboard() {
                               <a href={`/jobs/${j.slug}`} className="hover:text-primary-dark">{j.title}</a>
                             </td>
                             <td className="py-2.5 text-sub" dir="ltr">
-                              {j.budget_min ?? "—"}{j.budget_max ? `–${j.budget_max}` : ""}
+                              {j.budget_min && j.budget_max
+                                ? `${j.budget_min}–${j.budget_max}`
+                                : j.budget_min || j.budget_max || "—"}
                             </td>
                             <td className="py-2.5 text-sub">{(j.proposals_count ?? 0).toLocaleString("en-US")}</td>
                             <td className="py-2.5">
@@ -388,7 +400,7 @@ export default function Dashboard() {
         )}
 
         <h2 className="mt-10 text-lg font-bold">حسابي</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {accountLinks.map(renderLink)}
         </div>
     </DashboardShell>
