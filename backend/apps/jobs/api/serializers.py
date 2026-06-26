@@ -54,6 +54,9 @@ class JobCreateSerializer(serializers.ModelSerializer):
     screening_questions = ScreeningQuestionSerializer(many=True, required=False)
     skill_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
     expected_days = serializers.IntegerField(min_value=1, max_value=365, required=False, allow_null=True)
+    # Budgets are whole USD amounts — reject decimals/text at the API boundary (the model stores Decimal).
+    budget_min = serializers.IntegerField(min_value=0)
+    budget_max = serializers.IntegerField(min_value=0)
 
     class Meta:
         model = Job

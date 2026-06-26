@@ -9,6 +9,23 @@ import type { Category, Skill } from "@/lib/types";
 import ContactHint from "@/components/ContactHint";
 import { InfoIcon, CheckIcon } from "@/components/icons";
 
+/**
+ * Map Arabic-Indic (٠-٩) and Persian (۰-۹) digits to ASCII so `Number()` can parse them.
+ * Users on Arabic keyboards type "١٠"; without this, every numeric field reads as NaN and
+ * validation wrongly rejects valid budgets.
+ */
+function toAsciiDigits(s: string): string {
+  return s.replace(/[٠-٩۰-۹]/g, (d) => {
+    const code = d.charCodeAt(0);
+    return String(code >= 0x06F0 ? code - 0x06F0 : code - 0x0660);
+  });
+}
+
+/** Numeric-only input filter: normalize Arabic/Persian digits, then drop everything that isn't 0-9. */
+function digitsOnly(s: string): string {
+  return toAsciiDigits(s).replace(/\D/g, "");
+}
+
 /** Arabic labels for backend field errors, so we can show the real reason instead of a blanket message. */
 const FIELD_LABELS: Record<string, string> = {
   title: "عنوان الوظيفة",
@@ -235,17 +252,17 @@ export default function NewJobPage() {
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="text-sm font-bold">الميزانية من <span className="text-danger">*</span>
-            <input className={input} inputMode="numeric" value={form.budget_min} onChange={(e) => set("budget_min", e.target.value)} />
+            <input className={input} inputMode="numeric" value={form.budget_min} onChange={(e) => set("budget_min", digitsOnly(e.target.value))} />
             <span className="text-xs font-normal text-sub">بالدولار الأمريكي (USD)</span>
           </label>
           <label className="text-sm font-bold">إلى <span className="text-danger">*</span>
-            <input className={input} inputMode="numeric" value={form.budget_max} onChange={(e) => set("budget_max", e.target.value)} />
+            <input className={input} inputMode="numeric" value={form.budget_max} onChange={(e) => set("budget_max", digitsOnly(e.target.value))} />
             <span className="text-xs font-normal text-sub">بالدولار الأمريكي (USD)</span>
           </label>
           <label className="text-sm font-bold">مدة التنفيذ المتوقعة {optional}
             <div className="relative mt-1">
               <input className="w-full field pe-12" inputMode="numeric" value={form.expected_days}
-                onChange={(e) => set("expected_days", e.target.value)} />
+                onChange={(e) => set("expected_days", digitsOnly(e.target.value))} />
               <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-sub">يوم</span>
             </div>
             <span className="text-xs font-normal text-sub">المدة المتوقعة لإنجاز العمل بالأيام</span>
