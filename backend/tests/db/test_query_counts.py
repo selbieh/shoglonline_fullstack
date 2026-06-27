@@ -33,6 +33,23 @@ def test_jobs_list_is_not_n_plus_1(django_assert_max_num_queries):
     assert res.json()["count"] == 8
 
 
+def test_categories_tree_is_not_n_plus_1(django_assert_max_num_queries):
+    # CategorySerializer recurses children; a naive get_children fires one query per node,
+    # so a tree of 5 roots × 4 children was ~25 queries. The view now loads the whole active
+    # tree in a single query and assembles it in memory.
+    for r in range(5):
+        root = CategoryFactory(slug=f"root-{r}")
+        for c in range(4):
+            CategoryFactory(slug=f"root-{r}-child-{c}", parent=root)
+
+    with django_assert_max_num_queries(2):
+        res = APIClient().get("/api/v1/categories")
+    assert res.status_code == 200
+    body = res.json()
+    assert len(body) == 5
+    assert all(len(node["children"]) == 4 for node in body)
+
+
 def test_services_list_is_not_n_plus_1(django_assert_max_num_queries):
     cat = CategoryFactory()
     for _ in range(8):

@@ -79,6 +79,22 @@ export function ListPageSkeleton({ cards = 6 }: { cards?: number }) {
   );
 }
 
+/** Loading shell for the narrow content pages (faq, CMS pages): centered title + text blocks. */
+export function ArticlePageSkeleton({ blocks = 5 }: { blocks?: number }) {
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-10">
+      <Bar className="h-9 w-1/2" />
+      <div className="mt-6 space-y-2">
+        {Array.from({ length: blocks }).map((_, i) => (
+          <div key={i} className="card animate-pulse">
+            <Bar className="h-4 w-2/3" />
+          </div>
+        ))}
+      </div>
+    </main>
+  );
+}
+
 /** Loading shell for the detail pages (job, service, freelancer): hero band + main/aside split. */
 export function DetailPageSkeleton() {
   return (

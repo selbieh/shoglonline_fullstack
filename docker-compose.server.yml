@@ -77,16 +77,20 @@ services:
       backend: { condition: service_started }
 
   frontend:
-    image: node:20-alpine
-    working_dir: /app
-    command: sh -c "npm install && npm run dev"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # NEXT_PUBLIC_* are inlined at build time. Canonical/OG/sitemap/robots all derive from
+      # SITE_URL — if it's absent the build bakes in http://localhost:3000 (deindex risk).
+      args:
+        NEXT_PUBLIC_API_URL: https://shoglonline.bedoonsemsar.com/api/v1
+        NEXT_PUBLIC_SITE_URL: https://shoglonline.bedoonsemsar.com
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+        NEXT_PUBLIC_SOCIAL_LINKS: ${NEXT_PUBLIC_SOCIAL_LINKS:-}
     environment:
-      NEXT_PUBLIC_API_URL: https://shoglonline.bedoonsemsar.com/api/v1
+      # Read at runtime by server components (SSR fetch to backend over the compose network).
       INTERNAL_API_URL: http://backend:8000/api/v1
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
-    volumes:
-      - ./frontend:/app
-      - frontend_modules:/app/node_modules
+    restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
 

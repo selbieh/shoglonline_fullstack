@@ -64,6 +64,7 @@ export default function ContractDetailPage() {
   const [c, setC] = useState<Contract | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [chatBusy, setChatBusy] = useState(false);
   const [notes, setNotes] = useState("");
   const [newBudget, setNewBudget] = useState("");
   const [newDeadline, setNewDeadline] = useState("");
@@ -105,6 +106,8 @@ export default function ContractDetailPage() {
   }
 
   async function openChat() {
+    if (chatBusy) return;
+    setChatBusy(true);
     try {
       const conv = await api<{ id: number }>("/conversations", {
         method: "POST",
@@ -112,6 +115,7 @@ export default function ContractDetailPage() {
       });
       router.push(`/messages/${conv.id}`);
     } catch {
+      setChatBusy(false);
       setMsg({ ok: false, text: "⚠️ تعذّر فتح المحادثة" });
     }
   }
@@ -139,7 +143,7 @@ export default function ContractDetailPage() {
         <h1 className="text-3xl font-extrabold">{c.title}</h1>
         {/* rule D-2: chat only for a funded/active contract (hidden while pending-funding or cancelled). */}
         {["active", "delivered", "disputed", "completed"].includes(c.status) && (
-          <button className="btn-secondary gap-1.5" onClick={openChat}><ChatIcon className="text-[16px]" /> محادثة الطرف الآخر</button>
+          <button className="btn-secondary gap-1.5" onClick={openChat} disabled={chatBusy}><ChatIcon className="text-[16px]" /> {chatBusy ? "جارٍ الفتح…" : "محادثة الطرف الآخر"}</button>
         )}
       </div>
       <p className="mt-1 text-sm text-sub">
