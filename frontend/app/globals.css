@@ -269,6 +269,9 @@ body {
   .animate-float-slow { animation: floaty 9s ease-in-out infinite; }
   .animate-float-delayed { animation: floaty 7s ease-in-out infinite; animation-delay: -2.5s; }
   .animate-fade-up { animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  /* premium cover effects: a diagonal light sweep + a softly breathing glow */
+  .animate-shimmer { animation: shimmer 4.5s ease-in-out infinite; }
+  .animate-glow { animation: glowPulse 5s ease-in-out infinite; }
   /* mobile drawer: backdrop fade + panel sliding in from the inline-start edge (right in RTL) */
   .animate-fade-in { animation: fadeIn 0.2s ease both; }
   .animate-drawer-in { animation: drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -285,6 +288,15 @@ body {
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-160%) skewX(-18deg); opacity: 0; }
+  35% { opacity: 1; }
+  70%, 100% { transform: translateX(160%) skewX(-18deg); opacity: 0; }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.08); }
 }
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -304,7 +316,9 @@ body {
   .animate-float-delayed,
   .animate-fade-up,
   .animate-fade-in,
-  .animate-drawer-in {
+  .animate-drawer-in,
+  .animate-shimmer,
+  .animate-glow {
     animation: none !important;
   }
   .card-hover:hover { transform: none; }

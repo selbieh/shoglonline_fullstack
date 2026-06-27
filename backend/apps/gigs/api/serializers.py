@@ -12,11 +12,13 @@ class AddonSerializer(serializers.ModelSerializer):
 class ServiceListSerializer(serializers.ModelSerializer):
     worker_name = serializers.SerializerMethodField()
     category_name = serializers.CharField(source="category.name_ar", read_only=True)
+    category_slug = serializers.CharField(source="category.slug", read_only=True)
 
     class Meta:
         model = Service
         fields = ["id", "title", "slug", "description", "base_price", "delivery_days", "cover_image",
-                  "category", "category_name", "worker_name", "favorites_count", "created_at", "status"]
+                  "category", "category_name", "category_slug", "worker_name", "favorites_count",
+                  "created_at", "status"]
 
     def get_worker_name(self, obj) -> str:
         w = obj.worker

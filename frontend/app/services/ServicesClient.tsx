@@ -4,13 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
-import { AlertIcon, ArrowLeftIcon, BriefcaseIcon, ClockIcon, HeartIcon, SearchIcon, SparklesIcon } from "@/components/icons";
+import { AlertIcon, ArrowLeftIcon, ClockIcon, HeartIcon, SearchIcon } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import CardActions from "@/components/CardActions";
+import { ServiceThumb } from "@/components/ServiceCover";
 import { useFavoriteIds } from "@/lib/useFavoriteIds";
-import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import { formatUSD } from "@/lib/currency";
 
 export type Service = {
@@ -22,6 +22,7 @@ export type Service = {
   delivery_days: number;
   cover_image?: string;
   category_name?: string;
+  category_slug?: string;
   worker_name: string;
   favorites_count: number;
   created_at?: string;
@@ -198,21 +199,18 @@ export default function ServicesClient({
 
           {/* loading skeletons */}
           {loading && (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="card-modern animate-pulse p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="h-16 w-16 shrink-0 rounded-m bg-line sm:h-20 sm:w-20" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-5 w-2/3 rounded bg-line" />
-                      <div className="h-3 w-1/3 rounded bg-line" />
-                      <div className="h-5 w-24 rounded-full bg-line" />
-                      <div className="h-4 w-full rounded bg-line" />
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="card-modern animate-pulse overflow-hidden">
+                  <div className="aspect-video w-full bg-line" />
+                  <div className="space-y-2 p-4">
+                    <div className="h-5 w-3/4 rounded bg-line" />
+                    <div className="h-3 w-1/3 rounded bg-line" />
+                    <div className="h-3 w-full rounded bg-line" />
+                    <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+                      <div className="h-6 w-24 rounded bg-line" />
+                      <div className="h-8 w-24 rounded-full bg-line" />
                     </div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-line/70 pt-3.5">
-                    <div className="h-6 w-28 rounded bg-line" />
-                    <div className="h-8 w-28 rounded-full bg-line" />
                   </div>
                 </div>
               ))}
@@ -229,78 +227,83 @@ export default function ServicesClient({
             </div>
           )}
 
-          {/* results */}
+          {/* results — gallery-style grid: big 16:9 cover (or a branded per-category cover
+              when the seller uploaded none), then identity, meta and the order CTA */}
           {!loading && !error && items.length > 0 && (
-            <div className="space-y-4">
-              {items.map((s) => {
+            <div className="space-y-6">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {items.map((s) => {
                   const posted = timeAgo(s.created_at);
+                  const href = `/services/${s.slug}`;
                   return (
-                  <Link
-                    key={s.id}
-                    href={`/services/${s.slug}`}
-                    className="card-modern group relative block p-5"
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* cover image as a clean thumbnail, else a soft icon tile */}
-                      {s.cover_image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={s.cover_image}
-                          alt=""
-                          className="h-16 w-16 shrink-0 rounded-m object-cover ring-1 ring-line sm:h-20 sm:w-20"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="icon-tile h-16 w-16 shrink-0 text-[26px] transition duration-300 group-hover:bg-primary group-hover:text-white sm:h-20 sm:w-20">
-                          <SparklesIcon />
-                        </div>
+                  <Link key={s.id} href={href} className="card-modern group flex flex-col overflow-hidden">
+                    <div className="relative aspect-video overflow-hidden bg-tint">
+                      <ServiceThumb cover={s.cover_image} slug={s.category_slug} alt={s.title} />
+                      {/* category on the cover where it has the full width to show in full */}
+                      {s.category_name && (
+                        <span className="absolute start-2 top-2 inline-flex max-w-[75%] items-center gap-1 rounded-full bg-white/85 px-2.5 py-1 text-[11px] font-semibold text-primary-dark shadow-sm backdrop-blur">
+                          <CategoryIcon slug={s.category_slug} className="shrink-0 text-[12px]" />
+                          <span className="truncate">{s.category_name}</span>
+                        </span>
                       )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="text-lg font-bold leading-snug transition group-hover:text-primary-dark">
-                            {s.title}
-                          </h3>
-                          <CardActions
-                            reportKind="service"
-                            favoriteKind="service"
-                            id={s.id}
-                            favoriteInitial={favIds.has(s.id)}
-                            shareUrl={`/services/${s.slug}`}
-                            shareTitle={s.title}
-                          />
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-sub">
-                          <span className="font-medium text-ink/75">{s.worker_name}</span>
-                          {posted && (
-                            <>
-                              <span aria-hidden className="text-line-strong">•</span>
-                              <span className="inline-flex items-center gap-1"><ClockIcon className="text-[13px]" /> {posted}</span>
-                            </>
-                          )}
-                        </div>
-                        {s.description && (
-                          <p className="mt-3 line-clamp-2 text-sm leading-6 text-sub">{s.description}</p>
+                      {/* report · save · share — overlaid on the cover */}
+                      <CardActions
+                        variant="overlay"
+                        reportKind="service"
+                        favoriteKind="service"
+                        id={s.id}
+                        favoriteInitial={favIds.has(s.id)}
+                        shareUrl={href}
+                        shareTitle={s.title}
+                        className="absolute bottom-2 end-2 z-10"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      {/* title — up to two lines (height reserved so cards align) */}
+                      <h3 className="line-clamp-2 min-h-[2.6rem] font-bold leading-snug text-ink transition group-hover:text-primary-dark">
+                        {s.title}
+                      </h3>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-sub">
+                        <span className="font-medium text-ink/75">{s.worker_name}</span>
+                        {posted && (
+                          <>
+                            <span aria-hidden className="text-line-strong">•</span>
+                            <span className="inline-flex items-center gap-1"><ClockIcon className="text-[13px]" /> {posted}</span>
+                          </>
                         )}
                       </div>
+                      {s.description && (
+                        <p className="mt-2 line-clamp-2 text-xs leading-5 text-sub">{s.description}</p>
+                      )}
+
+                      {/* compact meta + price/CTA, pinned to the bottom so cards align */}
+                      <div className="mt-auto pt-3">
+                        <div className="flex items-center gap-4 border-t border-line pt-3 text-xs text-sub">
+                          <span className="inline-flex items-center gap-1" title="مدة التسليم">
+                            <ClockIcon className="text-[14px] text-primary" />
+                            <span className="font-bold text-ink">{s.delivery_days.toLocaleString("en-US")}</span> يوم
+                          </span>
+                          <span className="inline-flex items-center gap-1" title="المفضلة">
+                            <HeartIcon className="text-[14px] text-danger" />
+                            <span className="font-bold text-ink">{s.favorites_count.toLocaleString("en-US")}</span>
+                          </span>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <p className="text-sm">
+                            <span className="text-sub">يبدأ من </span>
+                            <span className="font-extrabold text-primary">{formatUSD(s.base_price)}</span>
+                          </p>
+                          <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
+                            اطلب الخدمة
+                            <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
+                          </span>
+                        </div>
+                      </div>
                     </div>
-
-                    {/* stats strip: delivery · category · favorites */}
-                    <ListingStats>
-                      <ListingStat icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
-                      <ListingStat icon={<BriefcaseIcon />} label="الفئة" value={s.category_name || "—"} />
-                      <ListingStat icon={<HeartIcon />} label="المفضلة" value={s.favorites_count.toLocaleString("en-US")} />
-                    </ListingStats>
-
-                    {/* footer: starting price + order CTA */}
-                    <ListingFooter priceLabel="يبدأ من" priceValue={formatUSD(s.base_price)}>
-                      <span className="btn-soft group/btn gap-1.5 px-4 py-1.5 text-sm">
-                        اطلب الخدمة
-                        <ArrowLeftIcon className="text-[16px] transition-transform group-hover/btn:-translate-x-0.5" />
-                      </span>
-                    </ListingFooter>
                   </Link>
                   );
                 })}
+              </div>
               {hasMore && (
                 <div className="flex justify-center pt-2">
                   <button
