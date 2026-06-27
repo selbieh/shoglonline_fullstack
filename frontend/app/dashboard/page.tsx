@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ModeToggle from "@/components/ModeToggle";
@@ -139,7 +140,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!me) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!me) return <PageLoader />;
 
   const worker = me.active_mode === "find_job";
 

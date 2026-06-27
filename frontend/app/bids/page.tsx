@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -79,7 +80,7 @@ export default function BidsPage() {
     }
   }
 
-  if (!history) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!history) return <PageLoader />;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">

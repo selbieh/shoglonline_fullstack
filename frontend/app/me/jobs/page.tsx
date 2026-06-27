@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -97,7 +98,7 @@ export default function MyJobsPage() {
       <button type="button" onClick={retry} className="font-bold text-primary-dark underline">إعادة المحاولة</button>
     </main>
   );
-  if (!jobs) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!jobs) return <PageLoader />;
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">

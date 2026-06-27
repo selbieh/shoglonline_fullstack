@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -50,7 +51,7 @@ export default function SubscriptionsPage() {
     }
   }
 
-  if (!cats) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!cats) return <PageLoader />;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">

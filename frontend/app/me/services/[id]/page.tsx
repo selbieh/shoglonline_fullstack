@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -116,7 +117,7 @@ export default function OwnerServicePage() {
       <button type="button" onClick={load} className="font-bold text-primary-dark underline">إعادة المحاولة</button>
     </main>
   );
-  if (!s) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!s) return <PageLoader />;
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">

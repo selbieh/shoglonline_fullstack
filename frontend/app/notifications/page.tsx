@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -47,7 +48,7 @@ export default function NotificationsPage() {
     setNotes((prev) => prev?.map((n) => ({ ...n, is_read: true })) ?? null);
   }
 
-  if (!notes) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!notes) return <PageLoader />;
 
   const unread = notes.filter((n) => !n.is_read).length;
 

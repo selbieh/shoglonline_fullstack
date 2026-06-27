@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, profileCache, myProfileCache, type Me } from "@/lib/api";
@@ -254,7 +255,7 @@ export default function ProfileEditPage() {
     }
   }
 
-  if (!me || !profile) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!me || !profile) return <PageLoader />;
 
   const available = catalog.filter((c) => !profile.skills.some((s) => s.skill_id === c.id));
   const selectedCat = categories.find((c) => c.id === profile.main_category);

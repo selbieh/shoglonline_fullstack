@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, type Me } from "@/lib/api";
@@ -171,7 +172,7 @@ export default function ActivityPage() {
     }
   }
 
-  if (!me || !tab) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!me || !tab) return <PageLoader />;
   const worker = me.active_mode === "find_job";
 
   const tabs = worker

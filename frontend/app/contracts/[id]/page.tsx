@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -120,7 +121,7 @@ export default function ContractDetailPage() {
     }
   }
 
-  if (!c) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!c) return <PageLoader />;
 
   const submissions = c.submissions ?? [];
   const update_requests = c.update_requests ?? [];

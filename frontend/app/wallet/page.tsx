@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -53,7 +54,7 @@ const ST_LABEL: Record<string, string> = {
 
 export default function WalletPage() {
   return (
-    <Suspense fallback={<main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>}>
+    <Suspense fallback={<PageLoader />}>
       <WalletInner />
     </Suspense>
   );
@@ -154,7 +155,7 @@ function WalletInner() {
     }
   }
 
-  if (!wallet) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!wallet) return <PageLoader />;
   const cur = wallet.currency === "USD" ? USD_LABEL : wallet.currency;
 
   return (

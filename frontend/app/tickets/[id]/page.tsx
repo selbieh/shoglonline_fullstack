@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -61,7 +62,7 @@ export default function TicketThreadPage() {
     }
   }
 
-  if (!t) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!t) return <PageLoader />;
   const closed = t.status === "closed";
 
   return (

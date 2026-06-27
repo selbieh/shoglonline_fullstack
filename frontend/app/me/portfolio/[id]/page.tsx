@@ -1,5 +1,6 @@
 "use client";
 
+import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
@@ -103,7 +104,7 @@ export default function PortfolioManagePage() {
     router.push("/me/profile");
   }
 
-  if (!loaded) return <main className="grid min-h-screen place-content-center text-sub">جارٍ التحميل…</main>;
+  if (!loaded) return <PageLoader />;
 
   return (
     <main dir="rtl" className="mx-auto max-w-3xl px-6 py-10">
