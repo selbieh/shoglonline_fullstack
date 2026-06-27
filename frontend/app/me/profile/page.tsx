@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, profileCache, myProfileCache, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError, apiFieldErrors } from "@/lib/errors";
+import { apiError, apiFieldErrors, isAuthError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
 import SkillPicker from "@/components/SkillPicker";
@@ -111,43 +111,53 @@ export default function ProfileEditPage() {
       setMe(cachedMe);
       setProfile(cachedProfile);
     }
-    Promise.all([
-      api<Me>("/auth/me"),
-      api<Profile>("/me/profile"),
-      api<CatalogSkill[] | { results: CatalogSkill[] }>("/skills"),
-      api<Idv>("/me/id-verification"),
-      api<CatalogCategory[] | { results: CatalogCategory[] }>("/categories"),
-    ])
-      .then(([m, p, s, v, cats]) => {
-        const normalized: Profile = {
-          ...p,
-          display_name: p.display_name ?? "",
-          intro_video: p.intro_video ?? "",
-          cover_image: p.cover_image ?? "",
-          main_category: p.main_category ?? null,
-          specialization: p.specialization ?? null,
-          years_experience: p.years_experience ?? null,
-          availability: p.availability ?? "available_now",
-          weekly_hours: p.weekly_hours ?? null,
-          client_notes: p.client_notes ?? "",
-          private_contact_channel: p.private_contact_channel ?? "whatsapp",
-          private_contact_value: p.private_contact_value ?? "",
-          skills: p.skills ?? [],
-          educations: p.educations ?? [],
-          employments: p.employments ?? [],
-          languages: p.languages ?? [],
-          certificates: p.certificates ?? [],
-          portfolio: p.portfolio ?? [],
-        };
-        setMe(m);
-        setProfile(normalized);
-        profileCache.write(m);
-        myProfileCache.write(normalized);
-        setCatalog(Array.isArray(s) ? s : s?.results ?? []);
-        setIdv(v);
-        setCategories(Array.isArray(cats) ? cats : cats?.results ?? []);
-      })
-      .catch(() => router.replace(signinHereHref()));
+    // BUG-05: the auth-critical pair (/auth/me + /me/profile) gates the page; the lookups
+    // (/skills, /me/id-verification, /categories) are optional — a transient failure there must
+    // default to empty/'none' instead of ejecting an authenticated user to sign-in. Only a real
+    // 401 on the critical pair redirects; any other critical failure shows an in-page retry.
+    (async () => {
+      let m: Me, p: Profile;
+      try {
+        [m, p] = await Promise.all([api<Me>("/auth/me"), api<Profile>("/me/profile")]);
+      } catch (e) {
+        if (isAuthError(e)) router.replace(signinHereHref());
+        else setMsg({ ok: false, text: errText(e) });
+        return;
+      }
+      const normalized: Profile = {
+        ...p,
+        display_name: p.display_name ?? "",
+        intro_video: p.intro_video ?? "",
+        cover_image: p.cover_image ?? "",
+        main_category: p.main_category ?? null,
+        specialization: p.specialization ?? null,
+        years_experience: p.years_experience ?? null,
+        availability: p.availability ?? "available_now",
+        weekly_hours: p.weekly_hours ?? null,
+        client_notes: p.client_notes ?? "",
+        private_contact_channel: p.private_contact_channel ?? "whatsapp",
+        private_contact_value: p.private_contact_value ?? "",
+        skills: p.skills ?? [],
+        educations: p.educations ?? [],
+        employments: p.employments ?? [],
+        languages: p.languages ?? [],
+        certificates: p.certificates ?? [],
+        portfolio: p.portfolio ?? [],
+      };
+      setMe(m);
+      setProfile(normalized);
+      profileCache.write(m);
+      myProfileCache.write(normalized);
+      // Optional lookups: settle independently so one failing endpoint can't blank the others.
+      const [s, v, cats] = await Promise.allSettled([
+        api<CatalogSkill[] | { results: CatalogSkill[] }>("/skills"),
+        api<Idv>("/me/id-verification"),
+        api<CatalogCategory[] | { results: CatalogCategory[] }>("/categories"),
+      ]);
+      if (s.status === "fulfilled") setCatalog(Array.isArray(s.value) ? s.value : s.value?.results ?? []);
+      setIdv(v.status === "fulfilled" ? v.value : { status: "none" });
+      if (cats.status === "fulfilled") setCategories(Array.isArray(cats.value) ? cats.value : cats.value?.results ?? []);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -155,8 +165,13 @@ export default function ProfileEditPage() {
     if (!me || !profile) return;
     setBusy(true);
     setMsg(null);
+    // P2-17: /auth/me (name/avatar) and /me/profile are two writes. If the first succeeds but the
+    // second fails, the name/avatar IS persisted — surface a partial-success notice instead of a
+    // blanket "nothing saved" error, so the user knows to retry only the profile fields.
+    let identitySaved = false;
     try {
       await api("/auth/me", { method: "PATCH", body: JSON.stringify({ first_name: me.first_name, last_name: me.last_name, avatar_url: me.avatar_url || "" }) });
+      identitySaved = true;
       const updated = await api<Profile>("/me/profile", { method: "PATCH", body: JSON.stringify({
         display_name: profile.display_name,
         bio_title: profile.bio_title,
@@ -177,7 +192,9 @@ export default function ProfileEditPage() {
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
       setMsg({ ok: true, text: "✅ حُفظ ملفك" });
     } catch (e) {
-      setMsg({ ok: false, text: errText(e) });
+      setMsg(identitySaved
+        ? { ok: false, text: `حُفظ الاسم والصورة، لكن تعذّر حفظ باقي الملف: ${errText(e)}` }
+        : { ok: false, text: errText(e) });
     } finally {
       setBusy(false);
     }
@@ -365,8 +382,8 @@ export default function ProfileEditPage() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-bold">سعر الساعة (بالدولار الأمريكي)
-            <input className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
-              onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value })} />
+            <input type="number" min={0} step="0.01" className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
+              onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value ? String(Number(e.target.value)) : null })} />
           </label>
           <label className="text-sm font-bold">التوفّر
             <select className={`mt-1 ${inputCls}`} value={profile.availability}
@@ -652,14 +669,17 @@ function PortfolioSection({
   onError: (text: string) => void;
 }) {
   const [draft, setDraft] = useState(EMPTY_PORTFOLIO);
+  const [ownership, setOwnership] = useState(false);
   const [busy, setBusy] = useState(false);
-  const reset = () => setDraft(EMPTY_PORTFOLIO);
+  const reset = () => { setDraft(EMPTY_PORTFOLIO); setOwnership(false); };
 
   async function submit(extra: Record<string, unknown>) {
     if (!draft.title.trim()) { onError("أدخل عنوانًا للعمل أولًا"); return; }
+    // P1-04: mirror the server-side ownership gate so the quick-add path can't bypass it.
+    if (!ownership) { onError("يجب تأكيد ملكيتك لهذا العمل قبل إضافته إلى معرضك."); return; }
     setBusy(true);
     try {
-      await onAdd({ title: draft.title, description: draft.description, media_type: draft.media_type, url: draft.url, cover_url: draft.cover_url, ...extra });
+      await onAdd({ title: draft.title, description: draft.description, media_type: draft.media_type, url: draft.url, cover_url: draft.cover_url, ownership_confirmed: ownership, ...extra });
       reset();
     } catch (e) {
       onError(errText(e));
@@ -723,6 +743,11 @@ function PortfolioSection({
         </div>
         <input className={inputCls} placeholder="عنوان العمل" aria-label="عنوان العمل" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
         <textarea className={`min-h-16 ${inputCls}`} placeholder="وصف مختصر (اختياري)" aria-label="وصف العمل" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+
+        <label className="flex items-start gap-2 text-sm text-sub">
+          <input type="checkbox" className="mt-0.5 accent-primary" aria-label="تأكيد ملكية العمل" checked={ownership} onChange={(e) => setOwnership(e.target.checked)} />
+          أؤكد أن هذا العمل من إنجازي وأنني أملك حق عرضه.
+        </label>
 
         {draft.media_type === "image" ? (
           <div className="space-y-2">

@@ -30,3 +30,10 @@ if (!window.matchMedia) {
       dispatchEvent: () => false,
     }) as unknown as MediaQueryList;
 }
+
+// jsdom doesn't implement URL.createObjectURL / revokeObjectURL — FileUpload uses them to render a
+// local image preview. Stub them so image-upload flows (e.g. national-ID verification) work in tests.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => "blob:mock";
+  URL.revokeObjectURL = () => {};
+}

@@ -36,7 +36,7 @@ def test_create_link_item_appears_in_public_profile():
     user = online_worker()
     res = auth(user).post(
         "/api/v1/me/portfolio",
-        {"title": "متجري", "media_type": "link", "url": "https://shop.example"},
+        {"title": "متجري", "media_type": "link", "url": "https://shop.example", "ownership_confirmed": True},
         format="json",
     )
     assert res.status_code == 201, res.content
@@ -52,7 +52,7 @@ def test_create_image_item_served_inline_publicly():
     att_id = upload_png(user)
     res = auth(user).post(
         "/api/v1/me/portfolio",
-        {"title": "تصميم", "media_type": "image", "attachment_ids": [att_id]},
+        {"title": "تصميم", "media_type": "image", "attachment_ids": [att_id], "ownership_confirmed": True},
         format="json",
     )
     assert res.status_code == 201, res.content

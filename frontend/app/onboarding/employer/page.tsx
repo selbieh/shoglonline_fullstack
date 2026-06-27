@@ -178,12 +178,13 @@ export default function EmployerWizard() {
               ) : (
                 <>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <select className="field w-24" value={cc} onChange={(e) => setCc(e.target.value)} aria-label="رمز الدولة">
+                    <select className="field w-24" value={cc} aria-label="رمز الدولة"
+                      onChange={(e) => { setCc(e.target.value); setOtpSent(false); setCode(""); }}>
                       <option value="+966">+966</option>
                       <option value="+20">+20</option>
                     </select>
                     <input className="field flex-1" inputMode="tel" placeholder="5XXXXXXXX" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => setPhone(digitsOnly(e.target.value))} />
+                      aria-label="رقم الجوال" onChange={(e) => { setPhone(digitsOnly(e.target.value)); setOtpSent(false); setCode(""); }} />
                     <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>

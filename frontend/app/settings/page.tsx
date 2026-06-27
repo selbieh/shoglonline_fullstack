@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError } from "@/lib/errors";
+import { apiError, isAuthError } from "@/lib/errors";
 
 /* Account info (ppt slide-31) — name, email, deactivate, delete — plus visibility +
    notification preferences. Rendered inside the settings shell (layout.tsx). */
@@ -25,6 +25,7 @@ export default function AccountInfoPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [name, setName] = useState({ first_name: "", last_name: "" });
   const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [visibility, setVisibility] = useState<"online" | "offline">("online");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingName, setSavingName] = useState(false);
@@ -38,24 +39,42 @@ export default function AccountInfoPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [emailMsg, setEmailMsg] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
+  // P2-10: a basic local-part@domain.tld shape so we don't enable "send code" for blank/garbage input.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim());
+
+  const loadAccount = useCallback(() => {
+    setLoadError(false);
+    // BUG-05: load the three panels independently so one transient/5xx failure doesn't blank the
+    // whole page or eject an authenticated user. Only a genuine 401 bounces to sign-in.
+    Promise.allSettled([
+      api<Me>("/auth/me"),
+      api<Prefs>("/me/notification-preferences"),
+      api<Profile>("/me/profile"),
+    ]).then(([uRes, pRes, profileRes]) => {
+      const authFailed = [uRes, pRes, profileRes].some(
+        (r) => r.status === "rejected" && isAuthError(r.reason),
+      );
+      if (authFailed) {
+        router.replace(signinHereHref());
+        return;
+      }
+      if (uRes.status === "fulfilled") {
+        setMe(uRes.value);
+        setName({ first_name: uRes.value.first_name, last_name: uRes.value.last_name });
+      }
+      if (pRes.status === "fulfilled") setPrefs(pRes.value);
+      if (profileRes.status === "fulfilled") setVisibility(profileRes.value.visibility);
+      // Account + prefs are required to render the shell; flag a retry if either failed.
+      if (uRes.status === "rejected" || pRes.status === "rejected") setLoadError(true);
+    });
+  }, [router]);
 
   useEffect(() => {
     if (!tokens.access) {
       router.replace(signinHereHref());
       return;
     }
-    Promise.all([
-      api<Me>("/auth/me"),
-      api<Prefs>("/me/notification-preferences"),
-      api<Profile>("/me/profile"),
-    ])
-      .then(([u, p, profile]) => {
-        setMe(u);
-        setName({ first_name: u.first_name, last_name: u.last_name });
-        setPrefs(p);
-        setVisibility(profile.visibility);
-      })
-      .catch(() => router.replace(signinHereHref()));
+    loadAccount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -64,7 +83,7 @@ export default function AccountInfoPage() {
     setEmailMsg("");
     try {
       const r = await api<{ sent: boolean; debug_token?: string }>("/auth/me/email/request-change", {
-        method: "POST", body: JSON.stringify({ email: newEmail }),
+        method: "POST", body: JSON.stringify({ email: newEmail.trim() }),
       });
       setEmailSent(true);
       setEmailMsg(r.debug_token ? `رمز التطوير: ${r.debug_token}` : "أرسلنا رمز تأكيد إلى بريدك الجديد");
@@ -135,7 +154,17 @@ export default function AccountInfoPage() {
     }
   }
 
-  if (!me || !prefs) return <p className="text-sub">جارٍ التحميل…</p>;
+  if (!me || !prefs) {
+    if (loadError)
+      return (
+        <div className="rounded-m bg-warn-t p-6 text-center text-warn" role="alert">
+          <p className="font-bold">تعذّر تحميل إعدادات الحساب</p>
+          <p className="mt-1 text-sm">تحقّق من اتصالك ثم حاول مجددًا</p>
+          <button onClick={loadAccount} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+        </div>
+      );
+    return <p className="text-sub">جارٍ التحميل…</p>;
+  }
 
   return (
     <>
@@ -158,23 +187,24 @@ export default function AccountInfoPage() {
             <input className="field" value={name.last_name} onChange={(e) => setName({ ...name, last_name: e.target.value })} />
           </label>
         </div>
-        <label className="mt-4 block">
+        <div className="mt-4 block">
           <span className="mb-1.5 flex items-center justify-between text-sm font-medium">
-            <span>البريد الإلكتروني</span>
+            <label htmlFor="account-email">البريد الإلكتروني</label>
             {!emailEdit && (
               <button type="button" className="text-xs font-medium text-primary-dark hover:underline"
                 onClick={() => { setEmailEdit(true); setNewEmail(""); setEmailSent(false); setEmailMsg(""); }}>تغيير</button>
             )}
           </span>
-          <input className="field bg-bg" dir="ltr" value={me.email} disabled readOnly />
+          <input id="account-email" className="field bg-bg" dir="ltr" value={me.email} disabled readOnly />
           {emailEdit && (
             <div className="mt-2 space-y-2 rounded-m border border-dashed border-line-strong p-3">
               {!emailSent ? (
                 <>
                   <input className="field" dir="ltr" type="email" placeholder="البريد الإلكتروني الجديد"
+                    aria-label="البريد الإلكتروني الجديد"
                     value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
                   <div className="flex gap-2">
-                    <button type="button" className="btn-primary disabled:opacity-50" disabled={emailBusy || !newEmail}
+                    <button type="button" className="btn-primary disabled:opacity-50" disabled={emailBusy || !emailValid}
                       onClick={requestEmailChange}>إرسال رمز التأكيد</button>
                     <button type="button" className="btn-secondary" onClick={() => setEmailEdit(false)}>إلغاء</button>
                   </div>
@@ -195,7 +225,7 @@ export default function AccountInfoPage() {
               {emailMsg && <p className="text-xs text-sub">{emailMsg}</p>}
             </div>
           )}
-        </label>
+        </div>
         <button className="btn-primary mt-4" disabled={savingName} onClick={saveName}>
           {savingName ? "جارٍ الحفظ…" : "حفظ"}
         </button>
@@ -235,7 +265,7 @@ export default function AccountInfoPage() {
           حذف نهائي لملفك العام. يُمنع الحذف ما دام لديك عقد جارٍ أو رصيد أو طلب سحب أو طلب خدمة معلّق.
         </p>
         {blockers && (
-          <div className="mt-3 rounded-m bg-warn-t p-3 text-sm text-warn">
+          <div className="mt-3 rounded-m bg-warn-t p-3 text-sm text-warn" role="alert" aria-live="assertive">
             <p className="font-bold">لا يمكن حذف الحساب الآن:</p>
             <ul className="mt-1 list-inside list-disc">
               {blockers.map((b) => <li key={b.code}>{b.message_ar}</li>)}

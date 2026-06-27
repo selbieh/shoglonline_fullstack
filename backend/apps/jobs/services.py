@@ -25,6 +25,7 @@ ERR = {
     "not_open": {"code": "job_not_open", "message_ar": "هذه الوظيفة لا تستقبل عروضًا حاليًا"},
     "locked": {"code": "job_locked", "message_ar": "العنوان والوصف مقفلان بعد استلام أول عرض"},
     "screening": {"code": "screening_required", "message_ar": "أجب عن جميع الأسئلة الإلزامية"},
+    "budget_range": {"code": "budget_out_of_range", "message_ar": "قيمة العرض يجب أن تكون ضمن ميزانية الوظيفة"},
     "not_owner": {"code": "not_owner", "message_ar": "لا تملك صلاحية على هذه الوظيفة"},
     "profile_not_published": {
         "code": "profile_not_published",
@@ -139,6 +140,12 @@ def submit_proposal(*, worker, job: Job, budget, delivery_days, description, ans
         raise ValidationError(ERR["not_open"])  # awarded, awaiting funding (BR-6a)
     if job.proposals.filter(worker=worker).exists():
         raise ValidationError(ERR["dup"])
+
+    # The bid value must sit inside the employer's stated budget band (the client shows it as a hint).
+    # Raised as a field-keyed error (no code/message_ar siblings) so the envelope lands it under
+    # `fields.budget` and applyApiError marks the budget input — see core/api/exception_handler.py.
+    if budget is not None and (budget < job.budget_min or budget > job.budget_max):
+        raise ValidationError({"budget": ERR["budget_range"]["message_ar"]})
 
     required = job.screening_questions.filter(is_required=True)
     missing = [q.pk for q in required if not (answers.get(str(q.pk)) or "").strip()]

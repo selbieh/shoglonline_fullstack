@@ -74,10 +74,17 @@ export default function ProposalForm({ job }: { job: Job }) {
   /** Client-side per-field rules (keyed by the same names the API uses, so messages line up). */
   function clientErrors(): Record<string, string> {
     const e: Record<string, string> = {};
-    const b = Number(toAsciiDigits(budget).replace(/[^\d.]/g, ""));
+    const raw = toAsciiDigits(budget).replace(/[^\d.]/g, "");
+    const b = Number(raw);
+    const min = Number(job.budget_min);
+    const max = Number(job.budget_max);
     if (!budget.trim()) e.budget = "أدخل قيمة العرض";
     else if (!(b > 0)) e.budget = "أدخل قيمة أكبر من صفر";
-    if (!(Number(days) >= 1)) e.delivery_days = "أدخل مدة تسليم لا تقل عن يوم";
+    else if (!/^\d+(\.\d{1,2})?$/.test(raw)) e.budget = "أدخل قيمة بحد أقصى منزلتين عشريتين";
+    else if (b < min || b > max) e.budget = `قيمة العرض يجب أن تكون ضمن الميزانية: ${formatUSDRange(job.budget_min, job.budget_max)}`;
+    const d = Number(days);
+    if (!(d >= 1)) e.delivery_days = "أدخل مدة تسليم لا تقل عن يوم";
+    else if (d > 365) e.delivery_days = "أقصى مدة تسليم 365 يومًا";
     if (!description.trim()) e.description = "اكتب تفاصيل عرضك";
     // required screening questions are keyed by their id (client-side only — the API reports these globally)
     for (const sq of job.screening_questions ?? []) {
@@ -105,9 +112,14 @@ export default function ProposalForm({ job }: { job: Job }) {
       setSubmitted(true);
     } catch (e) {
       // Field-keyed API errors (budget / delivery_days / description) land on the inputs;
-      // domain errors (self-dealing, duplicate, out-of-bids, screening) fall back to the banner.
+      // domain errors (self-dealing, duplicate, out-of-bids) fall back to the banner.
       const keys = applyApiError(e);
-      if (!keys.length && apiError(e).code === "insufficient_bids") setBuyBidsHref("/bids");
+      // screening_required carries the unanswered question pks — map them onto the per-question inputs.
+      const missing = (e as { body?: { missing_questions?: number[] } } | undefined)?.body?.missing_questions;
+      if (Array.isArray(missing) && missing.length) {
+        setErrors(Object.fromEntries(missing.map((pk) => [`q_${pk}`, "هذا السؤال إلزامي"])));
+        setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      } else if (!keys.length && apiError(e).code === "insufficient_bids") setBuyBidsHref("/bids");
     } finally {
       setBusy(false);
     }
@@ -221,9 +233,9 @@ export default function ProposalForm({ job }: { job: Job }) {
         </Field>
         <Field label="مدة التسليم" required error={errors.delivery_days} hint="المدة المقدّرة للإنجاز">
           <span className="relative block">
-            <input className="field pl-12" inputMode="numeric"
+            <input className="field pe-12" inputMode="numeric"
               value={days} onChange={(e) => { setDays(digitsOnly(e.target.value)); clearFields("delivery_days"); }} />
-            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-medium text-sub">يوم</span>
+            <span className="pointer-events-none absolute inset-y-0 end-4 flex items-center text-sm font-medium text-sub">يوم</span>
           </span>
         </Field>
       </div>

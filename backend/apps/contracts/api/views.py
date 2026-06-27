@@ -4,6 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -127,9 +128,16 @@ class UpdateRequestsView(APIView):
 
     def post(self, request, pk):
         contract = _party_contract(request.user, pk)
+        raw_budget = request.data.get("new_budget")
+        if raw_budget:
+            new_budget = _to_decimal(raw_budget)
+            if new_budget is None:
+                raise ValidationError({"new_budget": "أدخل رقمًا صحيحًا"})
+        else:
+            new_budget = None
         services.request_update(
             contract, request.user,
-            new_budget=_to_decimal(request.data.get("new_budget")) if request.data.get("new_budget") else None,
+            new_budget=new_budget,
             new_deadline=request.data.get("new_deadline") or None,
             message=request.data.get("message", ""),
         )

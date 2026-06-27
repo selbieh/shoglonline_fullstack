@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { StarIcon } from "@/components/icons";
 
 /* Horizontal "similar works / services" carousel (ppt slides 20/21/22 «أعمال مشابهة / خدمات مشابهة»).
@@ -15,6 +15,29 @@ export type SimilarWork = {
   href: string;
 };
 
+function Thumb({ src, title }: { src?: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={title} className="aspect-video w-full bg-tint object-cover"
+        onError={() => setFailed(true)} />
+    );
+  }
+  return (
+    <div aria-hidden
+      className="relative grid aspect-video w-full place-content-center overflow-hidden bg-gradient-to-br from-tint via-white to-tint">
+      <span className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.5"
+        strokeLinecap="round" strokeLinejoin="round" className="relative text-primary/50">
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <circle cx="8.5" cy="9.5" r="1.8" />
+        <path d="M21 16l-5-5-7 7" />
+      </svg>
+    </div>
+  );
+}
+
 export default function SimilarWorks({ items }: { items: SimilarWork[] }) {
   const ref = useRef<HTMLDivElement>(null);
   if (!items || items.length === 0) return null;
@@ -26,10 +49,7 @@ export default function SimilarWorks({ items }: { items: SimilarWork[] }) {
         {items.map((w) => (
           <a key={w.id} href={w.href}
             className="group w-52 shrink-0 overflow-hidden rounded-l border border-line bg-white transition hover:shadow-card">
-            {w.thumb
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <img src={w.thumb} alt={w.title} className="aspect-video w-full object-cover" />
-              : <div className="aspect-video w-full bg-tint" />}
+            <Thumb src={w.thumb} title={w.title} />
             <div className="p-3">
               <p className="truncate text-sm font-bold text-ink transition group-hover:text-primary-dark">{w.title}</p>
               <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-sub">

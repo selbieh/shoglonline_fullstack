@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { isAuthError } from "@/lib/errors";
 import { signinHereHref } from "@/lib/nav";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
 import StatusTabs from "@/components/StatusTabs";
@@ -34,8 +35,10 @@ export default function ContractsPage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [role, setRole] = useState<"all" | "employer" | "worker">("all");
   const [status, setStatus] = useState("");
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
+    setError(false);
     try {
       const params = new URLSearchParams();
       if (role !== "all") params.set("role", role);
@@ -46,8 +49,14 @@ export default function ContractsPage() {
       );
       setContracts(res.results);
       if (res.status_counts) setCounts(res.status_counts);
-    } catch {
-      router.replace(signinHereHref());
+    } catch (e) {
+      // BUG-05: only a genuine 401 ejects to sign-in; transient/5xx/network shows in-page retry.
+      if (isAuthError(e)) {
+        router.replace(signinHereHref());
+        return;
+      }
+      setContracts([]);
+      setError(true);
     }
   }, [role, status, router]);
 
@@ -98,6 +107,12 @@ export default function ContractsPage() {
 
       {contracts === null ? (
         <p className="mt-10 text-center text-sub">جارٍ التحميل…</p>
+      ) : error ? (
+        <div className="mt-10 rounded-m bg-warn-t p-8 text-center text-warn" role="alert">
+          <p className="font-bold">تعذّر تحميل العقود</p>
+          <p className="mt-1 text-sm">تحقّق من اتصالك ثم حاول مجددًا</p>
+          <button onClick={() => load()} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+        </div>
       ) : contracts.length === 0 ? (
         <div className="mt-10 rounded-m bg-tint p-8 text-center text-sub">
           لا عقود بعد — تنشأ العقود تلقائيًا عند قبول عرض على وظيفة.

@@ -91,15 +91,17 @@ class WorkerProfile(models.Model):
 
     @property
     def completeness_pct(self) -> int:
-        """Profile completion indicator (FR-PROF-3)."""
+        """Profile completion indicator (FR-PROF-3).
+
+        Counts only the fields the onboarding wizard actually collects, so the % it shows the
+        user matches the publish gate exactly (educations/employments are not wizard steps and
+        would make a "100%" wizard fail the gate — see P1-02)."""
         checks = [
             bool(self.bio_title),
             bool(self.overview),
             bool(self.expertise_level),
             self.hourly_rate is not None,
             self.skills.exists(),
-            self.educations.exists(),
-            self.employments.exists(),
             self.languages.exists(),
         ]
         return int(100 * sum(checks) / len(checks))

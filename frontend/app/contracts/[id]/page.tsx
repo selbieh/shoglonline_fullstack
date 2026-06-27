@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
-import { apiError } from "@/lib/errors";
+import { apiError, isAuthError } from "@/lib/errors";
 import ReviewsSection from "@/components/ReviewsSection";
 import { ChatIcon } from "@/components/icons";
 import { formatUSD } from "@/lib/currency";
@@ -63,6 +63,7 @@ export default function ContractDetailPage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [c, setC] = useState<Contract | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
@@ -71,10 +72,22 @@ export default function ContractDetailPage() {
   const [newDeadline, setNewDeadline] = useState("");
 
   const load = useCallback(async () => {
+    setLoadError(false);
     try {
       setC(await api<Contract>(`/contracts/${id}`));
-    } catch {
-      router.replace("/contracts");
+    } catch (e) {
+      // BUG-05: a real 401 → sign-in; a missing/forbidden contract → back to the list;
+      // a transient/5xx/network failure must NOT silently redirect — show an in-place retry.
+      if (isAuthError(e)) {
+        router.replace(signinHereHref());
+        return;
+      }
+      const status = (e as { status?: number } | undefined)?.status;
+      if (status === 403 || status === 404) {
+        router.replace("/contracts");
+        return;
+      }
+      setLoadError(true);
     }
   }, [id, router]);
 
@@ -121,6 +134,17 @@ export default function ContractDetailPage() {
     }
   }
 
+  if (loadError)
+    return (
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <div className="rounded-m bg-warn-t p-8 text-center text-warn" role="alert">
+          <p className="font-bold">تعذّر تحميل العقد</p>
+          <p className="mt-1 text-sm">تحقّق من اتصالك ثم حاول مجددًا</p>
+          <button onClick={() => load()} className="btn-secondary mt-4 text-sm">إعادة المحاولة</button>
+        </div>
+      </main>
+    );
+
   if (!c) return <PageLoader />;
 
   const submissions = c.submissions ?? [];
@@ -132,6 +156,8 @@ export default function ContractDetailPage() {
   const canDeliver = c.my_role === "worker" && (c.status === "active" || c.status === "delivered");
   const canReviewSub = isEmployer && c.status === "delivered" && openSub;
   const canChangeTerms = c.status === "active" || c.status === "delivered";
+  // P2-15: a typed budget must parse to a positive number before we allow submitting the request.
+  const budgetInvalid = newBudget.trim() !== "" && !(Number(newBudget) > 0);
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -296,13 +322,19 @@ export default function ContractDetailPage() {
               <div>
                 <h2 className="font-bold">طلب تعديل الشروط</h2>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <input className="w-36 field" dir="ltr"
+                  <input className="w-36 field" dir="ltr" type="number" inputMode="decimal" min="0" step="any"
                     placeholder="ميزانية جديدة (بالدولار الأمريكي)" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
                   <input type="date" className="field"
                     value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
-                  <button className="btn-secondary" disabled={busy || (!newBudget && !newDeadline)}
-                    onClick={() => act(`/contracts/${id}/update-requests`,
-                      { new_budget: newBudget || undefined, new_deadline: newDeadline || undefined }, "أُرسل طلب التعديل")}>
+                  <button className="btn-secondary" disabled={busy || (!newBudget && !newDeadline) || budgetInvalid}
+                    onClick={() => {
+                      if (newBudget && budgetInvalid) {
+                        setMsg({ ok: false, text: "⚠️ أدخل ميزانية رقمية أكبر من صفر" });
+                        return;
+                      }
+                      act(`/contracts/${id}/update-requests`,
+                        { new_budget: newBudget || undefined, new_deadline: newDeadline || undefined }, "أُرسل طلب التعديل");
+                    }}>
                     إرسال الطلب
                   </button>
                 </div>

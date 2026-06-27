@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError } from "@/lib/errors";
+import { useFieldErrors } from "@/lib/useFieldErrors";
+import Field from "@/components/Field";
 
 /* Receive-earnings / payout methods hub (ppt slides 38–42), on the PayoutMethod backend.
    PayPal + bank transfer are international; e-wallet / bank card / Instapay are Egypt-only. */
@@ -49,7 +50,7 @@ export default function PayoutsPage() {
   const [details, setDetails] = useState<Record<string, string>>({});
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
+  const { errors, formError, applyApiError, reset } = useFieldErrors();
 
   async function load() {
     const res = await api<{ results: PayoutMethod[] } | PayoutMethod[]>("/me/payout-methods");
@@ -71,21 +72,23 @@ export default function PayoutsPage() {
     setKind(v);
     setDetails({});
     setLabel("");
-    setMsg("");
+    reset();
   }
 
   async function add() {
     if (!active) return;
     setBusy(true);
-    setMsg("");
+    reset();
     try {
+      const trimmed: Record<string, string> = {};
+      for (const [k, v] of Object.entries(details)) trimmed[k] = v.trim();
       await api("/me/payout-methods", {
         method: "POST",
         body: JSON.stringify({
           kind,
-          label,
+          label: label.trim(),
           country: active.egyptOnly ? "EG" : "",
-          details,
+          details: trimmed,
         }),
       });
       setKind("");
@@ -93,7 +96,7 @@ export default function PayoutsPage() {
       setLabel("");
       await load();
     } catch (e) {
-      setMsg(apiError(e).message_ar);
+      applyApiError(e);
     } finally {
       setBusy(false);
     }
@@ -166,22 +169,20 @@ export default function PayoutsPage() {
         {active && (
           <div className="mt-4 space-y-3">
             {active.fields.map((f) => (
-              <label key={f.k} className="block">
-                <span className="mb-1.5 block text-sm font-medium">{f.label}</span>
+              <Field key={f.k} label={f.label} error={errors[f.k]}>
                 <input
                   className="field"
                   type={f.type ?? "text"}
                   value={details[f.k] ?? ""}
                   onChange={(e) => setDetails((d) => ({ ...d, [f.k]: e.target.value }))}
                 />
-              </label>
+              </Field>
             ))}
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">اسم مستعار (اختياري)</span>
+            <Field label="اسم مستعار (اختياري)" error={errors.label}>
               <input className="field" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="مثال: حساب الأرباح الرئيسي" />
-            </label>
+            </Field>
             {active.egyptOnly && <p className="text-xs text-sub">هذه الوسيلة متاحة داخل مصر فقط.</p>}
-            {msg && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{msg}</p>}
+            {formError && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
             <button className="btn-primary" disabled={busy || active.fields.some((f) => !(details[f.k] ?? "").trim())}
               onClick={add}>{busy ? "جارٍ الحفظ…" : "حفظ الوسيلة"}</button>
           </div>

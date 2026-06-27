@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { useFieldErrors, validateFields, earliestStep } from "@/lib/useFieldErrors";
-import { toAsciiDigits, digitsOnly } from "@/lib/arabic";
+import { toAsciiDigits, digitsOnly, pluralizeDays } from "@/lib/arabic";
 import Field from "@/components/Field";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
 import ContactHint from "@/components/ContactHint";
@@ -223,7 +223,7 @@ export default function ServiceCreateWizard() {
               <Field label="سعر الخدمة (بالدولار الأمريكي)" error={errors.base_price}>
                 <input inputMode="decimal" className="field" value={form.base_price}
                   placeholder="مثال: 100"
-                  onChange={(e) => set({ base_price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "") })} />
+                  onChange={(e) => set({ base_price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "").replace(/(\..*?)\./g, "$1") })} />
               </Field>
               <Field label="مدة التسليم (أيام)" error={errors.delivery_days}>
                 <input inputMode="numeric" className="field" value={form.delivery_days}
@@ -288,9 +288,9 @@ export default function ServiceCreateWizard() {
                   <input className="field" value={a.title} placeholder="مثال: تصميم شعار إضافي"
                     onChange={(e) => setAddon(i, { title: e.target.value })} />
                 </Field>
-                <Field label="السعر (بالدولار الأمريكي)">
+                <Field label="السعر (بالدولار الأمريكي)" error={errors.addons}>
                   <input inputMode="decimal" className="field" value={a.price}
-                    onChange={(e) => setAddon(i, { price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "") })} />
+                    onChange={(e) => setAddon(i, { price: toAsciiDigits(e.target.value).replace(/[^\d.]/g, "").replace(/(\..*?)\./g, "$1") })} />
                 </Field>
                 <Field label="أيام إضافية">
                   <input inputMode="numeric" className="field" value={a.extra_days}
@@ -312,7 +312,7 @@ export default function ServiceCreateWizard() {
               <Row k="عنوان الخدمة" v={form.title || "—"} />
               <Row k="التصنيف" v={cats.find((c) => String(c.id) === form.category)?.name_ar || "—"} />
               <Row k="السعر الأساسي" v={form.base_price ? formatUSD(form.base_price) : "—"} />
-              <Row k="مدة التسليم" v={`${form.delivery_days} أيام`} />
+              <Row k="مدة التسليم" v={pluralizeDays(Number(form.delivery_days))} />
               <Row k="عدد الكلمات المفتاحية" v={keywords.length.toLocaleString("en-US")} />
               <Row k="عدد التطويرات" v={addons.filter((a) => a.title && a.price).length.toLocaleString("en-US")} />
               <div className="flex items-center justify-between border-t border-line pt-2 font-bold">

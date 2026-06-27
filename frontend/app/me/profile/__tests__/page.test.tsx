@@ -7,9 +7,9 @@ import { render, screen, waitFor } from "@/test/utils/render";
 
 import ProfileEditPage from "@/app/me/profile/page";
 
-const nav = vi.hoisted(() => ({ replace: vi.fn() }));
+const nav = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), prefetch: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: nav.replace, push: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => nav,
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/me/profile",
 }));
@@ -66,6 +66,34 @@ describe("ProfileEditPage", () => {
     expect(await screen.findByText("✅ حُفظ ملفك")).toBeInTheDocument();
   });
 
+  // P1-06 (BUG-05): a transient failure on an OPTIONAL lookup (here /categories 500s) must NOT
+  // eject the authenticated user to sign-in — the page still renders from the critical pair.
+  it("stays on the page when an optional lookup (categories) fails", async () => {
+    server.use(
+      http.get(`${API_URL}/auth/me`, () => HttpResponse.json({ id: 1, email: "u@x.com", first_name: "سعيد", last_name: "ع", avatar_url: "", active_mode: "find_job", status: "active" })),
+      http.get(`${API_URL}/me/profile`, () => HttpResponse.json(PROFILE)),
+      http.get(`${API_URL}/skills`, () => HttpResponse.json([{ id: 1, name_ar: "بايثون" }])),
+      http.get(`${API_URL}/me/id-verification`, () => HttpResponse.json({ status: "none" })),
+      http.get(`${API_URL}/categories`, () => HttpResponse.json({ message_ar: "خطأ" }, { status: 500 })),
+    );
+    render(<ProfileEditPage />);
+    expect(await screen.findByText("اكتمال الملف: 60%")).toBeInTheDocument();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  // P2-17: when /auth/me succeeds but /me/profile fails, the name/avatar IS saved — surface a
+  // partial-success notice (not a blanket error implying nothing was saved).
+  it("shows a partial-success notice when the profile write fails after the identity write", async () => {
+    base();
+    server.use(
+      http.patch(`${API_URL}/auth/me`, () => HttpResponse.json({})),
+      http.patch(`${API_URL}/me/profile`, () => HttpResponse.json({ message_ar: "خطأ بالخادم" }, { status: 500 })),
+    );
+    const { user } = render(<ProfileEditPage />);
+    await user.click(await screen.findByText("حفظ"));
+    expect(await screen.findByText(/حُفظ الاسم والصورة/)).toBeInTheDocument();
+  });
+
   it("submits an uploaded national ID for verification", async () => {
     base({ status: "none" });
     server.use(
@@ -73,11 +101,12 @@ describe("ProfileEditPage", () => {
         HttpResponse.json({ id: 42, original_name: "id.png", content_type: "image/png", size: 9, kind: "image", url: "x", created_at: "x" }, { status: 201 })),
       http.post(`${API_URL}/me/id-verification`, () => HttpResponse.json({ status: "pending" })),
     );
-    const { container, user } = render(<ProfileEditPage />);
+    const { user } = render(<ProfileEditPage />);
     await screen.findByText("توثيق الهوية");
-    // The page now has two uploaders (portfolio image + national ID); the ID one is rendered last.
-    const fileInputs = container.querySelectorAll('input[type="file"]');
-    const input = fileInputs[fileInputs.length - 1] as HTMLInputElement;
+    // Target the national-ID uploader by its FileUpload dropzone aria-label (the page has several
+    // uploaders — avatar/cover/portfolio/ID — so positional selection is brittle).
+    const dropzone = screen.getByRole("button", { name: "ارفع صورة الهوية الوطنية" });
+    const input = dropzone.parentElement!.querySelector('input[type="file"]') as HTMLInputElement;
     await user.upload(input, new File([new Uint8Array(9)], "id.png", { type: "image/png" }));
     expect(await screen.findByText("✅ أُرسلت هويتك للمراجعة")).toBeInTheDocument();
   });

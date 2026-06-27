@@ -67,10 +67,8 @@ class JobCreateSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        if attrs["budget_min"] < 0:
-            raise serializers.ValidationError({"budget_min": "الميزانية لا يمكن أن تكون سالبة"})
         if attrs["budget_min"] > attrs["budget_max"]:
-            raise serializers.ValidationError({"budget_min": "الحد الأدنى أكبر من الأعلى"})
+            raise serializers.ValidationError({"budget_max": "الحد الأدنى أكبر من الأعلى"})
         deadline = attrs.get("deadline")
         if deadline is not None:
             from django.utils import timezone  # noqa: PLC0415

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { API_URL } from "@/lib/api";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/utils/render";
+import { fireEvent, render, screen, waitFor } from "@/test/utils/render";
 
 import FileUpload from "@/components/FileUpload";
 
@@ -44,6 +44,21 @@ describe("<FileUpload>", () => {
     await user.upload(fileInput(container), makeFile("doc.pdf", 10, "application/pdf"));
     // Non-image upload → no local preview url (second arg is undefined).
     await waitFor(() => expect(onUploaded).toHaveBeenCalledWith(expect.objectContaining({ id: 7, kind: "document" }), undefined));
+  });
+
+  it("rejects a disallowed MIME type on drag-drop without uploading (accept bypass)", async () => {
+    const uploadSpy = vi.fn(() => HttpResponse.json({ id: 1 }, { status: 201 }));
+    server.use(http.post(`${API_URL}/uploads`, uploadSpy));
+    const onUploaded = vi.fn();
+    const { container } = render(<FileUpload onUploaded={onUploaded} accept="image/*,application/pdf" />);
+    const file = makeFile("x.bin", 10, "application/octet-stream");
+    // Drag-drop bypasses the <input accept> filter, so the client pre-check must reject it.
+    fireEvent.drop(screen.getByRole("button"), { dataTransfer: { files: [file] } });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/نوع «x.bin» غير مسموح به/);
+    expect(alert).toHaveAttribute("aria-live", "assertive");
+    expect(onUploaded).not.toHaveBeenCalled();
+    expect(uploadSpy).not.toHaveBeenCalled();
   });
 
   it("shows the Arabic error envelope when the server rejects the file", async () => {

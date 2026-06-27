@@ -34,7 +34,8 @@ from apps.jobs.models import Job, Proposal
 from apps.notifications.models import Notification
 from apps.payments import services as pay
 from apps.payments.models import Transaction
-from apps.profiles.models import Education, Employment, WorkerProfile
+from apps.catalog.models import Skill
+from apps.profiles.models import WorkerLanguage, WorkerProfile, WorkerSkill
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
@@ -89,9 +90,10 @@ def test_full_freelancer_job_lifecycle(employer, worker, category, fund_wallet):
     profile.expertise_level = WorkerProfile.ExpertiseLevel.EXPERT
     profile.hourly_rate = 20
     profile.save()
-    Education.objects.create(profile=profile, school="جامعة")
-    Employment.objects.create(profile=profile, company="شركة", job_title="مطوّر")
-    assert profile.completeness_pct >= 70  # 6/8 of the completeness checks = 75%
+    _skill = Skill.objects.create(name_ar="برمجة", slug="coding")
+    WorkerSkill.objects.create(profile=profile, skill=_skill)
+    WorkerLanguage.objects.create(profile=profile, name="العربية", proficiency="native")
+    assert profile.completeness_pct >= 70  # 6/6 wizard checks = 100% (P1-02)
 
     pub = auth(worker).post("/api/v1/me/profile/publish", format="json")
     assert pub.status_code == 200, pub.content
@@ -112,7 +114,7 @@ def test_full_freelancer_job_lifecycle(employer, worker, category, fund_wallet):
     port = auth(worker).post(
         "/api/v1/me/portfolio",
         {"title": "مشروع متجر إلكتروني", "description": "واجهة متجر", "media_type": "link",
-         "url": "https://example.com/work"},
+         "url": "https://example.com/work", "ownership_confirmed": True},
         format="json",
     )
     assert port.status_code == 201, port.content

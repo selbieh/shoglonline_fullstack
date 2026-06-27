@@ -12,6 +12,17 @@ export type ApiErrorBody = {
   detail?: { code?: string; message_ar?: string } | string;
 };
 
+/**
+ * True only for a genuine auth failure (HTTP 401). `api()` already refreshes/clears tokens and
+ * bounces to sign-in on a real 401 (see lib/api.ts), so page-level loaders should ONLY redirect to
+ * sign-in when `isAuthError(e)` is true and otherwise render an in-place error/retry state. This is
+ * the guard for the BUG-05 family — a transient 500/network error on a non-auth endpoint must not
+ * eject an authenticated user.
+ */
+export function isAuthError(e: unknown): boolean {
+  return (e as { status?: number } | undefined)?.status === 401;
+}
+
 export function apiError(e: unknown): { code: string; message_ar: string } {
   const body = (e as { body?: ApiErrorBody } | undefined)?.body;
   if (body && typeof body === "object") {

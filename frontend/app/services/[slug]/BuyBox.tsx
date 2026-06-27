@@ -107,7 +107,7 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
                 <li key={a.id}>
                   <label className="flex items-center justify-between rounded-m bg-bg px-3 py-2 text-sm">
                     <span>
-                      <input type="checkbox" className="ml-2" checked={picked.includes(a.id)}
+                      <input type="checkbox" className="me-2" checked={picked.includes(a.id)}
                         onChange={(e) => setPicked((p) => (e.target.checked ? [...p, a.id] : p.filter((x) => x !== a.id)))} />
                       {a.title}
                     </span>

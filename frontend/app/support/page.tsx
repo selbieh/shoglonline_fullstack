@@ -74,7 +74,7 @@ export default function SupportPage() {
     try {
       await api("/tickets", {
         method: "POST",
-        body: JSON.stringify({ type_id: typeId, title, message }),
+        body: JSON.stringify({ type_id: typeId, title: title.trim(), message: message.trim() }),
       });
       setShowForm(false);
       setTitle("");
@@ -115,6 +115,7 @@ export default function SupportPage() {
           <input
             className="w-full field"
             placeholder="العنوان"
+            maxLength={200}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
@@ -122,6 +123,7 @@ export default function SupportPage() {
             className="w-full field"
             rows={4}
             placeholder="اشرح مشكلتك…"
+            maxLength={5000}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />

@@ -85,4 +85,48 @@ describe("SettingsPage", () => {
     await user.click(screen.getByText("تأكيد الحذف النهائي"));
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/"));
   });
+
+  // P2-30 (BUG-05): a transient 500 on one of the three loaders must NOT eject to sign-in.
+  it("shows an in-page retry on a 500 instead of bouncing to sign-in", async () => {
+    server.use(
+      http.get(`${API_URL}/auth/me`, () => new HttpResponse(null, { status: 500 })),
+      http.get(`${API_URL}/me/notification-preferences`, () => HttpResponse.json(PREFS)),
+      http.get(`${API_URL}/me/profile`, () => HttpResponse.json({ visibility: "online" })),
+    );
+    render(<SettingsPage />);
+    expect(await screen.findByText("تعذّر تحميل إعدادات الحساب")).toBeInTheDocument();
+    expect(nav.replace).not.toHaveBeenCalledWith("/signin");
+  });
+
+  // P2-33: the delete-blocker panel is announced to screen readers (role=alert).
+  it("announces the delete blockers via role=alert", async () => {
+    base();
+    server.use(http.delete(`${API_URL}/auth/me`, () =>
+      HttpResponse.json(
+        { code: "deletion_blocked", message_ar: "لا يمكن حذف الحساب الآن",
+          blockers: [{ code: "wallet_not_empty", message_ar: "رصيد محفظتك غير صفري" }] },
+        { status: 409 },
+      ),
+    ));
+    const { user } = render(<SettingsPage />);
+    await user.click(await screen.findByText("أريد حذف حسابي"));
+    await user.click(screen.getByText("تأكيد الحذف النهائي"));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("رصيد محفظتك غير صفري");
+  });
+
+  // P2-10: the "send code" button stays disabled until a well-formed email is entered.
+  it("gates the email-change send button on a valid email shape", async () => {
+    base();
+    const { user } = render(<SettingsPage />);
+    await user.click(await screen.findByText("تغيير"));
+    const send = screen.getByText("إرسال رمز التأكيد");
+    expect(send).toBeDisabled();
+    const input = screen.getByLabelText("البريد الإلكتروني الجديد");
+    await user.type(input, "not-an-email");
+    expect(send).toBeDisabled();
+    await user.clear(input);
+    await user.type(input, "new@example.com");
+    expect(send).toBeEnabled();
+  });
 });

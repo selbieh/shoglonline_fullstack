@@ -5,7 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
-import { apiError } from "@/lib/errors";
+import { useFieldErrors, validateFields } from "@/lib/useFieldErrors";
+import Field from "@/components/Field";
 import ContactHint from "@/components/ContactHint";
 import MediaGallery from "@/components/MediaGallery";
 import KpiCard from "@/components/KpiCard";
@@ -21,6 +22,7 @@ type OwnerService = {
   id: number; title: string; slug: string; status: string;
   description: string; what_you_get?: string; keywords?: string[];
   base_price: string; delivery_days: number; category_name?: string; cover_image?: string;
+  reject_reason?: string;
   addons: Addon[];
   views_count: number; orders_count: number; conversion: number;
 };
@@ -43,7 +45,9 @@ export default function OwnerServicePage() {
   // inline edit (ppt slide-20)
   const [edit, setEdit] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editMsg, setEditMsg] = useState("");
+  // Per-field validation messages + global banner + API-error mapping live in the shared hook
+  // (mirrors the create wizard so backend field errors render per-input, not as one banner).
+  const { errors, setErrors, clearFields, formError, setFormError, reset, applyApiError } = useFieldErrors();
   const [form, setForm] = useState({ title: "", description: "", what_you_get: "", base_price: "", delivery_days: "", keywords: "" });
   const [addons, setAddons] = useState<{ title: string; price: string; extra_days: string }[]>([]);
 
@@ -72,6 +76,30 @@ export default function OwnerServicePage() {
     setBusy(false);
   }
 
+  // editing a field clears its (and only its) error so the red mark goes away as you type
+  const set = (patch: Partial<typeof form>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    clearFields(...Object.keys(patch));
+  };
+
+  // Client rules mirroring the create wizard, keyed by field. Returns "" when the field is OK.
+  function errorFor(field: string): string {
+    switch (field) {
+      case "title": return form.title.trim() ? "" : "أدخل عنوان الخدمة";
+      case "description":
+        if (!form.description.trim()) return "اكتب وصفًا تفصيليًا للخدمة";
+        return form.description.trim().length >= 30 ? "" : "الوصف قصير جدًا — اكتب 30 حرفًا على الأقل";
+      case "base_price":
+        return form.base_price && Number(form.base_price) > 0 ? "" : "أدخل سعرًا أكبر من صفر";
+      case "delivery_days":
+        return (Number(form.delivery_days) || 0) >= 1 ? "" : "أدخل مدة تسليم لا تقل عن يوم";
+      default: return "";
+    }
+  }
+  const RULES = Object.fromEntries(
+    ["title", "description", "base_price", "delivery_days"].map((f) => [f, () => errorFor(f)]),
+  );
+
   function startEdit() {
     if (!s) return;
     setForm({
@@ -80,13 +108,20 @@ export default function OwnerServicePage() {
       keywords: (s.keywords ?? []).join("، "),
     });
     setAddons(s.addons.map((a) => ({ title: a.title, price: a.price, extra_days: String(a.extra_days) })));
-    setEditMsg("");
+    reset();
     setEdit(true);
   }
 
   async function saveEdit() {
+    setFormError("");
+    const found = validateFields(RULES, ["title", "description", "base_price", "delivery_days"]);
+    if (Object.keys(found).length) {
+      setErrors(found);
+      setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      return;
+    }
+    setErrors({});
     setSaving(true);
-    setEditMsg("");
     try {
       await api(`/me/services/${params.id}`, {
         method: "PATCH",
@@ -105,7 +140,8 @@ export default function OwnerServicePage() {
       setEdit(false);
       await load();
     } catch (e) {
-      setEditMsg(apiError(e).message_ar);
+      // Surface field-level validation from the API per-input; anything else falls back to the banner.
+      applyApiError(e);
     } finally {
       setSaving(false);
     }
@@ -132,6 +168,11 @@ export default function OwnerServicePage() {
             <span className="font-bold text-primary">{formatUSD(s.base_price)}</span>
             <span>· {s.delivery_days.toLocaleString("en-US")} يوم</span>
           </div>
+          {s.status === "rejected" && s.reject_reason && (
+            <p className="mt-2 rounded-m bg-danger-t p-3 text-sm text-danger">
+              <span className="font-bold">سبب الرفض: </span>{s.reject_reason}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!edit && <button className="btn-secondary text-sm" onClick={startEdit}>تعديل الخدمة</button>}
@@ -152,24 +193,24 @@ export default function OwnerServicePage() {
           {edit ? (
             <section className="card space-y-4">
               <h2 className="font-bold text-ink">تعديل الخدمة</h2>
-              <label className="block text-sm font-bold">عنوان الخدمة
-                <input className="field mt-1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              </label>
+              <Field label="عنوان الخدمة" error={errors.title}>
+                <input className="field" value={form.title} onChange={(e) => set({ title: e.target.value })} />
+              </Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm font-bold">السعر الأساسي (بالدولار الأمريكي)
-                  <input type="number" min={0} className="field mt-1" value={form.base_price}
-                    onChange={(e) => setForm({ ...form, base_price: e.target.value })} />
-                </label>
-                <label className="block text-sm font-bold">مدة التسليم (يوم)
-                  <input type="number" min={1} className="field mt-1" value={form.delivery_days}
-                    onChange={(e) => setForm({ ...form, delivery_days: e.target.value })} />
-                </label>
+                <Field label="السعر الأساسي (بالدولار الأمريكي)" error={errors.base_price}>
+                  <input type="number" min={0} className="field" value={form.base_price}
+                    onChange={(e) => set({ base_price: e.target.value })} />
+                </Field>
+                <Field label="مدة التسليم (يوم)" error={errors.delivery_days}>
+                  <input type="number" min={1} className="field" value={form.delivery_days}
+                    onChange={(e) => set({ delivery_days: e.target.value })} />
+                </Field>
               </div>
-              <label className="block text-sm font-bold">وصف الخدمة
-                <textarea className="field mt-1 min-h-28" value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Field label="وصف الخدمة" error={errors.description} hint={`حد أدنى 30 حرفًا · ${form.description.length.toLocaleString("en-US")}`}>
+                <textarea className="field min-h-28" value={form.description}
+                  onChange={(e) => set({ description: e.target.value })} />
                 <ContactHint text={form.description} mode="review" />
-              </label>
+              </Field>
               <label className="block text-sm font-bold">ماذا سيحصل عليه المشتري
                 <textarea className="field mt-1 min-h-24" value={form.what_you_get}
                   onChange={(e) => setForm({ ...form, what_you_get: e.target.value })} />
@@ -200,9 +241,9 @@ export default function OwnerServicePage() {
                 </div>
               </div>
 
-              {editMsg && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{editMsg}</p>}
+              {formError && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">{formError}</p>}
               <div className="flex gap-2">
-                <button className="btn-primary disabled:opacity-50" disabled={saving || !form.title.trim()} onClick={saveEdit}>
+                <button className="btn-primary disabled:opacity-50" disabled={saving} onClick={saveEdit}>
                   {saving ? "جارٍ الحفظ…" : "حفظ التعديلات"}
                 </button>
                 <button className="btn-secondary" disabled={saving} onClick={() => setEdit(false)}>إلغاء</button>

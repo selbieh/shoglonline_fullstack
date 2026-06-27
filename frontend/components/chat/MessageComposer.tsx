@@ -5,6 +5,24 @@ import { useRef, useState } from "react";
 import { DocumentIcon, ImageIcon, MicIcon, PlusIcon, SendIcon, VideoIcon } from "@/components/icons";
 import VoiceRecorder from "./VoiceRecorder";
 
+// Client-side guards mirroring backend uploads settings (apps/core/services.py): a fast pre-check
+// before onSendFile uploads — the server stays the source of truth.
+const MAX_FILE_MB = 25; // uploads.max_file_mb
+const ALLOWED_MIME = [
+  "image/jpeg", "image/png", "image/gif", "image/webp",
+  "video/mp4", "video/webm", "video/quicktime",
+  "audio/mpeg", "audio/ogg", "audio/webm", "audio/wav", "audio/mp4", "audio/x-m4a",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/zip", "application/x-zip-compressed",
+  "application/x-rar-compressed", "application/vnd.rar",
+  "text/plain",
+];
+const ACCEPT = ALLOWED_MIME.join(",");
+
 function MenuRow({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button
@@ -30,6 +48,7 @@ export default function MessageComposer({
   const [menuOpen, setMenuOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const imgRef = useRef<HTMLInputElement>(null);
   const vidRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -49,6 +68,7 @@ export default function MessageComposer({
   }
 
   function pick(ref: React.RefObject<HTMLInputElement>) {
+    if (busy) return;
     setMenuOpen(false);
     ref.current?.click();
   }
@@ -56,7 +76,16 @@ export default function MessageComposer({
   async function onPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
-    if (!f) return;
+    if (!f || busy) return;
+    if (!ALLOWED_MIME.includes(f.type)) {
+      setError(`نوع الملف «${f.name}» غير مسموح`);
+      return;
+    }
+    if (f.size > MAX_FILE_MB * 1024 * 1024) {
+      setError(`حجم «${f.name}» يتجاوز ${MAX_FILE_MB}MB`);
+      return;
+    }
+    setError("");
     setBusy(true);
     try {
       await onSendFile(f);
@@ -83,13 +112,16 @@ export default function MessageComposer({
   }
 
   return (
-    <div className="relative flex items-center gap-2 border-t border-line px-3 py-2.5">
+    <div className="border-t border-line">
+      {error && <p role="alert" className="px-3 pt-2 text-sm text-danger">{error}</p>}
+      <div className="relative flex items-center gap-2 px-3 py-2.5">
       <div className="relative">
         <button
           type="button"
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={() => !busy && setMenuOpen((v) => !v)}
+          disabled={busy}
           aria-label="إرفاق"
-          className="grid h-9 w-9 place-content-center rounded-full bg-tint text-primary-dark transition hover:bg-primary hover:text-white"
+          className="grid h-9 w-9 place-content-center rounded-full bg-tint text-primary-dark transition hover:bg-primary hover:text-white disabled:opacity-40"
         >
           <PlusIcon className="text-[18px]" />
         </button>
@@ -108,8 +140,9 @@ export default function MessageComposer({
       <button
         type="button"
         onClick={() => setRecording(true)}
+        disabled={busy}
         aria-label="تسجيل صوتي"
-        className="grid h-9 w-9 place-content-center rounded-full bg-tint text-primary-dark transition hover:bg-primary hover:text-white"
+        className="grid h-9 w-9 place-content-center rounded-full bg-tint text-primary-dark transition hover:bg-primary hover:text-white disabled:opacity-40"
       >
         <MicIcon className="text-[18px]" />
       </button>
@@ -117,7 +150,10 @@ export default function MessageComposer({
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
+        onKeyDown={(e) => {
+          // Don't send on the Enter that confirms an IME composition (Arabic/CJK input methods).
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) submit();
+        }}
         placeholder="اكتب رسالتك.."
         className="flex-1 rounded-full border border-line bg-bg px-4 py-2.5 text-sm text-ink placeholder:text-sub/60 focus:border-primary focus:outline-none"
       />
@@ -134,7 +170,8 @@ export default function MessageComposer({
 
       <input ref={imgRef} type="file" accept="image/*" hidden onChange={onPicked} />
       <input ref={vidRef} type="file" accept="video/*" hidden onChange={onPicked} />
-      <input ref={fileRef} type="file" hidden onChange={onPicked} />
+      <input ref={fileRef} type="file" accept={ACCEPT} hidden onChange={onPicked} />
+      </div>
     </div>
   );
 }

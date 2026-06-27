@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, API_URL, tokens } from "@/lib/api";
@@ -30,6 +30,8 @@ export default function NewJobPage() {
   const [questions, setQuestions] = useState<{ question: string; is_required: boolean }[]>([]);
   const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   const [busy, setBusy] = useState(false);
+  // Focus target for accessibility: jump the user to the error banner on a failed submit.
+  const formErrorRef = useRef<HTMLParagraphElement>(null);
   // When set, the form is replaced by a thank-you screen. `pending` distinguishes "queued for review" from "published".
   const [done, setDone] = useState<{ slug: string; pending: boolean } | null>(null);
 
@@ -108,6 +110,7 @@ export default function NewJobPage() {
     if (Object.keys(found).length) {
       setErrors(found);
       setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      requestAnimationFrame(() => formErrorRef.current?.focus());
       return;
     }
     setErrors({});
@@ -131,6 +134,7 @@ export default function NewJobPage() {
       // Field-keyed errors (budget_min/max, deadline, title…) mark their inputs; the rest is a banner.
       const keys = applyApiError(e);
       if (keys.length) setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      requestAnimationFrame(() => formErrorRef.current?.focus());
     } finally {
       setBusy(false);
     }
@@ -275,7 +279,10 @@ export default function NewJobPage() {
         <button className="btn-primary w-full py-3" disabled={busy} onClick={submit}>
           {busy ? "جارٍ النشر…" : "تأكيد الفئة ونشر الوظيفة"}
         </button>
-        {formError && <p className="rounded-m bg-danger-t p-3 text-sm text-danger">⚠️ {formError}</p>}
+        {formError && (
+          <p ref={formErrorRef} role="alert" tabIndex={-1}
+            className="rounded-m bg-danger-t p-3 text-sm text-danger">⚠️ {formError}</p>
+        )}
       </div>
     </main>
   );

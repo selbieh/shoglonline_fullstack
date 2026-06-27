@@ -32,6 +32,7 @@ ERR = {
     "funds": {"code": "insufficient_funds", "message_ar": "الرصيد المتاح لا يغطي قيمة العقد — اشحن محفظتك"},
     "reason": {"code": "reason_required", "message_ar": "السبب إلزامي"},
     "no_open_submission": {"code": "no_open_submission", "message_ar": "لا يوجد تسليم مفتوح للمراجعة"},
+    "submission_open": {"code": "submission_open", "message_ar": "يوجد تسليم مفتوح بانتظار المراجعة بالفعل"},
 }
 
 
@@ -215,6 +216,8 @@ def submit_deliverable(contract: Contract, worker, *, notes: str = "", files=Non
     contract = Contract.objects.select_for_update().get(pk=contract.pk)
     if contract.status not in (Contract.Status.ACTIVE, Contract.Status.DELIVERED):
         raise ValidationError(ERR["bad_state"])
+    if contract.submissions.filter(status=Submission.Status.OPEN).exists():
+        raise ValidationError(ERR["submission_open"])
     submission = Submission.objects.create(contract=contract, notes=notes, files=files or [])
     if attachment_ids:
         from apps.attachments.services import attach  # noqa: PLC0415 (avoid import cycle)

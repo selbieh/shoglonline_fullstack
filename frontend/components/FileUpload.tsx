@@ -18,6 +18,27 @@ type Props = {
 };
 
 /**
+ * Returns true when `file` matches the comma-separated `accept` allowlist (the same syntax as the
+ * <input accept> attribute: exact MIME types, wildcard groups like `image/*`, and `.ext` suffixes).
+ * An empty/undefined allowlist accepts everything. This is a fast client pre-check only — the
+ * backend stays the source of truth and re-validates the MIME on upload.
+ */
+function isAcceptedType(file: File, accept?: string): boolean {
+  if (!accept) return true;
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return accept
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+    .some((token) => {
+      if (token.startsWith(".")) return name.endsWith(token);
+      if (token.endsWith("/*")) return type.startsWith(token.slice(0, -1));
+      return type === token;
+    });
+}
+
+/**
  * Reusable upload control (drag/drop + click, RTL Arabic). Pre-checks size client-side for fast
  * feedback, then POSTs to /uploads; the backend re-validates flag/size/MIME and returns the
  * attachment, which the parent links to its host via `attachment_ids` on create.
@@ -46,6 +67,12 @@ export default function FileUpload({
       for (const file of Array.from(files)) {
         if (file.size > maxMb * 1024 * 1024) {
           failures.push(`حجم «${file.name}» يتجاوز ${maxMb}MB`);
+          continue;
+        }
+        // `accept` only filters the file picker, not drag-drop — re-check the MIME here so an
+        // unsupported file fails fast instead of round-tripping to the server.
+        if (!isAcceptedType(file, accept)) {
+          failures.push(`نوع «${file.name}» غير مسموح به`);
           continue;
         }
         try {
@@ -102,7 +129,11 @@ export default function FileUpload({
         onChange={(e) => handleFiles(e.target.files)}
       />
       {hint && !error && <p className="mt-1.5 text-xs text-sub">{hint}</p>}
-      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {error && (
+        <p className="mt-2 text-sm text-danger" role="alert" aria-live="assertive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

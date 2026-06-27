@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { Children, cloneElement, isValidElement, useId, type ReactNode } from "react";
 
 /* Shared form field wrapper — label + (optional) hint + the input + an inline error note.
    When `error` is set, the wrapped `.field` input turns red (border + ring) and the message
@@ -19,6 +19,23 @@ export default function Field({
   required?: boolean;
   children: ReactNode;
 }) {
+  const errorId = useId();
+  // Associate the inline error with the wrapped input for screen readers, without
+  // changing the visual output. Only a single element child is enhanced; anything
+  // else (text, fragments, multiple nodes) is passed through untouched.
+  const child = Children.toArray(children);
+  const enhanced =
+    child.length === 1 && isValidElement(child[0])
+      ? cloneElement(child[0] as React.ReactElement, {
+          "aria-invalid": error ? true : (child[0] as React.ReactElement).props["aria-invalid"],
+          "aria-describedby": error
+            ? errorId
+            : (child[0] as React.ReactElement).props["aria-describedby"],
+          "aria-required": required
+            ? true
+            : (child[0] as React.ReactElement).props["aria-required"],
+        })
+      : children;
   return (
     <label
       className={`block ${error ? "[&_.field]:border-danger [&_.field]:ring-1 [&_.field]:ring-danger" : ""}`}
@@ -30,9 +47,9 @@ export default function Field({
         </span>
         {hint && <span className="text-xs font-normal text-sub">{hint}</span>}
       </span>
-      {children}
+      {enhanced}
       {error && (
-        <span role="alert" className="mt-1 block text-xs font-medium text-danger">
+        <span id={errorId} role="alert" className="mt-1 block text-xs font-medium text-danger">
           {error}
         </span>
       )}

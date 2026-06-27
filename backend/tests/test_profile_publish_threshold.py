@@ -14,7 +14,10 @@ from apps.profiles.models import WorkerProfile
 
 
 def _profile(user, *, scalars=True) -> WorkerProfile:
-    """A profile at a deterministic completeness: the 4 scalar checks = 50% (4 of 8), or 0%."""
+    """A profile at a deterministic completeness: the 4 scalar checks = 66% (4 of 6), or 0%.
+
+    completeness_pct now averages only the 6 fields the onboarding wizard collects (P1-02);
+    educations/employments were dropped, so the 4 scalars land at 4/6 ≈ 66%."""
     p, _ = WorkerProfile.objects.get_or_create(user=user)
     if scalars:
         p.bio_title = "مطوّر واجهات"
@@ -29,13 +32,13 @@ def _profile(user, *, scalars=True) -> WorkerProfile:
 class TestPublishCompletenessThreshold:
     def test_default_threshold_blocks_incomplete(self, as_user, worker):
         p = _profile(worker)
-        assert p.completeness_pct == 50  # 4 of 8 checks filled
+        assert p.completeness_pct == 66  # 4 of 6 checks filled
         res = as_user(worker).post("/api/v1/me/profile/publish")
         assert res.status_code == 400
         body = res.json()
         assert body["code"] == "profile_incomplete"
         assert body["required_pct"] == 70  # default
-        assert body["completeness_pct"] == 50
+        assert body["completeness_pct"] == 66
 
     def test_lower_threshold_allows_publish(self, as_user, worker):
         _profile(worker)  # 50%

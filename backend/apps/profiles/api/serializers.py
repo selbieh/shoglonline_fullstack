@@ -62,6 +62,15 @@ class PortfolioItemSerializer(serializers.ModelSerializer):
         seen: set[str] = set()
         return [u for u in urls if u and not (u in seen or seen.add(u))]
 
+    def validate(self, attrs):
+        # P1-04: enforce the ownership gate server-side so the inline quick-add path can't bypass
+        # it. Only required on create — an existing item keeps its stored value on partial edits.
+        if self.instance is None and not attrs.get("ownership_confirmed"):
+            raise serializers.ValidationError(
+                {"ownership_confirmed": "يجب تأكيد ملكيتك لهذا العمل قبل إضافته إلى معرضك."}
+            )
+        return attrs
+
     def create(self, validated_data):
         validated_data.pop("attachment_ids", None)  # linked separately in the view
         return super().create(validated_data)

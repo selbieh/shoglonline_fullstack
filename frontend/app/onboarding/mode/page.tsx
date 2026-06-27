@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { apiError, isAuthError } from "@/lib/errors";
 import { nextFromUrl } from "@/lib/nav";
 import { BriefcaseIcon, LightbulbIcon, UsersIcon } from "@/components/icons";
 
@@ -10,13 +11,23 @@ import { BriefcaseIcon, LightbulbIcon, UsersIcon } from "@/components/icons";
 export default function ModeSelect() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   async function choose(mode: "find_job" | "find_worker") {
     setBusy(true);
-    await api("/auth/me/mode", { method: "PATCH", body: JSON.stringify({ mode }) });
-    // first-login: send freelancers to the profile wizard, employers to the employer wizard
-    const onboard = mode === "find_worker" ? "/onboarding/employer" : "/onboarding/profile";
-    router.push(nextFromUrl() ?? onboard);
+    setError("");
+    try {
+      await api("/auth/me/mode", { method: "PATCH", body: JSON.stringify({ mode }) });
+      // first-login: send freelancers to the profile wizard, employers to the employer wizard
+      const onboard = mode === "find_worker" ? "/onboarding/employer" : "/onboarding/profile";
+      router.push(nextFromUrl() ?? onboard);
+    } catch (e) {
+      // a real 401 is already handled (refresh/redirect) by the api() layer; for any other
+      // failure show a readable message near the cards so the user can retry.
+      if (!isAuthError(e)) setError(apiError(e).message_ar);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const card =
@@ -46,6 +57,11 @@ export default function ModeSelect() {
             </p>
           </button>
         </div>
+        {error && (
+          <p role="alert" className="mx-auto mt-4 max-w-xl rounded-m bg-danger/10 p-3 text-sm text-danger">
+            {error}
+          </p>
+        )}
         <p className="mx-auto mt-6 flex max-w-xl items-center justify-center gap-2 rounded-m bg-tint p-3 text-sm text-primary-dark">
           <LightbulbIcon className="shrink-0 text-[16px] text-star" /> كل شيء محفوظ عند التبديل: عقودك ومحفظتك ومحادثاتك تعمل في الوضعين معًا
         </p>

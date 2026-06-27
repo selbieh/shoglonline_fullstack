@@ -5,7 +5,8 @@ rejects (→ REJECTED + a required reason). The admin sees the completeness % (a
 """
 import pytest
 
-from apps.profiles.models import Education, Employment, WorkerProfile
+from apps.catalog.models import Skill
+from apps.profiles.models import WorkerLanguage, WorkerProfile, WorkerSkill
 from apps.profiles.services import review_profile_publish
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db]
@@ -14,15 +15,17 @@ PUBLISH = "/api/v1/me/profile/publish"
 
 
 def _complete_profile(user) -> WorkerProfile:
-    """Build a ≥70%-complete profile (6/8 of the completeness checks = 75%)."""
+    """Build a ≥70%-complete profile. completeness_pct now averages the 6 wizard fields
+    (P1-02); filling 5 of 6 (the 4 scalars + a skill) = ~83% ≥ 70%."""
     profile, _ = WorkerProfile.objects.get_or_create(user=user)
     profile.bio_title = "مطوّر برمجيات"
     profile.overview = "نبذة كافية عن الخبرة والمشاريع"
     profile.expertise_level = WorkerProfile.ExpertiseLevel.EXPERT
     profile.hourly_rate = 20
     profile.save()
-    Education.objects.create(profile=profile, school="جامعة")
-    Employment.objects.create(profile=profile, company="شركة", job_title="مطوّر")
+    skill = Skill.objects.create(name_ar="برمجة", slug="coding")
+    WorkerSkill.objects.create(profile=profile, skill=skill)
+    WorkerLanguage.objects.create(profile=profile, name="العربية", proficiency="native")
     return profile
 
 

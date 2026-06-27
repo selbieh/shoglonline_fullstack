@@ -22,7 +22,7 @@ type Item = {
   skills?: string[]; completed_at?: string | null; created_at?: string;
   budget?: string | null; features?: string[]; views_count?: number;
 };
-type PortfolioCard = { id: number; title: string; image_url?: string; cover_url?: string };
+type PortfolioCard = { id: number; title: string; image_url?: string; cover_url?: string; url?: string; media_type?: string; gallery?: string[] };
 type Worker = {
   id: number; name: string; avatar_url?: string; is_verified?: boolean;
   rating_avg?: number | string; rating_count?: number; city?: string; country?: string;
@@ -82,7 +82,7 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
     .map((p) => ({
       id: p.id,
       title: p.title,
-      thumb: p.image_url || p.cover_url,
+      thumb: p.image_url || p.gallery?.[0] || p.cover_url || (p.media_type === "image" ? p.url : undefined),
       author: worker?.name,
       rating: ratingAvg,
       href: `/freelancers/${params.id}/portfolio/${p.id}`,

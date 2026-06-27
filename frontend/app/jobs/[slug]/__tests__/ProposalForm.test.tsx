@@ -14,6 +14,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 const job = { id: 5, screening_questions: [] } as unknown as Job;
+// A job with an explicit budget band — used by the range-validation cases (P2-09).
+const rangedJob = {
+  id: 5,
+  budget_min: "100",
+  budget_max: "200",
+  screening_questions: [],
+} as unknown as Job;
 
 beforeEach(() => {
   nav.push.mockClear();
@@ -73,5 +80,111 @@ describe("ProposalForm — success state", () => {
     const link = await screen.findByRole("link", { name: "عرض عروضي" });
     expect(link).toHaveAttribute("href", "/me/proposals");
     expect(screen.queryByLabelText(/قيمة العرض/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ProposalForm — client-side budget/delivery validation (P2-09 / P2-08)", () => {
+  function bidsOff() {
+    server.use(
+      http.get(`${API_URL}/settings/public`, () => HttpResponse.json({ "bids.enabled": false })),
+    );
+  }
+
+  async function fill(user: ReturnType<typeof render>["user"], budget: string, days?: string) {
+    // wait for the loading skeleton to resolve into the actual form before querying inputs
+    await screen.findByLabelText(/قيمة العرض/);
+    await user.clear(screen.getByLabelText(/قيمة العرض/));
+    await user.type(screen.getByLabelText(/قيمة العرض/), budget);
+    if (days !== undefined) {
+      const d = screen.getByDisplayValue("14");
+      await user.clear(d);
+      await user.type(d, days);
+    }
+    await user.type(screen.getByLabelText(/تفاصيل العرض/), "خطة العمل");
+  }
+
+  it("blocks a budget below budget_min and never POSTs", async () => {
+    bidsOff();
+    let posted = false;
+    server.use(
+      http.post(`${API_URL}/jobs/5/proposals`, () => {
+        posted = true;
+        return HttpResponse.json({ id: 9 }, { status: 201 });
+      }),
+    );
+    const { user } = render(<ProposalForm job={rangedJob} />);
+    await fill(user, "50");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+
+    expect(await screen.findByText(/يجب أن تكون ضمن الميزانية/)).toBeInTheDocument();
+    expect(posted).toBe(false);
+  });
+
+  it("blocks a budget above budget_max", async () => {
+    bidsOff();
+    const { user } = render(<ProposalForm job={rangedJob} />);
+    await fill(user, "250");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+    expect(await screen.findByText(/يجب أن تكون ضمن الميزانية/)).toBeInTheDocument();
+  });
+
+  it("rejects a budget with more than two decimal places", async () => {
+    bidsOff();
+    const { user } = render(<ProposalForm job={rangedJob} />);
+    await fill(user, "150.999");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+    expect(await screen.findByText(/منزلتين عشريتين/)).toBeInTheDocument();
+  });
+
+  it("rejects a delivery time over 365 days", async () => {
+    bidsOff();
+    const { user } = render(<ProposalForm job={rangedJob} />);
+    await fill(user, "150", "400");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+    expect(await screen.findByText(/أقصى مدة تسليم 365/)).toBeInTheDocument();
+  });
+
+  it("accepts an in-range budget and POSTs", async () => {
+    bidsOff();
+    let posted = false;
+    server.use(
+      http.post(`${API_URL}/jobs/5/proposals`, () => {
+        posted = true;
+        return HttpResponse.json({ id: 9 }, { status: 201 });
+      }),
+    );
+    const { user } = render(<ProposalForm job={rangedJob} />);
+    await fill(user, "150");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+    await waitFor(() => expect(posted).toBe(true));
+  });
+
+  it("maps screening_required missing_questions onto the per-question inputs (P2-03)", async () => {
+    const q = { id: 42, question: "ما خبرتك؟", is_required: true };
+    const screeningJob = {
+      id: 5,
+      budget_min: "100",
+      budget_max: "200",
+      screening_questions: [q],
+    } as unknown as Job;
+    server.use(
+      http.get(`${API_URL}/settings/public`, () => HttpResponse.json({ "bids.enabled": false })),
+      http.post(`${API_URL}/jobs/5/proposals`, () =>
+        HttpResponse.json(
+          { code: "screening_required", message_ar: "أجب عن جميع الأسئلة الإلزامية", missing_questions: [42] },
+          { status: 400 },
+        ),
+      ),
+    );
+    const { user } = render(<ProposalForm job={screeningJob} />);
+    // answer the question client-side so the request reaches the server, which then rejects it
+    await screen.findByLabelText(/قيمة العرض/);
+    await user.type(screen.getByLabelText(/قيمة العرض/), "150");
+    await user.type(screen.getByLabelText(/تفاصيل العرض/), "خطة العمل");
+    await user.type(screen.getByLabelText(/ما خبرتك؟/), "x");
+    await user.click(await screen.findByRole("button", { name: "إرسال العرض" }));
+
+    // the per-question field shows the inline error (not just a global banner)
+    expect(await screen.findByText("هذا السؤال إلزامي")).toBeInTheDocument();
   });
 });

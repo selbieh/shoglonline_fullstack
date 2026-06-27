@@ -88,7 +88,7 @@ class OwnerServiceDetailSerializer(ServiceDetailSerializer):
     conversion = serializers.SerializerMethodField()
 
     class Meta(ServiceDetailSerializer.Meta):
-        fields = ServiceDetailSerializer.Meta.fields + ["orders_count", "conversion"]
+        fields = ServiceDetailSerializer.Meta.fields + ["orders_count", "conversion", "reject_reason"]
 
     def get_orders_count(self, obj) -> int:
         return obj.requests.filter(status=BuyingRequest.Status.ACCEPTED).count()

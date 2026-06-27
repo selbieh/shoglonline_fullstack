@@ -7,7 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { useFieldErrors, validateFields, earliestStep, type Rule } from "@/lib/useFieldErrors";
 import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
-import { digitsOnly } from "@/lib/arabic";
+import { digitsOnly, toAsciiDigits } from "@/lib/arabic";
 import { useKeyboardOpen } from "@/lib/useKeyboardOpen";
 import { LockIcon } from "@/components/icons";
 import Logo from "@/components/Logo";
@@ -234,14 +234,17 @@ export default function ProfileWizard() {
     availability: () => (draft.availability ? "" : "اختر حالة التوفر للعمل"),
   };
 
-  const core = [draft.display_name, draft.overview, draft.bio_title, draft.expertise_level, draft.hourly_rate, draft.availability, skills.length ? "1" : ""];
+  // Mirror backend WorkerProfile.completeness_pct EXACTLY (same 6 checks) so the % shown here
+  // agrees with the publish gate and a "100%" wizard never gets rejected as profile_incomplete (P1-02).
+  const core = [draft.bio_title, draft.overview, draft.expertise_level, draft.hourly_rate, skills.length ? "1" : "", languages.length ? "1" : ""];
   const pct = Math.round((core.filter(Boolean).length / core.length) * 100);
   const selectedCat = categories.find((c) => String(c.id) === draft.main_category);
   const specs = selectedCat?.children ?? [];
   const availableSkills = catalog.filter((c) => !skills.some((s) => s.skill_id === c.id));
 
   async function saveProfile() {
-    await api("/auth/me", { method: "PATCH", body: JSON.stringify({ avatar_url: draft.avatar_url || "" }) });
+    // Save the core profile FIRST so an avatar (/auth/me) failure can't discard the user's
+    // mandatory fields and abort the whole step (P2-18). The avatar write runs after.
     await api("/me/profile", {
       method: "PATCH",
       body: JSON.stringify({
@@ -263,6 +266,7 @@ export default function ProfileWizard() {
         skills: skills.map((s) => ({ skill_id: s.skill_id, efficiency: s.efficiency })),
       }),
     });
+    await api("/auth/me", { method: "PATCH", body: JSON.stringify({ avatar_url: draft.avatar_url || "" }) });
   }
 
   // Map a thrown API error to its inputs and bounce to the step that owns the first failure.
@@ -271,6 +275,21 @@ export default function ProfileWizard() {
     if (keys.length) {
       setStep(earliestStep(keys, FIELD_STEP, step));
       setFormError("يرجى تصحيح الحقول المظلَّلة بالأحمر أدناه");
+      return;
+    }
+    // The publish gate (profile_incomplete) returns no `fields` map, so applyApiError only set a
+    // banner. Guide the user: flag the first mandatory step whose required fields are still missing
+    // and jump there, instead of leaving them stuck at المراجعة (P2-01).
+    if (apiError(e).code === "profile_incomplete") {
+      for (const s of MANDATORY) {
+        const found = validateFields(RULES, STEP_REQUIRED[s] ?? []);
+        if (Object.keys(found).length) {
+          setErrors(found);
+          setStep(s);
+          setFormError("يرجى تعبئة الحقول الإلزامية المظلَّلة بالأحمر لإكمال ملفك.");
+          return;
+        }
+      }
     }
   }
 
@@ -566,7 +585,7 @@ export default function ProfileWizard() {
             </Field>
             <Field label="سنوات الخبرة">
               <input type="number" min={0} className="field" value={draft.years_experience}
-                placeholder="مثال: 5" onChange={(e) => set({ years_experience: e.target.value })} />
+                placeholder="مثال: 5" onChange={(e) => set({ years_experience: digitsOnly(e.target.value) })} />
             </Field>
 
             {/* ppt slide-04: skills with efficiency level — pick to add, adjust the level inline on each chip */}
@@ -788,7 +807,7 @@ export default function ProfileWizard() {
               <div className="flex items-center gap-2">
                 <span className="grid h-9 w-12 place-content-center rounded-m bg-tint text-sm font-bold text-primary-dark">USD</span>
                 <input type="number" min={0} className="field" value={draft.hourly_rate}
-                  placeholder="أدخل سعر الساعة" onChange={(e) => set({ hourly_rate: e.target.value })} />
+                  placeholder="أدخل سعر الساعة" onChange={(e) => set({ hourly_rate: toAsciiDigits(e.target.value) })} />
               </div>
             </Field>
             <Field label="التوفر للعمل" required error={errors.availability}>
@@ -805,7 +824,7 @@ export default function ProfileWizard() {
             </Field>
             <Field label="عدد ساعات العمل أسبوعيًا">
               <input type="number" min={0} max={168} className="field" value={draft.weekly_hours}
-                placeholder="مثال: 30" onChange={(e) => set({ weekly_hours: e.target.value })} />
+                placeholder="مثال: 30" onChange={(e) => set({ weekly_hours: digitsOnly(e.target.value) })} />
             </Field>
             <Field label="ملاحظات للعملاء (اختياري)" hint={`${draft.client_notes.length.toLocaleString("en-US")}/300`}>
               <textarea className="field min-h-20" maxLength={300} value={draft.client_notes}
@@ -838,12 +857,13 @@ export default function ProfileWizard() {
               ) : (
                 <>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <select className="field w-24" value={cc} onChange={(e) => setCc(e.target.value)} aria-label="رمز الدولة">
+                    <select className="field w-24" value={cc} aria-label="رمز الدولة"
+                      onChange={(e) => { setCc(e.target.value); setOtpSent(false); setCode(""); }}>
                       <option value="+966">+966</option>
                       <option value="+20">+20</option>
                     </select>
                     <input className="field flex-1" inputMode="tel" placeholder="50 123 4567" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => setPhone(digitsOnly(e.target.value))} />
+                      aria-label="رقم الجوال" onChange={(e) => { setPhone(digitsOnly(e.target.value)); setOtpSent(false); setCode(""); }} />
                     <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>
