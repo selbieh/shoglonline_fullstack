@@ -18,10 +18,16 @@ export type Job = {
   created_at?: string;
   proposals_count: number;
   is_locked?: boolean;
+  /** Employer (job owner) user id — used client-side to stop an owner bidding on their own job. */
+  employer?: number;
   employer_name?: string;
   screening_questions?: ScreeningQuestion[];
   meta_title?: string;
   meta_description?: string;
+  /** Invite-only job (FR-JOB-12) — hidden from public search; only invited workers may apply. */
+  is_private?: boolean;
+  /** True when the signed-in worker was invited to this private job → their proposal is free (BR-7). */
+  viewer_invited?: boolean;
 };
 
 export type ScreeningQuestion = {

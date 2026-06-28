@@ -85,7 +85,7 @@ class PublicJobDetailView(APIView):
             )
             if not allowed:
                 raise Http404
-        return Response(JobDetailSerializer(job).data)
+        return Response(JobDetailSerializer(job, context={"request": request}).data)
 
 
 class MyJobsView(ListCreateAPIView):
@@ -99,6 +99,13 @@ class MyJobsView(ListCreateAPIView):
 
     def perform_create(self, serializer):
         job = serializer.save()
+        # A private/invited hire (FR-JOB-12): record the request-to-propose before publishing so the
+        # worker can apply without a bid (BR-7). _publish then notifies them once the job is live.
+        if job.is_private and job.invited_worker_id:
+            services.attach_invited_worker(
+                job, employer=self.request.user, worker=job.invited_worker,
+                message=serializer.initial_data.get("message", ""),
+            )
         services.submit_for_publication(job)
 
     def create(self, request, *args, **kwargs):
@@ -317,9 +324,7 @@ class SentInvitationsView(ListAPIView):
 class RejectInvitationView(APIView):
     def post(self, request, pk):
         invitation = get_object_or_404(Invitation, pk=pk, worker=request.user, status=Invitation.Status.SENT)
-        invitation.status = Invitation.Status.REJECTED
-        invitation.reject_reason = request.data.get("reason", "")
-        invitation.save(update_fields=["status", "reject_reason"])
+        services.reject_invitation(invitation, request.data.get("reason", ""))
         return Response({"status": invitation.status})
 
 

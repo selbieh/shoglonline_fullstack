@@ -66,6 +66,24 @@ def submit_for_publication(job: Job) -> Job:
     return job
 
 
+def _notify_invited_worker(job: Job, worker, message: str = "") -> None:
+    """Tell an invited freelancer their private job is live and awaiting their proposal (FR-JOB-12).
+
+    An INVITATION is transactional (never preference-suppressed), so the invited worker always
+    hears about it — the whole point of a private/invited job. Deep-links to the now-viewable job."""
+    from apps.notifications.models import Notification  # noqa: PLC0415 (avoid import cycle)
+    from apps.notifications.services import notify  # noqa: PLC0415
+
+    body = message.strip() or f"دعاك صاحب العمل لتقديم عرض على «{job.title}»."
+    notify(
+        worker,
+        kind=Notification.Kind.INVITATION,
+        title="دعوة لتقديم عرض على وظيفة",
+        body=body,
+        deep_link=f"/jobs/{job.slug}",
+    )
+
+
 def _publish(job: Job) -> None:
     job.status = Job.Status.PUBLISHED
     job.published_at = timezone.now()
@@ -76,7 +94,11 @@ def _publish(job: Job) -> None:
         job.expires_at = None
     job.save()
     if job.is_private:
-        return  # a private/invited job is never broadcast to category subscribers (FR-JOB-12)
+        # never broadcast to category subscribers (FR-JOB-12); instead notify the invited worker
+        # directly — now that the job is PUBLISHED it is viewable by them (BR-7).
+        if job.invited_worker_id:
+            _notify_invited_worker(job, job.invited_worker)
+        return
     from apps.subscriptions.tasks import fanout_job_published  # noqa: PLC0415 (avoid cycle)
 
     fanout_job_published.delay(job.pk)  # FR-JOB-16 / FR-SUB-2
@@ -202,12 +224,28 @@ def cancel_proposal(proposal: Proposal) -> Proposal:
     return proposal
 
 
+def _notify_proposal_rejected(proposal: Proposal, reason: str) -> None:
+    """Close the loop for the worker — tell them their proposal was turned down and why (FR-JOB-9)."""
+    from apps.notifications.models import Notification  # noqa: PLC0415 (avoid import cycle)
+    from apps.notifications.services import notify  # noqa: PLC0415
+
+    notify(
+        proposal.worker,
+        kind=Notification.Kind.PROPOSAL,
+        title="لم يُقبل عرضك",
+        body=(reason.strip() and f"على «{proposal.job.title}»: {reason.strip()}")
+        or f"لم يُقبل عرضك على «{proposal.job.title}».",
+        deep_link="/me/proposals",
+    )
+
+
 def moderation_reject_proposal(proposal: Proposal, reason: str) -> Proposal:
     """Admin filter before the employer sees it — refunds the bid (FR-BID-6)."""
     proposal.status = Proposal.Status.REJECTED
     proposal.reject_reason = reason
     proposal.save(update_fields=["status", "reject_reason"])
     refund_bid(proposal, BidLedger.Reason.REFUND_MODERATION)
+    _notify_proposal_rejected(proposal, reason)
     return proposal
 
 
@@ -246,6 +284,7 @@ def reject_proposal(proposal: Proposal, reason: str) -> Proposal:
     proposal.status = Proposal.Status.REJECTED
     proposal.reject_reason = reason
     proposal.save(update_fields=["status", "reject_reason"])
+    _notify_proposal_rejected(proposal, reason)  # FR-JOB-9: the worker hears the outcome
     return proposal
 
 
@@ -257,7 +296,31 @@ def invite_worker(*, employer, job: Job, worker, message: str = "") -> Invitatio
     assert_active(worker)  # BR-23: cannot invite a frozen worker
     if job.status != Job.Status.PUBLISHED:
         raise ValidationError(ERR["not_open"])
-    return Invitation.objects.create(job=job, employer=employer, worker=worker, private_message=message)
+    invitation = Invitation.objects.create(job=job, employer=employer, worker=worker, private_message=message)
+    # The job is already live, so _publish won't fire again — notify the worker here (FR-JOB-12).
+    _notify_invited_worker(job, worker, message)
+    return invitation
+
+
+def reject_invitation(invitation: Invitation, reason: str = "") -> Invitation:
+    """Worker declines a private hire — record it and tell the employer so they can repost/rehire."""
+    invitation.status = Invitation.Status.REJECTED
+    invitation.reject_reason = reason
+    invitation.save(update_fields=["status", "reject_reason"])
+    from apps.notifications.models import Notification  # noqa: PLC0415 (avoid import cycle)
+    from apps.notifications.services import notify  # noqa: PLC0415
+
+    worker_name = (f"{invitation.worker.first_name} {invitation.worker.last_name}".strip()
+                   or "المستقل")
+    notify(
+        invitation.employer,
+        kind=Notification.Kind.INVITATION,
+        title="اعتذر المستقل عن الدعوة",
+        body=(reason.strip() and f"{worker_name} على «{invitation.job.title}»: {reason.strip()}")
+        or f"اعتذر {worker_name} عن دعوتك على «{invitation.job.title}».",
+        deep_link="/me/activity",
+    )
+    return invitation
 
 
 # ------------------------------------------------------------------ repost & rehire (FR-JOB-11/12)
@@ -268,6 +331,16 @@ def _request_to_propose(job: Job, employer, worker, message: str = "") -> Invita
         job=job, worker=worker, defaults={"employer": employer, "private_message": message}
     )
     return invitation
+
+
+def attach_invited_worker(job: Job, *, employer, worker, message: str = "") -> Invitation:
+    """Wire a freshly-created (possibly not-yet-published) private job to its invited freelancer:
+    guard the worker is active (BR-23) and record the request-to-propose (no bid, BR-7). The
+    invited worker is notified separately, by _publish, once the job actually goes live."""
+    from apps.accounts.services import assert_active  # noqa: PLC0415 (avoid import cycle)
+
+    assert_active(worker)
+    return _request_to_propose(job, employer, worker, message)
 
 
 def _spawn_job(employer, *, base_job, source_job, private, invited, overrides) -> Job:

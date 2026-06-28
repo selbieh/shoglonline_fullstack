@@ -8,7 +8,7 @@ import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { digitsOnly } from "@/lib/arabic";
 
-type Job ={ id: number; title: string; slug: string; status: string; budget_min: string; budget_max: string; proposals_count: number };
+type Job ={ id: number; title: string; slug: string; status: string; budget_min: string; budget_max: string; proposals_count: number; is_private?: boolean };
 type Contract = { id: number; status: string; my_role: string; counterpart: { id: number; name: string } };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -118,7 +118,12 @@ export default function MyJobsPage() {
           <li key={job.id} className="card">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="font-bold">{job.title}</p>
+                <p className="flex items-center gap-2 font-bold">
+                  {job.title}
+                  {job.is_private && (
+                    <span className="rounded-full bg-tint px-2 py-0.5 text-[11px] font-bold text-primary-dark">دعوة خاصة</span>
+                  )}
+                </p>
                 <p className="mt-0.5 text-xs text-sub">
                   {STATUS_LABEL[job.status] ?? job.status} · {job.proposals_count} عرض · <span dir="ltr">{job.budget_min}–{job.budget_max}$</span>
                 </p>

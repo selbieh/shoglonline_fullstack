@@ -20,7 +20,7 @@ class JobListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "title", "slug", "description", "category", "category_name", "skill_names",
             "budget_min", "budget_max", "location_type", "country", "city", "status",
-            "published_at", "expires_at", "created_at", "proposals_count",
+            "published_at", "expires_at", "created_at", "proposals_count", "is_private",
         ]
 
     def get_skill_names(self, obj) -> list[str]:
@@ -35,6 +35,9 @@ class JobDetailSerializer(serializers.ModelSerializer):
     )
     employer_name = serializers.SerializerMethodField()
     is_locked = serializers.BooleanField(read_only=True)
+    # True only for the signed-in worker who was invited to this (private) job — the client uses it
+    # to show "no bid charged" on the proposal form, since invited proposals are free (BR-7).
+    viewer_invited = serializers.SerializerMethodField()
 
     class Meta:
         model = Job
@@ -42,12 +45,25 @@ class JobDetailSerializer(serializers.ModelSerializer):
             "id", "title", "slug", "description", "category", "category_name", "subcategory",
             "skill_ids", "budget_min", "budget_max", "deadline", "expected_days", "location_type", "country",
             "city", "status", "reject_reason", "published_at", "expires_at", "proposals_count",
-            "is_locked", "employer_name", "screening_questions", "created_at",
-            "meta_title", "meta_description",
+            "is_locked", "employer", "employer_name", "screening_questions", "created_at",
+            "meta_title", "meta_description", "is_private", "viewer_invited",
         ]
 
     def get_employer_name(self, obj) -> str:
         return f"{obj.employer.first_name} {obj.employer.last_name}".strip() or "صاحب العمل"
+
+    def get_viewer_invited(self, obj) -> bool:
+        if not obj.is_private:
+            return False
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None or not user.is_authenticated:
+            return False
+        from ..models import Invitation  # noqa: PLC0415 (avoid import cycle)
+        return Invitation.objects.filter(
+            job=obj, worker=user,
+            status__in=[Invitation.Status.SENT, Invitation.Status.ACCEPTED],
+        ).exists()
 
 
 class JobCreateSerializer(serializers.ModelSerializer):
@@ -57,14 +73,27 @@ class JobCreateSerializer(serializers.ModelSerializer):
     # Budgets are whole USD amounts — reject decimals/text at the API boundary (the model stores Decimal).
     budget_min = serializers.IntegerField(min_value=0)
     budget_max = serializers.IntegerField(min_value=0)
+    # Hiring a specific freelancer (profile "توظيف المستقل" → /jobs/new?hire=ID): makes the job
+    # PRIVATE + invite-only so it is never broadcast publicly and the chosen worker is notified.
+    invited_worker_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Job
         fields = [
             "title", "description", "category", "subcategory", "skill_ids", "budget_min",
             "budget_max", "deadline", "expected_days", "location_type", "country", "city",
-            "screening_questions",
+            "screening_questions", "invited_worker_id",
         ]
+
+    def validate_invited_worker_id(self, value):
+        if value is None:
+            return value
+        from apps.accounts.models import User  # noqa: PLC0415 (avoid import cycle)
+        if value == self.context["request"].user.id:
+            raise serializers.ValidationError("لا يمكنك توظيف نفسك")  # BR-21
+        if not User.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("المستقل غير موجود")
+        return value
 
     def validate(self, attrs):
         if attrs["budget_min"] > attrs["budget_max"]:
@@ -83,7 +112,13 @@ class JobCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         questions = validated_data.pop("screening_questions", [])
         skill_ids = validated_data.pop("skill_ids", [])
-        job = Job.objects.create(employer=self.context["request"].user, **validated_data)
+        invited_worker_id = validated_data.pop("invited_worker_id", None)
+        job = Job.objects.create(
+            employer=self.context["request"].user,
+            is_private=bool(invited_worker_id),  # an invited hire is private (FR-JOB-12)
+            invited_worker_id=invited_worker_id or None,
+            **validated_data,
+        )
         if skill_ids:
             job.skills.set(skill_ids)
         for index, q in enumerate(questions):
@@ -133,12 +168,13 @@ class ProposalCreateSerializer(serializers.Serializer):
 
 class InvitationSerializer(serializers.ModelSerializer):
     job_title = serializers.CharField(source="job.title", read_only=True)
+    job_slug = serializers.CharField(source="job.slug", read_only=True)  # the job page is keyed by slug
     employer_name = serializers.SerializerMethodField()
     worker_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
-        fields = ["id", "job", "job_title", "employer_name", "worker_name",
+        fields = ["id", "job", "job_slug", "job_title", "employer_name", "worker_name",
                   "private_message", "status", "created_at"]
 
     def get_employer_name(self, obj) -> str:

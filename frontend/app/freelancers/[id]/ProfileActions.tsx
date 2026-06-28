@@ -28,7 +28,7 @@ export default function ProfileActions({ profileId }: { profileId: number }) {
   }
   return (
     <div className="mt-4 flex flex-wrap gap-2">
-      <Link href="/jobs/new" className="btn-primary w-full">توظيف المستقل</Link>
+      <Link href={`/jobs/new?hire=${profileId}`} className="btn-primary w-full">توظيف المستقل</Link>
     </div>
   );
 }

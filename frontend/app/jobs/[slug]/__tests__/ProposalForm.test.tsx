@@ -63,6 +63,26 @@ describe("ProposalForm — bids OFF", () => {
   });
 });
 
+describe("ProposalForm — owner can't bid on their own job (BR-21)", () => {
+  it("shows a manage-job notice instead of the form when the signed-in user owns the job", async () => {
+    const ownedJob = { id: 5, employer: 7, screening_questions: [] } as unknown as Job;
+    server.use(
+      http.get(`${API_URL}/auth/me`, () => HttpResponse.json({ id: 7 })),
+      http.get(`${API_URL}/me/bids`, () => HttpResponse.json({ balance: 5, ledger: [] })),
+      http.get(`${API_URL}/me/proposals`, () => HttpResponse.json({ results: [] })),
+    );
+    render(<ProposalForm job={ownedJob} />);
+
+    expect(await screen.findByText("هذه وظيفتك")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "العروض الواردة" })).toHaveAttribute(
+      "href",
+      "/me/jobs/5/proposals",
+    );
+    // the bid form never appears
+    expect(screen.queryByLabelText(/قيمة العرض/)).not.toBeInTheDocument();
+  });
+});
+
 describe("ProposalForm — success state", () => {
   it("replaces the form with a success card linking to my proposals", async () => {
     server.use(

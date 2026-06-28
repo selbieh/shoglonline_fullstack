@@ -2,6 +2,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.utils.text import slugify
 
 
 class Job(models.Model):
@@ -65,6 +66,28 @@ class Job(models.Model):
     def is_locked(self) -> bool:
         """BR-4: title/description locked once any proposal exists."""
         return self.proposals_count > 0
+
+    def _build_unique_slug(self) -> str:
+        """A collision-free unicode slug derived from the title (mirrors services._unique_slug)."""
+        base = slugify(self.title, allow_unicode=True)[:150] or "job"
+        slug, i = base, 1
+        siblings = Job.objects.exclude(pk=self.pk)
+        while siblings.filter(slug=slug).exists():
+            i += 1
+            slug = f"{base}-{i}"
+        return slug
+
+    def save(self, *args, **kwargs):
+        # Safety net so a Job is NEVER persisted with an empty slug. `slug` is unique=True, so a
+        # single blank-slug row (e.g. created via the Django admin, a management command, or the
+        # tiny race window between the API insert and submit_for_publication's slug assignment)
+        # would otherwise collide and 500 *every* subsequent job insert site-wide. Generating the
+        # slug before the INSERT closes that hole for all code paths.
+        if not self.slug:
+            self.slug = self._build_unique_slug()
+            if "update_fields" in kwargs and kwargs["update_fields"] is not None:
+                kwargs["update_fields"] = {*kwargs["update_fields"], "slug"}
+        super().save(*args, **kwargs)
 
 
 class ScreeningQuestion(models.Model):

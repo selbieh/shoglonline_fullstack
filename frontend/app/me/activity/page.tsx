@@ -34,6 +34,7 @@ type BuyingRequest = {
 type Invitation = {
   id: number;
   job: number;
+  job_slug: string;
   job_title: string;
   employer_name?: string;
   worker_name?: string;
@@ -335,7 +336,7 @@ export default function ActivityPage() {
                       <Chip map={INV_STATUS} status={inv.status} />
                       {inv.status === "sent" && (
                         <>
-                          <a href={`/jobs/${inv.job}`} className="btn-primary text-xs">عرض الوظيفة وتقديم عرض</a>
+                          <a href={`/jobs/${inv.job_slug}`} className="btn-primary text-xs">عرض الوظيفة وتقديم عرض</a>
                           <button type="button" disabled={busyId === inv.id}
                             onClick={() => rejectInvitation(inv)}
                             className="btn-secondary text-xs disabled:opacity-50">اعتذار</button>

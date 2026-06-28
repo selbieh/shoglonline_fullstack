@@ -1,20 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, API_URL, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { useFieldErrors, validateFields, type Rule } from "@/lib/useFieldErrors";
 import type { Category, Skill } from "@/lib/types";
 import Field from "@/components/Field";
+import PageLoader from "@/components/PageLoader";
 import ContactHint from "@/components/ContactHint";
 import { InfoIcon, CheckIcon, SearchIcon } from "@/components/icons";
 import { normalizeArabic, digitsOnly } from "@/lib/arabic";
 
 /** Post a job (FR-JOB-1/2) — moderation flag may queue it for admin review. Remote-only platform. */
 export default function NewJobPage() {
+  // useSearchParams (read in the inner form for the optional ?hire= invite) needs a Suspense boundary.
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <NewJobForm />
+    </Suspense>
+  );
+}
+
+function NewJobForm() {
   const router = useRouter();
+  // Hiring a specific freelancer (from their profile's "توظيف المستقل" button): the job is posted
+  // PRIVATE/invite-only and never broadcast — only this worker is notified and may apply (FR-JOB-12).
+  const hireId = useSearchParams().get("hire");
+  const [hireName, setHireName] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [skillIds, setSkillIds] = useState<number[]>([]);
@@ -48,6 +62,15 @@ export default function NewJobPage() {
       .catch(() => setSkills([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Resolve the invited freelancer's name for the banner (best-effort — falls back to a generic label).
+  useEffect(() => {
+    if (!hireId) return;
+    fetch(`${API_URL}/freelancers/${hireId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setHireName(d?.name ?? null))
+      .catch(() => setHireName(null));
+  }, [hireId]);
 
   // Published (not queued for review) → show the success message briefly, then open the live job.
   useEffect(() => {
@@ -125,6 +148,8 @@ export default function NewJobPage() {
         // drop empty screening rows so a blank question never blocks submission
         screening_questions: questions.filter((q) => q.question.trim()),
       };
+      // Private invite: post only to the chosen freelancer (server marks the job is_private).
+      if (hireId) payload.invited_worker_id = Number(hireId);
       const job = await api<{ status: string; slug: string }>("/me/jobs", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -171,10 +196,20 @@ export default function NewJobPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="text-3xl font-extrabold">نشر وظيفة جديدة</h1>
+      <h1 className="text-3xl font-extrabold">{hireId ? "توظيف مستقل" : "نشر وظيفة جديدة"}</h1>
       <p className="mt-2 text-sm text-sub">
         الحقول المعلّمة بـ <span className="text-danger">*</span> إلزامية، والباقي اختياري.
       </p>
+      {hireId && (
+        <div className="mt-4 flex items-start gap-2 rounded-m bg-tint p-3 text-sm text-primary-dark">
+          <InfoIcon className="mt-0.5 shrink-0 text-[16px]" />
+          <span>
+            هذه وظيفة <span className="font-bold">خاصة</span> — ستُرسل دعوة إلى{" "}
+            <span className="font-bold">{hireName ?? "المستقل المحدَّد"}</span> فقط، ولن تظهر للعامة
+            ولن يصل بريد للمشتركين في الفئة.
+          </span>
+        </div>
+      )}
       <div className="card mt-6 space-y-4">
         <Field label="عنوان الوظيفة" required error={errors.title} hint="يُقفل التعديل عليه بعد استلام أول عرض">
           <input className="w-full field" value={form.title} onChange={(e) => set("title", e.target.value)} />
@@ -272,12 +307,15 @@ export default function NewJobPage() {
 
         <div className="flex items-start gap-2 rounded-m bg-warn-t p-3 text-sm text-warn">
           <InfoIcon className="mt-0.5 shrink-0 text-[16px]" />
-          <span>قد تخضع الوظيفة لمراجعة الإدارة قبل النشر. عند النشر يصل بريد فوري للمشتركين في الفئة،
+          <span>قد تخضع الوظيفة لمراجعة الإدارة قبل النشر.{" "}
+          {hireId
+            ? "بعد الموافقة تصل دعوة للمستقل المحدَّد فقط ليقدّم عرضه دون خصم رصيد."
+            : "عند النشر يصل بريد فوري للمشتركين في الفئة،"}{" "}
           وتُغلق تلقائيًا بعد 30 يومًا إن لم تُرسَّ.</span>
         </div>
 
         <button className="btn-primary w-full py-3" disabled={busy} onClick={submit}>
-          {busy ? "جارٍ النشر…" : "تأكيد الفئة ونشر الوظيفة"}
+          {busy ? "جارٍ النشر…" : hireId ? "إرسال الدعوة" : "تأكيد الفئة ونشر الوظيفة"}
         </button>
         {formError && (
           <p ref={formErrorRef} role="alert" tabIndex={-1}

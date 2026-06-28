@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, tokens } from "@/lib/api";
+import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { apiError } from "@/lib/errors";
@@ -17,7 +17,7 @@ import {
 } from "@/lib/types";
 import Field from "@/components/Field";
 import ContactHint from "@/components/ContactHint";
-import { TicketIcon, ClockIcon, SendIcon, CheckIcon } from "@/components/icons";
+import { TicketIcon, ClockIcon, SendIcon, CheckIcon, ClipboardIcon } from "@/components/icons";
 import { formatUSD, formatUSDRange } from "@/lib/currency";
 
 /** Soft badge tone per proposal status — mirrors the «عروضي» list page. */
@@ -34,6 +34,8 @@ const STATUS_TONE: Record<string, string> = {
 /** Interactive proposal form (client island) — the surrounding job content is SSR. */
 export default function ProposalForm({ job }: { job: Job }) {
   const router = useRouter();
+  // An invited worker applies for free (BR-7) — suppress every bid-cost hint for them.
+  const invited = Boolean(job.viewer_invited);
   const [bids, setBids] = useState<number | null>(null);
   const [budget, setBudget] = useState("");
   const [days, setDays] = useState("14");
@@ -46,6 +48,12 @@ export default function ProposalForm({ job }: { job: Job }) {
   const [authed, setAuthed] = useState(false);
   const [bidsOn, setBidsOn] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  // True once we confirm the signed-in user owns this job — an owner can't bid on their own job
+  // (backend BR-21 self_dealing), so we show a "manage your job" notice instead of the form.
+  const [isOwner, setIsOwner] = useState(false);
+  // Gates the form until the ownership check settles, so an owner never sees a flash of the bid
+  // form before /auth/me resolves (the /me/proposals lookup can return first).
+  const [ownerChecked, setOwnerChecked] = useState(false);
   // The worker's prior proposal on this job, if any (undefined = still checking, null = none).
   // A worker may bid only once per job (backend uniq_proposal_per_job_worker), so when one
   // exists we show it read-only instead of the form.
@@ -57,6 +65,21 @@ export default function ProposalForm({ job }: { job: Job }) {
     if (!isAuthed) {
       setExisting(null);
       return;
+    }
+    // Owner short-circuit: a job owner may never bid on their own job (BR-21). The SSR job is fetched
+    // anonymously, so ownership can only be resolved here, client-side, against the signed-in user.
+    if (job.employer != null) {
+      api<Me>("/auth/me")
+        .then((me) => {
+          if (me.id === job.employer) {
+            setIsOwner(true);
+            setExisting(null);
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => setOwnerChecked(true));
+    } else {
+      setOwnerChecked(true);  // nothing to compare against — never an owner
     }
     fetchPublicSettings().then((s) => {
       const on = bidsEnabled(s);
@@ -138,6 +161,23 @@ export default function ProposalForm({ job }: { job: Job }) {
     );
   }
 
+  // You own this job — you can't bid on it (BR-21). Point yourself at your proposals inbox instead.
+  if (isOwner) {
+    return (
+      <div className="rounded-m border border-line bg-tint/60 p-5 text-center text-sm">
+        <span className="mx-auto mb-3 grid h-11 w-11 place-content-center rounded-full bg-white text-primary shadow-sm">
+          <ClipboardIcon className="text-[18px]" />
+        </span>
+        <p className="font-bold text-primary-deep">هذه وظيفتك</p>
+        <p className="mt-1 text-sub">لا يمكنك التقديم على وظيفة نشرتها بنفسك. تابِع العروض الواردة وأدِر وظيفتك من لوحة التحكم.</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <a href={`/me/jobs/${job.id}/proposals`} className="btn-primary">العروض الواردة</a>
+          <a href="/me/jobs" className="btn-secondary">وظائفي</a>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="rounded-m border border-success/20 bg-success-t p-6 text-center text-sm">
@@ -146,7 +186,9 @@ export default function ProposalForm({ job }: { job: Job }) {
         </span>
         <p className="text-base font-bold text-success">تم إرسال عرضك بنجاح</p>
         <p className="mt-1.5 leading-6 text-primary-dark">
-          {bidsOn
+          {invited
+            ? "بصفتك مدعوًّا لهذه الوظيفة، لم يُخصم أي رصيد. يمكنك متابعة حالة العرض من صفحة عروضي."
+            : bidsOn
             ? "خُصم عرض واحد من رصيدك. يمكنك متابعة حالة العرض وإلغاؤه ما لم يُشاهد من صفحة عروضي."
             : "يمكنك متابعة حالة العرض وإلغاؤه ما لم يُشاهد من صفحة عروضي."}
         </p>
@@ -158,8 +200,9 @@ export default function ProposalForm({ job }: { job: Job }) {
     );
   }
 
-  // Still checking whether the worker already applied — avoid flashing an empty form.
-  if (existing === undefined) {
+  // Still checking whether the worker already applied or owns this job — avoid flashing a form
+  // we're about to replace with the "already applied" / "your job" notices.
+  if (existing === undefined || !ownerChecked) {
     return (
       <div className="rounded-m border border-line bg-tint/40 p-5">
         <div className="h-5 w-2/3 animate-pulse rounded bg-line" />
@@ -218,7 +261,13 @@ export default function ProposalForm({ job }: { job: Job }) {
 
   return (
     <div className="space-y-4">
-      {bidsOn && bids !== null && (
+      {invited && (
+        <div className="flex items-center gap-2 rounded-m border border-success/20 bg-success-t px-4 py-2.5 text-sm text-success">
+          <CheckIcon className="text-[15px]" />
+          <span>دُعيت لهذه الوظيفة — تقديم عرضك <span className="font-bold">مجاني</span> ولن يُخصم أي رصيد.</span>
+        </div>
+      )}
+      {!invited && bidsOn && bids !== null && (
         <div className="flex items-center justify-between gap-2 rounded-m border border-primary/15 bg-tint px-4 py-2.5 text-sm text-primary-dark">
           <span className="inline-flex items-center gap-1.5"><TicketIcon className="text-[15px]" /> سيُخصم عرض واحد عند الإرسال</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-primary-deep">رصيدك: {bids}</span>
@@ -263,7 +312,7 @@ export default function ProposalForm({ job }: { job: Job }) {
         {busy ? "جارٍ الإرسال…" : (
           <span className="inline-flex items-center gap-2">
             <SendIcon className="text-[16px]" />
-            {bidsOn ? "إرسال العرض (يُخصم 1 من رصيدك)" : "إرسال العرض"}
+            {!invited && bidsOn ? "إرسال العرض (يُخصم 1 من رصيدك)" : "إرسال العرض"}
           </span>
         )}
       </button>
@@ -279,7 +328,7 @@ export default function ProposalForm({ job }: { job: Job }) {
         <ClockIcon className="mt-0.5 shrink-0 text-[13px]" />
         <span>
           يمكنك تعديل عرضك حتى يُقبل، وإلغاؤه ما لم يُشاهد
-          {bidsOn && " · إن أُغلقت الوظيفة قبل البتّ يُسترد رصيدك تلقائيًا"}
+          {!invited && bidsOn && " · إن أُغلقت الوظيفة قبل البتّ يُسترد رصيدك تلقائيًا"}
         </span>
       </p>
     </div>
