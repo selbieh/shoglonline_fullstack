@@ -177,6 +177,7 @@ export default function Dashboard() {
     { href: "/me/favorites", label: "المفضلة", desc: "الخدمات التي حفظتها", Icon: HeartIcon, tone: "bg-danger-t text-danger" },
     { href: "/messages", label: "الرسائل", desc: "محادثاتك مع الطرف الآخر", Icon: ChatIcon, tone: "bg-tint text-primary-dark" },
     { href: "/wallet", label: "محفظتي", desc: "الرصيد والمعاملات", Icon: WalletIcon, tone: "bg-success-t text-success" },
+    { href: "/wallet/charge?return=/dashboard", label: "شحن المحفظة", desc: "أضف رصيدًا عبر PayPal أو بطاقة", Icon: WalletIcon, tone: "bg-tint text-primary-dark" },
     { href: "/notifications", label: "الإشعارات", desc: "آخر التحديثات", Icon: BellIcon, tone: "bg-accent-sky text-primary-deep" },
     { href: "/settings", label: "الإعدادات", desc: "حسابك وخصوصيتك", Icon: GearIcon, tone: "bg-tint text-sub" },
     { href: "/affiliate", label: "الإحالة", desc: "اربح بدعوة أصدقائك", Icon: GiftIcon, tone: "bg-accent-sky text-primary-deep" },

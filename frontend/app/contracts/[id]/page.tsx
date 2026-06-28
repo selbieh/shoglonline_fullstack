@@ -221,7 +221,7 @@ export default function ContractDetailPage() {
                 <button className="btn-primary" disabled={busy} onClick={() => act(`/contracts/${id}/fund`, undefined, "فُعّل العقد بعد حجز الضمان")}>
                   تمويل وتفعيل العقد
                 </button>
-                <a href="/wallet" className="btn-secondary">شحن المحفظة أولًا</a>
+                <a href={`/wallet/charge?return=${encodeURIComponent(`/contracts/${id}`)}&amount=${c.budget}`} className="btn-secondary">شحن المحفظة أولًا</a>
               </div>
             </>
           ) : (

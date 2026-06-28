@@ -1,9 +1,10 @@
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings as dj_settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -143,6 +144,26 @@ class MyTransactionsView(ListAPIView):
 
     def get_queryset(self):
         return Transaction.objects.filter(wallet=services.get_wallet(self.request.user))
+
+
+class PaymentConfigView(APIView):
+    """GET /payments/config — publishable PayPal config for the browser JS SDK.
+
+    The client-id is publishable (it ships in the SDK URL on every page that renders the buttons);
+    the secret NEVER leaves the server. `stub` lets the frontend fall back to the redirect flow in
+    local dev where no real SDK client-id exists.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {
+                "paypal_client_id": dj_settings.PAYPAL_CLIENT_ID,
+                "currency": get_setting("platform.currency", "USD"),
+                "stub": bool(getattr(dj_settings, "PAYPAL_STUB", False)),
+            }
+        )
 
 
 class ChargeView(APIView):

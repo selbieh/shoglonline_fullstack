@@ -33,6 +33,7 @@ const NAV: { key: string; label: string; href: string; Icon: IconCmp }[] = [
   { key: "portfolio", label: "معرض أعمالي", href: "/me/profile#portfolio", Icon: GridIcon },
   { key: "messages", label: "الرسائل", href: "/messages", Icon: EnvelopeIcon },
   { key: "wallet", label: "المحفظة", href: "/wallet", Icon: WalletIcon },
+  { key: "charge", label: "شحن المحفظة", href: "/wallet/charge?return=/wallet", Icon: WalletIcon },
   { key: "ratings", label: "التقييمات", href: "/me/profile", Icon: StarIcon },
   { key: "notifications", label: "الإشعارات", href: "/notifications", Icon: BellIcon },
   { key: "settings", label: "الإعدادات", href: "/settings", Icon: GearIcon },

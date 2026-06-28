@@ -2,7 +2,7 @@
 
 import PageLoader from "@/components/PageLoader";
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { USD_LABEL } from "@/lib/currency";
@@ -19,8 +19,6 @@ const PAYOUT_KIND_LABEL: Record<string, string> = {
   paypal: "PayPal", bank_transfer: "تحويل بنكي", e_wallet: "محفظة إلكترونية",
   bank_card: "بطاقة بنكية", instapay: "إنستاباي",
 };
-
-const QUICK_AMOUNTS = [50, 100, 250, 500]; // ppt slide-33 preset top-up chips
 
 const TX_LABEL: Record<string, string> = {
   deposit: "إيداع PayPal",
@@ -62,12 +60,10 @@ export default function WalletPage() {
 
 function WalletInner() {
   const router = useRouter();
-  const params = useSearchParams();
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [payoutMethods, setPayoutMethods] = useState<PayoutMethod[]>([]);
-  const [chargeAmount, setChargeAmount] = useState("50");
   const [wdAmount, setWdAmount] = useState("");
   const [wdEmail, setWdEmail] = useState("");
   const [wdMethodId, setWdMethodId] = useState("");
@@ -97,37 +93,9 @@ function WalletInner() {
       router.replace(signinHereHref());
       return;
     }
-    // PayPal return: ?token=<order_id> → capture (stub or live)
-    const orderId = params.get("token");
-    if (orderId) {
-      api("/wallet/charge/confirm", { method: "POST", body: JSON.stringify({ order_id: orderId }) })
-        .then(() => setMsg({ ok: true, text: "✅ تم شحن المحفظة بنجاح عبر PayPal" }))
-        .catch(() => setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" }))
-        .finally(() => {
-          // Drop ?token so a manual refresh doesn't re-trigger the capture (banner state survives).
-          window.history.replaceState(null, "", "/wallet");
-          load();
-        });
-    } else {
-      load();
-    }
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function charge() {
-    setBusy(true);
-    setMsg(null);
-    try {
-      const order = await api<{ order_id: string; approval_url: string }>("/wallet/charge", {
-        method: "POST",
-        body: JSON.stringify({ amount: chargeAmount, return_url: window.location.origin + "/wallet" }),
-      });
-      window.location.href = order.approval_url; // PayPal approval (stub returns here instantly)
-    } catch {
-      setMsg({ ok: false, text: "⚠️ تحقق من المبلغ" });
-      setBusy(false);
-    }
-  }
 
   async function withdraw() {
     setBusy(true);
@@ -184,46 +152,18 @@ function WalletInner() {
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <section className="card space-y-3">
-          <h2 className="font-bold">+ شحن المحفظة (PayPal)</h2>
-          {/* quick-amount chips (ppt slide-33) */}
-          <div className="flex flex-wrap gap-2">
-            {QUICK_AMOUNTS.map((a) => (
-              <button key={a} type="button"
-                className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                  chargeAmount === String(a) ? "bg-primary text-white" : "bg-tint text-primary-dark hover:bg-primary/10"
-                }`}
-                onClick={() => setChargeAmount(String(a))}>
-                {a} {cur}
-              </button>
-            ))}
+        <section className="card flex flex-col justify-between gap-3">
+          <div className="space-y-2">
+            <h2 className="font-bold">+ شحن المحفظة (PayPal أو بطاقة)</h2>
+            <p className="text-sm text-sub">أضف رصيدًا لتمويل العقود وشراء العروض. الدفع عبر PayPal أو
+            ببطاقة ائتمان/خصم مباشرةً — لا نلمس بيانات بطاقتك.</p>
           </div>
-          <div className="flex gap-2">
-            <input className="w-32 field" inputMode="decimal" value={chargeAmount}
-              onChange={(e) => setChargeAmount(toAsciiDigits(e.target.value))} />
-            <button className="btn-primary flex-1" disabled={busy || !(Number(chargeAmount) > 0)} onClick={charge}>
-              المتابعة للدفع عبر PayPal
-            </button>
-          </div>
-          {/* breakdown (ppt slide-33) — full amount is credited; no platform fee on top-up */}
-          <dl className="rounded-m bg-bg p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-sub">المبلغ المطلوب</dt>
-              <dd className="font-medium text-ink" dir="ltr">{(Number(chargeAmount) || 0).toFixed(2)} {cur}</dd>
-            </div>
-            <div className="mt-1.5 flex items-center justify-between">
-              <dt className="text-sub">رسوم المنصة</dt>
-              <dd className="font-medium text-success" dir="ltr">0.00 {cur}</dd>
-            </div>
-            <div className="mt-1.5 flex items-center justify-between border-t border-line pt-1.5">
-              <dt className="font-bold text-ink">يُضاف إلى رصيدك</dt>
-              <dd className="font-extrabold text-primary-dark" dir="ltr">{(Number(chargeAmount) || 0).toFixed(2)} {cur}</dd>
-            </div>
-          </dl>
+          <a href="/wallet/charge?return=/wallet" className="btn-primary w-full text-center">
+            شحن المحفظة الآن
+          </a>
           <p className="flex items-start gap-1.5 text-xs text-sub">
             <LockIcon className="mt-0.5 shrink-0 text-[14px]" />
-            <span>الدفع يتم بالكامل في صفحة PayPal — لا نلمس بيانات بطاقتك. يظهر الإيداع «معلّقًا» فورًا
-            ويُؤكَّد خلال ثوانٍ؛ وإن تأخر تتولاه التسوية التلقائية.</span>
+            <span>يظهر الإيداع «معلّقًا» فورًا ويُؤكَّد خلال ثوانٍ؛ وإن تأخر تتولاه التسوية التلقائية.</span>
           </p>
         </section>
 
