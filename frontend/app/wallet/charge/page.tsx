@@ -62,6 +62,30 @@ function ChargeInner() {
     setTimeout(() => router.push(dest), 1200);
   }, [router, returnTo, loadWallet]);
 
+  // Capture is server-side and returns the settled status — only a real "succeeded" credits the
+  // wallet. A 200 response does NOT mean the money moved (a declined/415 capture also returns 200).
+  const confirmOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const res = await api<{ status: string; available: string }>("/wallet/charge/confirm", {
+          method: "POST",
+          body: JSON.stringify({ order_id: orderId }),
+        });
+        if (res.status === "succeeded") {
+          onSuccess();
+        } else if (res.status === "pending") {
+          setMsg({ ok: false, text: "الدفع قيد المعالجة لدى PayPal — سيُحدّث رصيدك تلقائيًا خلال دقائق." });
+          loadWallet();
+        } else {
+          setMsg({ ok: false, text: "تعذّر إتمام الدفع — لم يُخصم أي مبلغ. جرّب مجددًا أو استخدم وسيلة أخرى." });
+        }
+      } catch {
+        setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" });
+      }
+    },
+    [onSuccess, loadWallet],
+  );
+
   useEffect(() => {
     if (!tokens.access) {
       router.replace(signinHereHref());
@@ -70,10 +94,8 @@ function ChargeInner() {
     // Redirect-flow return (?token=<order_id>): capture, then forward to the caller.
     const orderId = params.get("token");
     if (orderId) {
-      api("/wallet/charge/confirm", { method: "POST", body: JSON.stringify({ order_id: orderId }) })
-        .then(onSuccess)
-        .catch(() => setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" }))
-        .finally(() => window.history.replaceState(null, "", "/wallet/charge"));
+      window.history.replaceState(null, "", "/wallet/charge"); // drop ?token so a refresh won't re-confirm
+      confirmOrder(orderId);
     } else {
       loadWallet();
     }
@@ -117,12 +139,7 @@ function ChargeInner() {
           },
           // Capture on our server (idempotent) — the same path the redirect flow uses.
           onApprove: async (data) => {
-            try {
-              await api("/wallet/charge/confirm", { method: "POST", body: JSON.stringify({ order_id: data.orderID }) });
-              onSuccess();
-            } catch {
-              setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" });
-            }
+            await confirmOrder(data.orderID);
           },
           onCancel: () => setMsg({ ok: false, text: "أُلغيت عملية الدفع" }),
           onError: () => setMsg({ ok: false, text: "حدث خطأ في بوابة الدفع — حاول مجددًا أو استخدم وسيلة أخرى" }),
@@ -134,7 +151,7 @@ function ChargeInner() {
     return () => {
       cancelled = true;
     };
-  }, [cfg, onSuccess]);
+  }, [cfg, confirmOrder]);
 
   // Redirect fallback (stub / no SDK): stash the return path, then bounce to PayPal's approval page.
   async function charge() {

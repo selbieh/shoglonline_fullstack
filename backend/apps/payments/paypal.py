@@ -75,7 +75,9 @@ def capture_order(order_id: str) -> bool:
         return order_id.startswith("STUB-")
     res = requests.post(
         f"{_base_url()}/v2/checkout/orders/{order_id}/capture",
-        headers={"Authorization": f"Bearer {_token()}"},
+        # Content-Type is REQUIRED even though the body is empty — PayPal rejects a bodyless
+        # capture with 415 UNSUPPORTED_MEDIA_TYPE otherwise.
+        headers={"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"},
         timeout=20,
     )
     if res.status_code not in (200, 201):
