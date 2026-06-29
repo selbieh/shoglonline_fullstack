@@ -155,8 +155,8 @@ export default function ProposalForm({ job }: { job: Job }) {
           <SendIcon className="text-[18px]" />
         </span>
         <p className="font-bold text-primary-deep">سجّل الدخول لتقديم عرض</p>
-        <p className="mt-1 text-sub">تصفّح الوظيفة بحرية — التقديم يتطلّب دخولًا عبر جوجل.</p>
-        <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary mt-4 w-full">دخول عبر جوجل</button>
+        <p className="mt-1 text-sub">تصفّح الوظيفة بحرية — التقديم يتطلّب تسجيل الدخول.</p>
+        <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary mt-4 w-full">تسجيل الدخول</button>
       </div>
     );
   }

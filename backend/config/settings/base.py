@@ -157,10 +157,17 @@ REST_FRAMEWORK = {
         "anon": "60/min",
         "user": "240/min",
         "auth": "10/min",      # google token exchange
+        "otp_request": "5/min",   # email OTP request (per client IP)
+        "otp_verify": "10/min",   # email OTP verify (per client IP)
         "chat_send": "30/min",  # FR-CHAT-10: cap message/report flooding per user
         "uploads": "60/min",    # attachment uploads
         "payments": "20/min",   # wallet charge + withdrawal requests (money-moving)
     },
+    # Trusted reverse-proxy depth: with a proxy in front (nginx/LB), DRF + _client_ip must read the
+    # proxy-appended right-most X-Forwarded-For hop, not the client-supplied left-most one — otherwise
+    # a spoofed XFF defeats every per-IP throttle and the unauthenticated OTP rate limits. Set to the
+    # real number of proxies (DRF_NUM_PROXIES) per deployment; 1 suits a single edge proxy.
+    "NUM_PROXIES": env.int("DRF_NUM_PROXIES", default=1),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -314,13 +321,30 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.attachments.tasks.sweep_orphan_attachments",
         "schedule": 6 * 60 * 60,
     },
+    "purge-login-codes": {  # FR-AUTH: bound the standing plaintext email-OTP store
+        "task": "apps.accounts.tasks.purge_login_codes",
+        "schedule": 6 * 60 * 60,
+    },
 }
 
 # ---------------------------------------------------------------- email
+# Dev/test default to the console backend; production sets EMAIL_BACKEND to the
+# SMTP backend (Hostinger) via .env. Host/port/credentials below are only read
+# when the SMTP backend is active.
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
 )
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.hostinger.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=465)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+# Hostinger: port 465 → SSL, port 587 → STARTTLS. Defaults follow the 465/SSL pair;
+# the two flags are mutually exclusive (Django errors if both are True).
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=True)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=20)  # seconds, so a stalled SMTP send can't hang a worker
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="شغل أونلاين <no-reply@shoghlonline.com>")
+SERVER_EMAIL = env("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)  # error/admin mail uses the same sender
 
 # ---------------------------------------------------------------- unfold admin
 from config.unfold import UNFOLD  # noqa: E402,F401  (brand theme + sidebar, FR-ADM-1)

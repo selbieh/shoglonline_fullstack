@@ -4,7 +4,7 @@ import Link from "next/link";
 import { JsonLd, SITE_URL, serverApi } from "@/lib/seo";
 
 const HOME_DESC =
-  "ابحث عن أفضل المستقلين العرب أو انشر وظيفتك مجانًا — آلاف الخدمات الجاهزة، عروض من محترفين، ومدفوعات محمية بنظام الضمان. حساب واحد للعمل والتوظيف، ودخول بنقرة عبر جوجل.";
+  "ابحث عن أفضل المستقلين العرب أو انشر وظيفتك مجانًا — آلاف الخدمات الجاهزة، عروض من محترفين، ومدفوعات محمية بنظام الضمان. حساب واحد للعمل والتوظيف، ودخول سريع وآمن بنقرة.";
 
 export const metadata: Metadata = {
   title: "شغل أونلاين — وظّف مستقلين واعثر على عمل حر",
@@ -46,7 +46,7 @@ const DEFAULTS: Section[] = [
   {
     key: "hero", kind: "hero",
     heading: "وظّف أفضل المستقلين أو ابدأ عملك التالي — بثقة",
-    subheading: "حساب واحد للوضعين، مدفوعات محمية بالضمان، ودخول عبر جوجل بنقرة. تصفّح الآن بدون تسجيل.",
+    subheading: "حساب واحد للوضعين، مدفوعات محمية بالضمان، ودخول سريع وآمن بنقرة. تصفّح الآن بدون تسجيل.",
     cta_primary_label: "تصفّح الوظائف", cta_primary_link: "/jobs",
     cta_secondary_label: "تصفّح الخدمات", cta_secondary_link: "/services", cards: [],
   },
@@ -56,7 +56,7 @@ const DEFAULTS: Section[] = [
     cards: [
       { icon: "🛡", title: "مدفوعات بالضمان", subtitle: "المبلغ محجوز حتى تسلّم وتُقبل الأعمال.", link: "", image_url: "" },
       { icon: "🔁", title: "حساب واحد، وضعان", subtitle: "بدّل بين «أبحث عن عمل» و«أوظّف» فورًا.", link: "", image_url: "" },
-      { icon: "🔒", title: "دخول عبر جوجل", subtitle: "تسجيل آمن بنقرة واحدة بلا كلمات مرور.", link: "", image_url: "" },
+      { icon: "🔒", title: "دخول سريع وآمن", subtitle: "بجوجل أو برمز يُرسل إلى بريدك — بلا كلمات مرور.", link: "", image_url: "" },
       { icon: "⚡", title: "سريع وآني", subtitle: "إشعارات ومحادثات لحظية بين الطرفين.", link: "", image_url: "" },
     ],
   },
@@ -73,14 +73,14 @@ const DEFAULTS: Section[] = [
     cta_primary_label: "", cta_primary_link: "", cta_secondary_label: "", cta_secondary_link: "",
     cards: [
       { icon: "1", title: "تصفّح بحرية", subtitle: "استعرض الوظائف والخدمات وابحث وفلتر دون تسجيل.", link: "", image_url: "" },
-      { icon: "2", title: "سجّل بنقرة", subtitle: "دخول عبر جوجل عند التقديم أو الشراء — بلا كلمات مرور.", link: "", image_url: "" },
+      { icon: "2", title: "سجّل بنقرة", subtitle: "بجوجل أو برمز بريدك عند التقديم أو الشراء — بلا كلمات مرور.", link: "", image_url: "" },
       { icon: "3", title: "اعمل بأمان", subtitle: "مدفوعات بنظام الضمان: تُحجز وتُحرَّر بعد التسليم والقبول.", link: "", image_url: "" },
     ],
   },
   {
     key: "cta", kind: "cta",
-    heading: "جاهز للبدء؟ حساب واحد للوضعين", subheading: "سجّل بنقرة عبر جوجل — وادفع أو اعمل بأمان الضمان",
-    cta_primary_label: "المتابعة باستخدام جوجل", cta_primary_link: "/signin",
+    heading: "جاهز للبدء؟ حساب واحد للوضعين", subheading: "سجّل بنقرة — وادفع أو اعمل بأمان الضمان",
+    cta_primary_label: "إنشاء حساب أو تسجيل الدخول", cta_primary_link: "/signin",
     cta_secondary_label: "", cta_secondary_link: "", cards: [],
   },
 ];
@@ -301,7 +301,7 @@ function Testimonials() {
     },
     {
       name: "ليلى حسن", role: "مطوّرة ويب", avatar: "ل", stars: 5,
-      quote: "الدخول بنقرة عبر جوجل والمحادثات الآنية وفّرا عليّ وقتًا كبيرًا. منصّة عربية بمعايير عالمية.",
+      quote: "الدخول السريع بنقرة والمحادثات الآنية وفّرا عليّ وقتًا كبيرًا. منصّة عربية بمعايير عالمية.",
     },
   ];
   return (

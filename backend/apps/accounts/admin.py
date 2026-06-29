@@ -4,7 +4,7 @@ from unfold.admin import ModelAdmin
 
 from apps.core.admin_export import ExportCsvMixin
 
-from .models import User
+from .models import EmailLoginCode, User
 from .services import freeze_user, unfreeze_user
 
 
@@ -51,3 +51,22 @@ class UserAdmin(ExportCsvMixin, DjangoUserAdmin, ModelAdmin):
             unfreeze_user(user, actor=request.user, ip=ip)
             count += 1
         self.message_user(request, f"أُعيد تفعيل {count} حساب واستُعيدت قوائمهم.")
+
+
+@admin.register(EmailLoginCode)
+class EmailLoginCodeAdmin(ModelAdmin):
+    """Read-only view of email login codes (FR-AUTH) — operator fallback when email delivery is down.
+    Codes are short-lived, single-use and auto-purged (apps.accounts.tasks.purge_login_codes)."""
+
+    list_display = ("email", "code", "created_at", "expires_at", "consumed_at", "attempts", "request_ip")
+    list_filter = ("created_at", "consumed_at")
+    search_fields = ("email", "request_ip")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+    readonly_fields = [f.name for f in EmailLoginCode._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

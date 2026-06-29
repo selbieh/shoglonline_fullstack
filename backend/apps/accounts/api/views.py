@@ -1,8 +1,10 @@
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -16,11 +18,15 @@ from ..services import (
     confirm_email_change,
     delete_account,
     request_email_change,
+    request_login_otp,
     request_phone_otp,
+    verify_login_otp,
     verify_phone_otp,
 )
 from .serializers import (
     DeleteAccountSerializer,
+    EmailOTPRequestSerializer,
+    EmailOTPVerifySerializer,
     GoogleLoginSerializer,
     MeSerializer,
     ModeSerializer,
@@ -30,8 +36,17 @@ from .serializers import (
 
 
 def _client_ip(request) -> str | None:
+    """Resolve the client IP the SAME way DRF's throttles key on it (api_settings.NUM_PROXIES), so
+    the audit IP and the rate-limit bucket agree and a spoofed X-Forwarded-For can't bypass either."""
     xff = request.META.get("HTTP_X_FORWARDED_FOR")
-    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")
+    remote = request.META.get("REMOTE_ADDR")
+    num_proxies = api_settings.NUM_PROXIES
+    if num_proxies is not None:
+        if num_proxies == 0 or not xff:
+            return remote
+        addrs = xff.split(",")
+        return addrs[-min(num_proxies, len(addrs))].strip()
+    return "".join(xff.split()) if xff else remote
 
 
 class GoogleLoginView(APIView):
@@ -163,6 +178,61 @@ class PhoneOTPVerifyView(APIView):
         serializer.is_valid(raise_exception=True)
         user = verify_phone_otp(request.user, serializer.validated_data["code"])
         return Response(MeSerializer(user).data)
+
+
+class EmailOTPRequestView(APIView):
+    """POST /api/v1/auth/email/request-otp — email a one-time login code (FR-AUTH).
+
+    Unauthenticated (sign-in == sign-up). Own ScopedRateThrottle bucket so login is not 429'd by
+    unrelated anonymous browsing sharing the per-IP `anon` quota on a NAT/office IP.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "otp_request"
+
+    def post(self, request):
+        serializer = EmailOTPRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(request_login_otp(serializer.validated_data["email"], ip=_client_ip(request)))
+
+
+class EmailOTPVerifyView(APIView):
+    """POST /api/v1/auth/email/verify-otp — confirm the code and issue JWTs (FR-AUTH).
+
+    Returns the SAME shape as GoogleLoginView so the frontend handles both methods identically.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "otp_verify"
+
+    def post(self, request):
+        serializer = EmailOTPVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ip = _client_ip(request)
+        try:
+            user, created = verify_login_otp(
+                serializer.validated_data["email"], serializer.validated_data["code"], ip=ip
+            )
+        except (PermissionDenied, AuthenticationFailed, ValidationError) as exc:  # FR-AUTH-7
+            AuditLog.objects.create(
+                actor=None, action="auth.email_otp_failed", ip=ip,
+                after={"detail": str(getattr(exc, "detail", exc))[:200]},
+            )
+            raise
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "first_login": created or not user.active_mode,
+                "user": MeSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class EmailChangeRequestView(APIView):

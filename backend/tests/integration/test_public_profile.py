@@ -37,6 +37,28 @@ def test_offline_profile_is_hidden():
     assert APIClient().get(f"/api/v1/freelancers/{worker.id}").status_code == 404
 
 
+def test_signup_default_profile_is_not_published_as_freelancer():
+    """A fresh signup gets a lazily auto-created profile that defaults to DRAFT (rule D-1) — it must
+    NOT appear in the public directory or detail until the worker explicitly publishes it."""
+    worker = UserFactory(first_name="جديد")
+    # Simulate the lazy auto-create (what /me/profile does on first access): all defaults, ONLINE.
+    profile = WorkerProfile.objects.create(user=worker)
+    assert profile.publish_state == WorkerProfile.PublishState.DRAFT
+    assert profile.visibility == WorkerProfile.Visibility.ONLINE  # online presence ≠ published
+
+    # Hidden from both the directory list and the public detail page.
+    ids = [r["id"] for r in APIClient().get("/api/v1/freelancers").json()["results"]]
+    assert worker.id not in ids
+    assert APIClient().get(f"/api/v1/freelancers/{worker.id}").status_code == 404
+
+    # Once published, the same profile becomes publicly discoverable.
+    profile.publish_state = WorkerProfile.PublishState.PUBLISHED
+    profile.save(update_fields=["publish_state"])
+    ids = [r["id"] for r in APIClient().get("/api/v1/freelancers").json()["results"]]
+    assert worker.id in ids
+    assert APIClient().get(f"/api/v1/freelancers/{worker.id}").status_code == 200
+
+
 def test_city_blank_when_no_address():
     worker = UserFactory()
     WorkerProfileFactory(user=worker, visibility=WorkerProfile.Visibility.ONLINE)

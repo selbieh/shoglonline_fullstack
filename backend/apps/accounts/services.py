@@ -3,9 +3,11 @@ lifecycle services — freeze ripple (BR-23 / FR-ADM-5) and deletion (BR-2/3 / F
 import logging
 import secrets
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.cache import cache
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
@@ -13,7 +15,7 @@ from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, Va
 from apps.core.models import AuditLog
 from apps.core.services import get_setting
 
-from .models import User
+from .models import EmailLoginCode, User
 
 logger = logging.getLogger(__name__)
 
@@ -71,64 +73,125 @@ def verify_google_token(id_token_str: str) -> dict:
     return payload
 
 
-def authenticate_google_user(id_token_str: str, ip: str | None = None) -> tuple[User, bool]:
-    """Sign-in == sign-up (FR-AUTH-2). Returns (user, created).
+def _block_if_inactive(user: User) -> None:
+    """Reject a returning login for a frozen/deleted account (FR-ADM-5 / BR-23)."""
+    if user.status == User.Status.FROZEN:
+        raise PermissionDenied(
+            detail={"code": "account_frozen", "message_ar": "حسابك مجمّد — تواصل مع الدعم"}
+        )
+    if user.status == User.Status.DELETED:
+        raise PermissionDenied(
+            detail={"code": "account_deleted", "message_ar": "هذا الحساب محذوف"}
+        )
 
-    Enforces: registration flag (FR-AUTH-5), frozen accounts blocked (FR-ADM-5),
-    one account per Google identity (FR-AUTH-6 / BR-1).
-    """
-    payload = verify_google_token(id_token_str)
-    email = payload["email"].lower()
 
-    user = (
-        User.objects.filter(google_sub=payload["sub"]).first()
-        or User.objects.filter(email=email).first()
+def _queue_welcome(user: User) -> None:
+    """Create the onboarding greeting row inside the current transaction, but only send the email
+    AFTER it commits — so a rolled-back signup never emails a phantom welcome."""
+    from apps.notifications.services import _dispatch, notify  # noqa: PLC0415 (avoid import cycle)
+
+    note = notify(
+        user, kind="admin_broadcast",
+        title="مرحبًا بك في شغل أونلاين 👋",
+        body="حسابك جاهز! أكمل ملفك الشخصي وابدأ بتصفّح الوظائف أو إنشاء خدمتك الأولى.",
+        deep_link="/dashboard", force=True, send_now=False,
     )
-    created = False
+    if note is not None:
+        transaction.on_commit(lambda: _dispatch(note, email=True))
+
+
+def _notify_security(user: User, *, title: str, body: str) -> None:
+    """Owner-facing security notice (login/identity events). Email deferred to commit."""
+    from apps.notifications.services import _dispatch, notify  # noqa: PLC0415 (avoid import cycle)
+
+    note = notify(
+        user, kind="admin_broadcast", title=title, body=body,
+        deep_link="/settings", force=True, send_now=False,
+    )
+    if note is not None:
+        transaction.on_commit(lambda: _dispatch(note, email=True))
+
+
+def get_or_provision_user(
+    email: str, *, ip: str | None = None,
+    first_name: str = "", last_name: str = "", avatar_url: str = "",
+    google_sub: str | None = None,
+) -> tuple[User, bool]:
+    """Single source of truth for end-user create-or-fetch — used by BOTH Google SSO and email OTP
+    so side effects (bids/welcome/terms) and gates (registration/frozen/deleted) never diverge and
+    no duplicate account can be created (FR-AUTH-2/5/6, BR-1). Returns (user, created).
+
+    Sign-in == sign-up: the same email always resolves to the same account regardless of method.
+    """
+    email = (email or "").strip().lower()
+    by_sub = User.objects.filter(google_sub=google_sub).first() if google_sub else None
+    by_email = User.objects.filter(email__iexact=email).first()
+
+    # Split-brain guard: the Google identity and the email point at DIFFERENT rows. Never auto-link
+    # (would attach the wrong identity) and never duplicate — refuse and let support reconcile.
+    if by_sub and by_email and by_sub.pk != by_email.pk:
+        AuditLog.objects.create(
+            actor=None, action="auth.account_conflict", ip=ip,
+            after={"by_sub": by_sub.pk, "by_email": by_email.pk},
+        )
+        raise PermissionDenied(
+            detail={"code": "account_conflict",
+                    "message_ar": "تعذّر ربط الحساب — تواصل مع الدعم"}
+        )
+
+    user = by_sub or by_email
 
     if user is None:
         if not get_setting("registration.enabled", True):
             raise PermissionDenied(
                 detail={"code": "registration_closed", "message_ar": "التسجيل مغلق حاليًا"}
             )
-        user = User.objects.create_user(
-            email=email,
-            google_sub=payload["sub"],
-            first_name=payload.get("given_name", ""),
-            last_name=payload.get("family_name", ""),
-            avatar_url=payload.get("picture", ""),
-            terms_accepted_at=timezone.now(),  # consent given on the sign-in screen (FR-AUTH-2)
-        )
-        created = True
-        from apps.bids.services import grant_signup_bids
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    email=email, google_sub=google_sub,
+                    first_name=first_name, last_name=last_name, avatar_url=avatar_url,
+                    terms_accepted_at=timezone.now(),  # consent given on the sign-in screen
+                )
+                from apps.bids.services import grant_signup_bids  # noqa: PLC0415
 
-        grant_signup_bids(user)  # FR-BID-5: free bids at registration
-        from apps.notifications.services import notify  # noqa: PLC0415 (avoid import cycle)
-        notify(
+                grant_signup_bids(user)  # FR-BID-5: free bids at registration — once, only on create
+                _queue_welcome(user)
+            return user, True
+        except IntegrityError:
+            # Lost a concurrent first-login race — the winner already provisioned this identity.
+            user = (User.objects.filter(google_sub=google_sub).first() if google_sub else None) \
+                or User.objects.filter(email__iexact=email).first()
+            if user is None:
+                raise
+
+    _block_if_inactive(user)
+    if google_sub and not user.google_sub:  # link a Google identity to an existing (e.g. OTP) account
+        user.google_sub = google_sub
+        user.save(update_fields=["google_sub"])
+        _notify_security(
             user,
-            kind="admin_broadcast",
-            title="مرحبًا بك في شغل أونلاين 👋",
-            body="حسابك جاهز! أكمل ملفك الشخصي وابدأ بتصفّح الوظائف أو إنشاء خدمتك الأولى.",
-            deep_link="/dashboard",
-            force=True,  # onboarding greeting always delivers (no preference row exists yet)
+            title="تم ربط حساب جوجل بحسابك",
+            body="تم تسجيل الدخول وربط حساب جوجل بحسابك في شغل أونلاين. إن لم تكن أنت، تواصل مع الدعم فورًا.",
         )
-    else:
-        if user.status == User.Status.FROZEN:
-            raise PermissionDenied(
-                detail={"code": "account_frozen", "message_ar": "حسابك مجمّد — تواصل مع الدعم"}
-            )
-        if user.status == User.Status.DELETED:
-            raise PermissionDenied(
-                detail={"code": "account_deleted", "message_ar": "هذا الحساب محذوف"}
-            )
-        if not user.google_sub:  # staff account linking its Google identity
-            user.google_sub = payload["sub"]
-            user.save(update_fields=["google_sub"])
+    return user, False
 
+
+def authenticate_google_user(id_token_str: str, ip: str | None = None) -> tuple[User, bool]:
+    """Sign-in == sign-up (FR-AUTH-2). Verifies the Google token, then delegates to the shared
+    provisioning path. Returns (user, created)."""
+    payload = verify_google_token(id_token_str)
+    user, created = get_or_provision_user(
+        payload["email"], ip=ip,
+        first_name=payload.get("given_name", ""),
+        last_name=payload.get("family_name", ""),
+        avatar_url=payload.get("picture", ""),
+        google_sub=payload["sub"],
+    )
     user.last_login = timezone.now()
     user.save(update_fields=["last_login"])
     AuditLog.objects.create(
-        actor=user, action="auth.google_login" if not created else "auth.google_signup", ip=ip
+        actor=user, action="auth.google_signup" if created else "auth.google_login", ip=ip
     )
     return user, created
 
@@ -521,3 +584,166 @@ def confirm_email_change(user, token: str) -> User:
         before={"email": old}, after={"email": user.email},
     )
     return user
+
+
+# --------------------------------------------------------------- email OTP login (FR-AUTH)
+# Passwordless login/signup by a one-time code emailed to the user. Sign-in == sign-up: the same
+# email resolves to the same account whether the user came via Google or OTP (get_or_provision_user).
+# Codes are persisted (EmailLoginCode) so they show in the admin and single-use is row-locked.
+
+
+def _otp_email_valid(email: str) -> bool:
+    return "@" in email and "." in email.rsplit("@", 1)[-1]
+
+
+# Complex code alphabet (FR-AUTH): mixed-case letters + digits + special characters for high entropy.
+# Visually-ambiguous characters (O/0, I/l/1) are excluded to cut typo-driven lockouts.
+_OTP_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz"
+_OTP_DIGITS = "23456789"
+_OTP_SPECIALS = "@#$%&*?!"
+_OTP_ALL = _OTP_LETTERS + _OTP_DIGITS + _OTP_SPECIALS
+
+
+def _generate_login_code(length: int) -> str:
+    """A cryptographically-random code guaranteed to mix letters, digits and special characters."""
+    length = max(4, int(length))
+    rng = secrets.SystemRandom()
+    # Guarantee at least one of each required class, then fill + shuffle so position is unpredictable.
+    chars = [secrets.choice(_OTP_LETTERS), secrets.choice(_OTP_DIGITS), secrets.choice(_OTP_SPECIALS)]
+    chars += [secrets.choice(_OTP_ALL) for _ in range(length - len(chars))]
+    rng.shuffle(chars)
+    return "".join(chars)
+
+
+def request_login_otp(email: str, ip: str | None = None) -> dict:
+    """Generate + email a login code (rate-limited, anti-enumeration). Always returns {"sent": True}
+    for any syntactically-valid email so callers can't probe which addresses have accounts."""
+    if not get_setting("auth.email_otp_enabled", True):
+        raise ValidationError({"code": "otp_disabled", "message_ar": "الدخول برمز البريد غير مُفعّل حاليًا"})
+    email = (email or "").strip().lower()
+    if not _otp_email_valid(email):
+        raise ValidationError({"code": "invalid_email", "message_ar": "البريد الإلكتروني غير صالح"})
+
+    gap = int(get_setting("auth.otp_resend_gap_seconds", 60))
+    if cache.get(f"email_otp_gap:{email}"):
+        raise ValidationError({"code": "otp_too_soon", "message_ar": "انتظر قليلًا قبل إعادة الإرسال"})
+
+    # Per-email rolling-24h cap (anti-bombing; DB-backed so it survives across workers).
+    day_ago = timezone.now() - timedelta(hours=24)
+    email_cap = int(get_setting("auth.otp_email_daily_cap", 10))
+    if EmailLoginCode.objects.filter(email__iexact=email, created_at__gte=day_ago).count() >= email_cap:
+        raise ValidationError({"code": "otp_too_many", "message_ar": "تجاوزت عدد المحاولات اليومية، حاول لاحقًا"})
+
+    # Per-IP daily cap so one attacker can't exhaust a victim's per-email quota or mailbomb at scale.
+    if ip:
+        ip_cap = int(get_setting("auth.otp_ip_daily_cap", 20))
+        ip_key = f"email_otp_ip:{ip}:{timezone.now():%Y%m%d}"
+        cache.add(ip_key, 0, 60 * 60 * 24)
+        try:
+            ip_count = cache.incr(ip_key)
+        except ValueError:
+            cache.set(ip_key, 1, 60 * 60 * 24)
+            ip_count = 1
+        if ip_count > ip_cap:
+            raise ValidationError({"code": "otp_too_many", "message_ar": "تجاوزت عدد المحاولات، حاول لاحقًا"})
+
+    cache.set(f"email_otp_gap:{email}", 1, gap)
+
+    # Registration-closed shortcut: an unknown email can never complete signup, so don't send a
+    # dead-end code — but keep the response identical so registration state can't be probed.
+    is_existing = User.objects.filter(email__iexact=email).exists()
+    if not is_existing and not get_setting("registration.enabled", True):
+        return {"sent": True}
+
+    # Supersede any outstanding codes so only the newest can be redeemed.
+    EmailLoginCode.objects.filter(email__iexact=email, consumed_at__isnull=True).update(
+        consumed_at=timezone.now()
+    )
+    length = int(get_setting("auth.otp_length", 7))
+    code = _generate_login_code(length)
+    ttl = int(get_setting("auth.otp_ttl_seconds", 600))
+    EmailLoginCode.objects.create(
+        email=email, code=code, request_ip=ip,
+        expires_at=timezone.now() + timedelta(seconds=ttl),
+    )
+
+    minutes = max(1, ttl // 60)
+    try:
+        from apps.notifications.services import send_branded_email  # noqa: PLC0415
+
+        send_branded_email(
+            to=email,
+            subject="رمز الدخول إلى شغل أونلاين",
+            title="رمز الدخول الخاص بك",
+            body=(
+                f"استخدم الرمز التالي لتسجيل الدخول إلى شغل أونلاين. الرمز صالح لمدة {minutes} دقيقة، "
+                "ويُكتب كما هو تمامًا (حسّاس لحالة الأحرف). لا تشاركه مع أي أحد."
+            ),
+            code=code,
+            deep_link="/signin",
+            cta_label="الذهاب إلى تسجيل الدخول",
+            fail_silently=False,
+        )
+    except Exception as exc:  # noqa: BLE001 — never leak delivery state (anti-enumeration); just log
+        logger.warning("email OTP send failed for %s: %s", email, exc)
+    return {"sent": True}
+
+
+def verify_login_otp(email: str, code: str, ip: str | None = None) -> tuple[User, bool]:
+    """Confirm a login code and return (user, created) via the shared provisioning path. Single-use is
+    enforced atomically with a row lock (compare-and-set); brute force is capped by a per-email fail
+    counter that survives code re-requests (supersede)."""
+    if not get_setting("auth.email_otp_enabled", True):
+        raise ValidationError({"code": "otp_disabled", "message_ar": "الدخول برمز البريد غير مُفعّل حاليًا"})
+    email = (email or "").strip().lower()
+    code = str(code or "").strip()
+    max_attempts = int(get_setting("auth.otp_max_attempts", 5))
+    lock_ttl = int(get_setting("auth.otp_fail_window_lock_seconds", 900))
+    fail_key = f"email_otp_fail:{email}"
+
+    # Cross-supersede brute-force lock: re-requesting a fresh code cannot reset this.
+    if (cache.get(fail_key) or 0) >= max_attempts:
+        raise ValidationError({"code": "otp_locked", "message_ar": "محاولات كثيرة، حاول لاحقًا"})
+
+    now = timezone.now()
+    row = EmailLoginCode.objects.filter(email__iexact=email).order_by("-created_at").first()
+    if row is None or not row.is_redeemable(now, max_attempts):
+        raise ValidationError({"code": "otp_expired", "message_ar": "انتهت صلاحية الرمز، أعد الإرسال"})
+
+    if code != row.code:
+        EmailLoginCode.objects.filter(pk=row.pk).update(attempts=F("attempts") + 1)  # autocommit, persists
+        cache.add(fail_key, 0, lock_ttl)
+        try:
+            fails = cache.incr(fail_key)
+        except ValueError:
+            cache.set(fail_key, 1, lock_ttl)
+            fails = 1
+        if fails >= max_attempts:
+            raise ValidationError({"code": "otp_locked", "message_ar": "محاولات كثيرة، حاول لاحقًا"})
+        raise ValidationError({"code": "otp_mismatch", "message_ar": "الرمز غير صحيح"})
+
+    # Correct code — consume + provision atomically so single-use holds under concurrent verifies.
+    with transaction.atomic():
+        locked = EmailLoginCode.objects.select_for_update().get(pk=row.pk)
+        if not locked.is_redeemable(now, max_attempts):  # lost the race — already consumed
+            raise ValidationError({"code": "otp_expired", "message_ar": "انتهت صلاحية الرمز، أعد الإرسال"})
+        locked.consumed_at = now
+        locked.save(update_fields=["consumed_at"])
+        user, created = get_or_provision_user(email, ip=ip)
+        user.last_login = now
+        user.save(update_fields=["last_login"])
+        AuditLog.objects.create(
+            actor=user, action="auth.email_otp_signup" if created else "auth.email_otp_login", ip=ip,
+        )
+        # Owner-facing alert when OTP signs into an account that ALSO has Google linked (mailbox
+        # access ≠ Google access) — assurance downgrade should be visible to the owner.
+        if not created and user.google_sub:
+            _notify_security(
+                user,
+                title="تسجيل دخول جديد عبر رمز البريد",
+                body="تم تسجيل الدخول إلى حسابك باستخدام رمز أُرسل إلى بريدك. إن لم تكن أنت، تواصل مع الدعم فورًا.",
+            )
+
+    cache.delete(fail_key)
+    cache.delete(f"email_otp_gap:{email}")
+    return user, created

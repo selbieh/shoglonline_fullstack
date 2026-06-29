@@ -324,6 +324,7 @@ class Command(BaseCommand):
             wp.expertise_level = level
             wp.hourly_rate = D(rate)
             wp.visibility = WorkerProfile.Visibility.ONLINE
+            wp.publish_state = WorkerProfile.PublishState.PUBLISHED  # live demo freelancer (default is now DRAFT)
             ex = extra.get(key)
             if ex:
                 wp.display_name = ex["name"]

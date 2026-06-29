@@ -65,11 +65,12 @@ class WorkerProfile(models.Model):
     client_notes = models.CharField(max_length=300, blank=True)
     visibility = models.CharField(max_length=8, choices=Visibility.choices, default=Visibility.ONLINE)
     # ppt slide-09 + rule D-1: a worker submits for review at ≥70% → PENDING_REVIEW; an admin
-    # approves → PUBLISHED (or rejects → REJECTED + reason). Default PUBLISHED so existing/
-    # auto-created profiles stay visible; the directory filter is NOT gated on this (avoids hiding
-    # anyone) — only the explicit publish endpoint now routes through review.
+    # approves → PUBLISHED (or rejects → REJECTED + reason). Defaults to DRAFT: a lazily
+    # auto-created profile (every signup gets one on first /me access) is NOT a freelancer until
+    # the worker explicitly publishes it. The public directory / gallery / detail surfaces are all
+    # gated on PUBLISHED, so a draft never appears as a freelancer to the public.
     publish_state = models.CharField(
-        max_length=20, choices=PublishState.choices, default=PublishState.PUBLISHED
+        max_length=20, choices=PublishState.choices, default=PublishState.DRAFT
     )
     publish_reject_reason = models.CharField(max_length=300, blank=True, default="")
     publish_reviewed_by = models.ForeignKey(

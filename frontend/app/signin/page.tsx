@@ -8,21 +8,40 @@ import { nextFromUrl } from "@/lib/nav";
 import { LockIcon } from "@/components/icons";
 import Logo from "@/components/Logo";
 import { Blobs, SigninArt } from "@/components/Brand";
+import EmailOtpForm, { type OtpLoginResponse } from "@/components/EmailOtpForm";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
-type LoginResponse = {
-  access: string;
-  refresh: string;
-  first_login: boolean;
-};
+type LoginResponse = OtpLoginResponse;
 
-/** Google SSO — the only auth method (FR-AUTH-1). */
+/** Two passwordless methods: Google Sign-In or a one-time code emailed to the user (FR-AUTH).
+ * Both resolve to the SAME account for a given email (server-side unification). */
 export default function SignIn() {
   const router = useRouter();
   const gButton = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false); // client-mounted gate (avoids SSR/localStorage mismatch)
+
+  // Send a signed-in user away — /signin is a dead-end for them and re-auth could swap accounts.
+  useEffect(() => {
+    if (tokens.access) {
+      router.replace(nextFromUrl() ?? "/dashboard");
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  /** Shared post-login routing — identical for Google and email OTP. Keys only on first_login. */
+  function onLoginSuccess(data: LoginResponse) {
+    tokens.set(data.access, data.refresh);
+    const next = nextFromUrl();
+    router.push(
+      data.first_login
+        ? `/onboarding/mode${next ? `?next=${encodeURIComponent(next)}` : ""}`
+        : (next ?? "/dashboard"),
+    );
+  }
 
   async function exchange(idToken: string) {
     setBusy(true);
@@ -32,15 +51,7 @@ export default function SignIn() {
         method: "POST",
         body: JSON.stringify({ id_token: idToken }),
       });
-      tokens.set(data.access, data.refresh);
-      // Return the user to where they came from (?next=…). First-login users must pick a
-      // mode first, so carry `next` through onboarding instead of dropping it.
-      const next = nextFromUrl();
-      router.push(
-        data.first_login
-          ? `/onboarding/mode${next ? `?next=${encodeURIComponent(next)}` : ""}`
-          : (next ?? "/dashboard"),
-      );
+      onLoginSuccess(data);
     } catch (e) {
       const { code } = apiError(e);
       setError(
@@ -48,7 +59,9 @@ export default function SignIn() {
           ? "🚧 التسجيل مغلق حاليًا للمستخدمين الجدد — أصحاب الحسابات الحالية يسجّلون الدخول بشكل طبيعي."
           : code === "account_frozen"
             ? "⛔ حسابك مجمّد من إدارة المنصة — تواصل مع الدعم."
-            : "تعذّر تسجيل الدخول — حاول مجددًا.",
+            : code === "account_conflict"
+              ? "تعذّر ربط الحساب تلقائيًا — تواصل مع الدعم."
+              : "تعذّر تسجيل الدخول — حاول مجددًا.",
       );
     } finally {
       setBusy(false);
@@ -56,20 +69,20 @@ export default function SignIn() {
   }
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) return; // dev stub button is shown instead
+    if (!ready || !GOOGLE_CLIENT_ID) return; // dev stub button is shown instead
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.onload = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const google = (window as any).google;
+      if (!google || !gButton.current) return;
       google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (res: { credential: string }) => exchange(res.credential),
       });
       // Size the button to the available container width (max 360) so it never
-      // overflows the viewport on narrow phones — a fixed 360 forces horizontal
-      // scroll and shoves the RTL card off-screen.
-      const available = gButton.current?.parentElement?.clientWidth ?? 360;
+      // overflows the viewport on narrow phones.
+      const available = gButton.current.parentElement?.clientWidth ?? 360;
       google.accounts.id.renderButton(gButton.current, {
         theme: "outline",
         size: "large",
@@ -80,7 +93,9 @@ export default function SignIn() {
     };
     document.head.appendChild(script);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ready]);
+
+  if (!ready) return null; // brief: redirecting an already-signed-in user, or pre-mount
 
   return (
     <main className="grid min-h-screen md:grid-cols-2">
@@ -90,7 +105,8 @@ export default function SignIn() {
           <Logo href="/" className="mx-auto h-9 w-auto md:hidden" />
           <h1 className="mt-4 text-2xl font-extrabold md:mt-0">تسجيل الدخول</h1>
           <p className="mt-2 text-sm text-sub">
-            بحساب جوجل فقط — لا حاجة لكلمة مرور أو رمز تحقق. الدخول الأول ينشئ حسابك تلقائيًا.
+            اختر طريقة الدخول: عبر حساب جوجل، أو برمز يُرسل إلى بريدك الإلكتروني — بلا كلمة مرور.
+            الدخول الأول ينشئ حسابك تلقائيًا.
           </p>
 
           <div className="mt-6 flex justify-center">
@@ -103,10 +119,19 @@ export default function SignIn() {
                 onClick={() => exchange("stub:dev@example.com")}
               >
                 <span className="font-extrabold text-[#4285F4]">G</span>
-                {busy ? "جارٍ الدخول…" : "دخول تجريبي (وضع التطوير)"}
+                {busy ? "جارٍ الدخول…" : "دخول تجريبي عبر جوجل (وضع التطوير)"}
               </button>
             )}
           </div>
+
+          {/* divider */}
+          <div className="my-6 flex items-center gap-3 text-xs text-sub">
+            <span className="h-px flex-1 bg-line" />
+            <span>أو</span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+
+          <EmailOtpForm onSuccess={onLoginSuccess} />
 
           {error && (
             <p className="mt-4 rounded-m bg-warn-t p-3 text-sm text-warn" role="alert">
@@ -120,7 +145,7 @@ export default function SignIn() {
           </p>
           <p className="mt-3 flex items-start gap-1.5 rounded-m bg-tint p-3 text-right text-xs text-primary-dark">
             <LockIcon className="mt-0.5 shrink-0 text-[14px]" />
-            <span>يتحقق خادمنا من هوية جوجل ثم يصدر جلسة آمنة خاصة بالمنصة — لا نخزّن أي كلمات مرور إطلاقًا</span>
+            <span>نتحقّق من هويتك ثم نصدر جلسة آمنة خاصة بالمنصة — لا نخزّن أي كلمات مرور إطلاقًا</span>
           </p>
         </div>
       </section>

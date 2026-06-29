@@ -135,11 +135,12 @@ def close_job(job: Job, *, expired: bool = False) -> Job:
 
 # ------------------------------------------------------------------ proposals
 def _assert_profile_published(worker) -> None:
-    """Rule D-1: a worker may only bid once an admin has published their profile.
+    """Rule D-1: a worker may only bid once their profile is published.
 
-    Profiles default to PUBLISHED (so existing/auto-created profiles keep working); a worker who
-    submits for review drops to PENDING_REVIEW until an admin approves. We block only the explicit
-    not-published states — a worker with no profile row yet is left to the other onboarding gates.
+    Auto-created profiles default to DRAFT, so a worker must complete and publish their profile
+    (going live directly when profiles.auto_publish is ON, else after admin approval) before they
+    can bid. We block every not-PUBLISHED state — a worker with no profile row yet is left to the
+    other onboarding gates.
     """
     from apps.profiles.models import WorkerProfile  # noqa: PLC0415 (avoid import cycle)
 

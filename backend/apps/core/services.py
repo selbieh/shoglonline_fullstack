@@ -61,6 +61,15 @@ DEFAULTS: dict[str, tuple[object, str, str, bool]] = {
     "jobs.enable_auto_archive": (True, "bool", "jobs", True),  # ON → expire after jobs.expiry_days; OFF → stay published
     "platform.currency": ("USD", "str", "payments", True),  # PayPal-compatible (no KWD on PayPal)
     "payments.commission_pct": (10, "int", "payments", True),  # pending final rates (Q3)
+    # --- email OTP login (FR-AUTH). Public flag is the kill-switch; the rest tune the code lifecycle.
+    "auth.email_otp_enabled": (True, "bool", "platform", True),  # master switch for passwordless email login
+    "auth.otp_ttl_seconds": (600, "int", "platform", False),     # code validity window
+    "auth.otp_resend_gap_seconds": (60, "int", "platform", False),
+    "auth.otp_length": (7, "int", "platform", False),  # complex: letters + digits + special chars
+    "auth.otp_max_attempts": (5, "int", "platform", False),      # wrong-code guesses before lockout
+    "auth.otp_email_daily_cap": (10, "int", "platform", False),  # codes per email per rolling 24h (anti-bombing)
+    "auth.otp_ip_daily_cap": (20, "int", "platform", False),     # codes per IP per day (anti-bombing)
+    "auth.otp_fail_window_lock_seconds": (900, "int", "platform", False),  # lockout duration after max fails
 }
 
 

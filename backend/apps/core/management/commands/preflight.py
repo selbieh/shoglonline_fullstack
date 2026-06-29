@@ -63,6 +63,12 @@ class Command(BaseCommand):
             "media on local FS — fine only if a persistent volume is mounted",
             warn_only=True,
         )
+        check(
+            "Cache is shared (not locmem)",
+            "locmem" not in settings.CACHES["default"]["BACKEND"].lower(),
+            "OTP resend-gap / fail-lock / IP caps need a cross-worker cache (Redis); "
+            "locmem is per-process and silently disables them in a multi-worker deploy",
+        )
 
         # --- database state ---------------------------------------------------
         executor = MigrationExecutor(connection)

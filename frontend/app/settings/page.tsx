@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
@@ -28,6 +28,10 @@ export default function AccountInfoPage() {
   const [loadError, setLoadError] = useState(false);
   const [visibility, setVisibility] = useState<"online" | "offline">("online");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Per-toggle "saved" confirmation: these settings persist instantly (no save button), so a
+  // transient green note next to the control reassures the change took. Keyed by field name.
+  const [saved, setSaved] = useState<string | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout>>();
   const [savingName, setSavingName] = useState(false);
   const [blockers, setBlockers] = useState<Blocker[] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -77,6 +81,14 @@ export default function AccountInfoPage() {
     loadAccount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => () => clearTimeout(savedTimer.current), []);
+
+  function flashSaved(key: string) {
+    setSaved(key);
+    clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(null), 2500);
+  }
 
   async function requestEmailChange() {
     setEmailBusy(true);
@@ -129,15 +141,25 @@ export default function AccountInfoPage() {
     if (!prefs) return;
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
-    await api("/me/notification-preferences", { method: "PUT", body: JSON.stringify({ [key]: next[key] }) })
-      .catch(() => setPrefs(prefs));
+    try {
+      await api("/me/notification-preferences", { method: "PUT", body: JSON.stringify({ [key]: next[key] }) });
+      flashSaved(key);
+    } catch (e) {
+      setPrefs(prefs);
+      setMsg({ ok: false, text: apiError(e).message_ar });
+    }
   }
 
   async function toggleVisibility() {
     const next = visibility === "online" ? "offline" : "online";
     setVisibility(next);
-    await api("/me/profile", { method: "PATCH", body: JSON.stringify({ visibility: next }) })
-      .catch(() => setVisibility(visibility));
+    try {
+      await api("/me/profile", { method: "PATCH", body: JSON.stringify({ visibility: next }) });
+      flashSaved("visibility");
+    } catch (e) {
+      setVisibility(visibility);
+      setMsg({ ok: false, text: apiError(e).message_ar });
+    }
   }
 
   async function deleteAccount() {
@@ -242,6 +264,11 @@ export default function AccountInfoPage() {
           </span>
           <input type="checkbox" checked={visibility === "online"} onChange={toggleVisibility} aria-label="الظهور على المنصة" className="h-5 w-5" />
         </label>
+        {saved === "visibility" && (
+          <p className="mt-2 inline-flex items-center gap-1 rounded-m bg-success-t px-2 py-1 text-xs font-medium text-success" role="status">
+            ✓ تم حفظ التغيير
+          </p>
+        )}
       </section>
 
       {/* notification preferences */}
@@ -249,9 +276,14 @@ export default function AccountInfoPage() {
         <h2 className="font-bold">تفضيلات الإشعارات</h2>
         <ul className="mt-3 space-y-3">
           {(Object.keys(PREF_LABEL) as (keyof Prefs)[]).map((key) => (
-            <li key={key} className="flex items-center justify-between">
+            <li key={key} className="flex items-center justify-between gap-2">
               <span className="text-sm">{PREF_LABEL[key]}</span>
-              <input type="checkbox" checked={prefs[key]} onChange={() => togglePref(key)} aria-label={PREF_LABEL[key]} className="h-5 w-5" />
+              <span className="flex items-center gap-2">
+                {saved === key && (
+                  <span className="text-xs font-medium text-success" role="status">✓ تم الحفظ</span>
+                )}
+                <input type="checkbox" checked={prefs[key]} onChange={() => togglePref(key)} aria-label={PREF_LABEL[key]} className="h-5 w-5" />
+              </span>
             </li>
           ))}
         </ul>

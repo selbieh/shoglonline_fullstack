@@ -96,10 +96,13 @@ def _send_branded_email(note: Notification) -> None:
 
 
 def send_branded_email(*, to, subject: str, title: str = "", body: str = "", deep_link: str = "",
-                       cta_label: str = "عرض التفاصيل", fail_silently: bool = True) -> None:
+                       cta_label: str = "عرض التفاصيل", code: str = "", fail_silently: bool = True) -> None:
     """Render the shared branded, RTL HTML email (matching the web app's colors/logo) and send it
     with a plain-text fallback. `deep_link` becomes the CTA button URL (the item link). Used by the
     notification hub and the chat/subscription sweepers so every channel looks identical.
+
+    `code` (optional) renders a prominent, copy-friendly code box (email OTP / verification) — it is
+    also included in the plain-text fallback so it survives clients that strip HTML.
 
     `to` is a single address or list; `fail_silently=False` lets a caller (e.g. the retrying
     fan-out task) surface SMTP errors. `title` defaults to `subject` when omitted."""
@@ -109,6 +112,7 @@ def send_branded_email(*, to, subject: str, title: str = "", body: str = "", dee
     html_body = render_to_string("email/notification.html", {
         "title": heading,
         "body": body,
+        "code": code,
         "cta_url": cta_url,
         "cta_label": cta_label,
         "site_url": FRONTEND_URL,
@@ -116,7 +120,7 @@ def send_branded_email(*, to, subject: str, title: str = "", body: str = "", dee
         "prefs_url": EMAIL_PREFS_URL,
         "year": timezone.now().year,
     })
-    text_body = "\n\n".join(part for part in (heading, body, cta_url) if part).strip()
+    text_body = "\n\n".join(part for part in (heading, body, code, cta_url) if part).strip()
     if not text_body:
         text_body = strip_tags(html_body)
     msg = EmailMultiAlternatives(

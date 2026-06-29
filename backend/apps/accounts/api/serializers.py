@@ -8,7 +8,7 @@ class GoogleLoginSerializer(serializers.Serializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
-    # Email is verified at Google SSO time (FR-AUTH) — surfaced for the verification chip.
+    # Email is proven at login (Google SSO or email OTP) — surfaced for the verification chip.
     email_verified = serializers.SerializerMethodField()
 
     class Meta:
@@ -30,6 +30,21 @@ class MeSerializer(serializers.ModelSerializer):
 
     def get_email_verified(self, obj) -> bool:
         return bool(obj.google_sub) or bool(obj.email)
+
+
+class EmailOTPRequestSerializer(serializers.Serializer):
+    """Body for POST /auth/email/request-otp. CharField (not EmailField) so the service-level
+    `invalid_email` code surfaces instead of a generic DRF field error."""
+
+    email = serializers.CharField(max_length=254)
+
+
+class EmailOTPVerifySerializer(serializers.Serializer):
+    """Body for POST /auth/email/verify-otp. Complex code (letters+digits+specials); exact value is
+    checked server-side, so accept a sane length band and trim whitespace (paste-friendly)."""
+
+    email = serializers.CharField(max_length=254)
+    code = serializers.CharField(min_length=4, max_length=16, trim_whitespace=True)
 
 
 class PhoneOTPRequestSerializer(serializers.Serializer):

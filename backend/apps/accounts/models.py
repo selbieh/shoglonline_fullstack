@@ -41,3 +41,31 @@ class User(AbstractUser):
     @property
     def is_frozen(self) -> bool:
         return self.status == self.Status.FROZEN
+
+
+class EmailLoginCode(models.Model):
+    """A short-lived, single-use email OTP for passwordless login/signup (FR-AUTH).
+
+    Persisted (not cache-only) so codes are visible in the Django admin as an operator fallback
+    when email delivery is unavailable, and so single-use is enforced atomically via a row lock.
+    The code is stored in plaintext deliberately (admin must see it); it is bounded by a short TTL,
+    single use, an attempt lockout and a periodic purge (apps.accounts.tasks.purge_login_codes).
+    """
+
+    email = models.EmailField(db_index=True)  # always normalized lowercase on create
+    code = models.CharField(max_length=16)  # complex alphanumeric+special, case-sensitive
+    request_ip = models.GenericIPAddressField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["email", "created_at"])]
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.email} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+    def is_redeemable(self, now, max_attempts: int) -> bool:
+        return self.consumed_at is None and now < self.expires_at and self.attempts < max_attempts

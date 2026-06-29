@@ -34,6 +34,17 @@ from .serializers import (
 )
 
 
+def _worker_publicly_visible(profile: WorkerProfile) -> bool:
+    """A worker (and their portfolio) is public only when online, account-active AND published
+    (rule D-1). Mirrors the directory/gallery querysets so single-object gates can't drift from
+    the list filters — a brand-new/draft profile is never served on any public surface."""
+    return (
+        profile.visibility == WorkerProfile.Visibility.ONLINE
+        and profile.publish_state == WorkerProfile.PublishState.PUBLISHED
+        and profile.user.status == User.Status.ACTIVE
+    )
+
+
 class MyWorkerProfileView(RetrieveUpdateAPIView):
     """GET/PATCH /api/v1/me/profile — lazily creates the profile (SRS §10.1)."""
 
@@ -129,8 +140,7 @@ class PublicPortfolioItemView(APIView):
             pk=pk,
         )
         profile = item.profile
-        if (profile.visibility != WorkerProfile.Visibility.ONLINE
-                or profile.user.status != User.Status.ACTIVE):
+        if not _worker_publicly_visible(profile):
             raise Http404
         # ppt slide-22: bump the public view counter (atomic; mirror onto the instance for this response).
         PortfolioItem.objects.filter(pk=item.pk).update(views_count=F("views_count") + 1)
@@ -179,6 +189,7 @@ class PublicPortfolioListView(ListAPIView):
         return (
             PortfolioItem.objects.filter(
                 profile__visibility=WorkerProfile.Visibility.ONLINE,
+                profile__publish_state=WorkerProfile.PublishState.PUBLISHED,  # rule D-1: hide draft workers' work
                 profile__user__status=User.Status.ACTIVE,
             )
             .select_related("profile__user", "profile__main_category")
@@ -227,8 +238,7 @@ class PortfolioMediaView(APIView):
         if not isinstance(host, PortfolioItem):
             raise Http404
         profile = host.profile
-        if (profile.visibility != WorkerProfile.Visibility.ONLINE
-                or profile.user.status != User.Status.ACTIVE):
+        if not _worker_publicly_visible(profile):
             raise Http404
         response = FileResponse(att.file.open("rb"), filename=att.original_name)
         response["Content-Type"] = att.content_type  # inline (no as_attachment) → browser renders it
@@ -281,6 +291,7 @@ class PublicWorkerListView(ListAPIView):
         qs = (
             WorkerProfile.objects.filter(
                 visibility=WorkerProfile.Visibility.ONLINE,
+                publish_state=WorkerProfile.PublishState.PUBLISHED,  # rule D-1: drafts/pending are not freelancers
                 user__status=User.Status.ACTIVE,
             )
             .select_related("user")
@@ -334,6 +345,7 @@ class PublicWorkerDetailView(APIView):
             ),
             user_id=pk,
             visibility=WorkerProfile.Visibility.ONLINE,
+            publish_state=WorkerProfile.PublishState.PUBLISHED,  # rule D-1: an unpublished profile is not public
             user__status=User.Status.ACTIVE,
         )
         return Response(
