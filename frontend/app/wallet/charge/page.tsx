@@ -32,6 +32,9 @@ function ChargeInner() {
   const [chargeAmount, setChargeAmount] = useState(need > 0 ? String(Math.ceil(need)) : "50");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // PayPal's popup closes the instant the buyer approves; this gates a blocking overlay during the
+  // server-side capture so the buyer isn't staring at a frozen page wondering if the payment went through.
+  const [capturing, setCapturing] = useState(false);
   const [cfg, setCfg] = useState<PayPalConfig | null>(null);
   const [ppReady, setPpReady] = useState(false);
   const [ppFailed, setPpFailed] = useState(false);
@@ -66,6 +69,8 @@ function ChargeInner() {
   // wallet. A 200 response does NOT mean the money moved (a declined/415 capture also returns 200).
   const confirmOrder = useCallback(
     async (orderId: string) => {
+      setMsg(null);
+      setCapturing(true);
       try {
         const res = await api<{ status: string; available: string }>("/wallet/charge/confirm", {
           method: "POST",
@@ -81,6 +86,8 @@ function ChargeInner() {
         }
       } catch {
         setMsg({ ok: false, text: "تعذّر تأكيد العملية — سيُعاد فحصها تلقائيًا خلال دقائق" });
+      } finally {
+        setCapturing(false);
       }
     },
     [onSuccess, loadWallet],
@@ -176,6 +183,19 @@ function ChargeInner() {
 
   return (
     <main className="mx-auto max-w-xl px-6 py-10">
+      {/* Blocking overlay while the server captures the approved order — bridges the dead-time after
+          PayPal's popup closes so the buyer doesn't think nothing happened (and can't double-submit). */}
+      {capturing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+          role="status" aria-live="polite" aria-busy="true">
+          <div className="flex flex-col items-center gap-3 rounded-l bg-white px-9 py-7 shadow-xl">
+            <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-line border-t-primary" aria-hidden />
+            <p className="text-sm font-bold text-ink">جارٍ تأكيد الدفع…</p>
+            <p className="text-xs text-sub">لا تُغلق هذه الصفحة</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">شحن المحفظة</h1>
         <a href={returnTo} className="text-sm text-primary-dark">← رجوع</a>
