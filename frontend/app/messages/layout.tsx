@@ -16,7 +16,9 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-5">
-      <div className="flex h-[calc(100vh-160px)] min-h-[520px] gap-4">
+      {/* 100dvh (not 100vh): the dynamic viewport shrinks when the mobile keyboard opens, so the
+          chat resizes to keep the composer visible instead of the whole page overflowing/scrolling. */}
+      <div className="flex h-[calc(100dvh-160px)] min-h-[520px] gap-4">
         <div className={`${onThread ? "hidden md:flex" : "flex"} w-full md:w-auto`}>
           <ConversationList activeId={activeId} />
         </div>

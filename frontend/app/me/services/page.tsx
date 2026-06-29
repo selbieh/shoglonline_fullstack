@@ -7,6 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import StatusTabs from "@/components/StatusTabs";
 import RowActionMenu, { type RowAction } from "@/components/RowActionMenu";
 import DashboardShell from "@/components/DashboardShell";
+import MeTabs from "@/components/MeTabs";
 import { formatUSD } from "@/lib/currency";
 
 type Service = { id: number; title: string; slug: string; base_price: string; status: string };
@@ -112,6 +113,8 @@ export default function MyServicesPage() {
     <DashboardShell active="services" title="خدماتي المصغرة"
       subtitle="إدارة ومتابعة جميع خدماتك المصغرة المنشورة والتأكد من أدائها."
       headerActions={<a href="/me/services/new" className="btn-primary">+ إضافة خدمة جديدة</a>}>
+
+      <MeTabs active="services" />
 
       {/* status filter tabs with per-status counts */}
       <div className="mt-5">

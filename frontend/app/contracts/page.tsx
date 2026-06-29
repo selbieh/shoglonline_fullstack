@@ -123,17 +123,17 @@ export default function ContractsPage() {
       ) : (
         <ul className="mt-6 space-y-3">
           {contracts.map((c) => (
-            <li key={c.id} className="card flex flex-wrap items-center justify-between gap-3">
-              <a href={`/contracts/${c.id}`} className="min-w-0 flex-1">
+            <li key={c.id} className="card flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <a href={`/contracts/${c.id}`} className="min-w-0 flex-1 basis-full sm:basis-0">
                 <p className="truncate font-bold transition hover:text-primary-dark">{c.title}</p>
                 <p className="mt-0.5 text-xs text-sub">
                   {c.my_role === "employer" ? "أنت صاحب العمل" : "أنت المستقل"} ·{" "}
                   {c.my_role === "employer" ? "المستقل" : "صاحب العمل"}: {c.counterpart.name}
                 </p>
               </a>
-              <div className="flex items-center gap-3">
-                <span className="font-extrabold">{formatUSD(c.budget)}</span>
-                <span className={`rounded-full px-3 py-1 text-xs ${STATUS_CHIP[c.status]}`}>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
+                <span className="whitespace-nowrap font-extrabold">{formatUSD(c.budget)}</span>
+                <span className={`whitespace-nowrap rounded-full px-3 py-1 text-xs ${STATUS_CHIP[c.status]}`}>
                   {STATUS_LABEL[c.status]}
                 </span>
                 <RowActionMenu actions={rowActions(c)} />

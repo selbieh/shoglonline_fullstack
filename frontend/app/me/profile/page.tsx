@@ -1,7 +1,7 @@
 "use client";
 
 import PageLoader from "@/components/PageLoader";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens, profileCache, myProfileCache, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
@@ -9,8 +9,10 @@ import { apiError, apiFieldErrors, isAuthError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
 import SkillPicker from "@/components/SkillPicker";
+import DashboardShell from "@/components/DashboardShell";
+import MeTabs from "@/components/MeTabs";
 import type { PortfolioItem, PortfolioMediaType, WorkerEducation, WorkerEmployment, WorkerLanguage } from "@/lib/types";
-import { ExternalLinkIcon, GridIcon, ImageIcon, LockIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { CheckIcon, ExternalLinkIcon, GridIcon, ImageIcon, LockIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
 /** Prefer the backend's per-field reasons (joined) over the generic envelope message,
  * so a save failure names what's wrong (e.g. "الوصف قصير جدًا") instead of "تحقّق من الحقول". */
@@ -93,6 +95,19 @@ export default function ProfileEditPage() {
   const [idv, setIdv] = useState<Idv>({ status: "none" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Transient "تم الحفظ" confirmation: since most sections persist automatically (skills,
+  // experience, education, languages — and the main form on click), flash a checkmark toast
+  // so the user knows their change landed without hunting for a save button. Errors stay in the
+  // persistent `msg` banner below; this is success-only.
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function flashSaved() {
+    setMsg(null);  // a fresh successful save clears any stale error banner
+    setSaved(true);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(false), 2500);
+  }
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
   // Local object-URL previews for just-picked images (the server url is auth-scoped and can't
   // render in a plain <img>). Cleared/replaced on each new pick.
   const [avatarPreview, setAvatarPreview] = useState<string>("");
@@ -190,7 +205,7 @@ export default function ProfileEditPage() {
         private_contact_value: profile.private_contact_value,
       }) });
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
-      setMsg({ ok: true, text: "✅ حُفظ ملفك" });
+      flashSaved();
     } catch (e) {
       setMsg(identitySaved
         ? { ok: false, text: `حُفظ الاسم والصورة، لكن تعذّر حفظ باقي الملف: ${errText(e)}` }
@@ -209,6 +224,7 @@ export default function ProfileEditPage() {
         body: JSON.stringify({ skills: skills.map((s) => ({ skill_id: s.skill_id, efficiency: s.efficiency })) }),
       });
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
+      flashSaved();
     } catch (e) {
       if (prev) setProfile((p) => (p ? { ...p, skills: prev } : p));  // don't leave the UI lying
       setMsg({ ok: false, text: errText(e) });
@@ -222,7 +238,7 @@ export default function ProfileEditPage() {
     try {
       const updated = await api<Profile>("/me/profile", { method: "PATCH", body: JSON.stringify({ [key]: list }) });
       setProfile((p) => (p ? { ...p, completeness_pct: updated.completeness_pct } : p));
-      setMsg({ ok: true, text: "✅ تم الحفظ" });
+      flashSaved();
     } catch (e) {
       if (prev !== undefined) setProfile((p) => (p ? { ...p, [key]: prev } : p));
       setMsg({ ok: false, text: errText(e) });
@@ -279,15 +295,20 @@ export default function ProfileEditPage() {
   const specs = selectedCat?.children ?? [];
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-extrabold">
-          ملفي {profile.is_verified && <span className="rounded-full bg-success-t px-2 py-0.5 text-sm text-success">موثّق ✅</span>}
-        </h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+    <DashboardShell active="profile" title="ملفي"
+      subtitle="حدّث بياناتك ومعرض أعمالك، ثم انتقل إلى تبويب خدماتك من نفس المكان.">
+      <MeTabs active="profile" />
+      {/* Auto-save confirmation — flashes briefly after each successful save, then fades out. */}
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+        {saved && (
+          <span role="status" className="animate-fade-up inline-flex items-center gap-2 rounded-full bg-success-t px-4 py-2 text-sm font-bold text-success shadow-lg">
+            <CheckIcon aria-hidden className="text-[16px]" /> تم حفظ التغييرات
+          </span>
+        )}
       </div>
-
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mx-auto max-w-3xl">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {profile.is_verified && <span className="rounded-full bg-success-t px-2 py-0.5 text-sm text-success">موثّق ✅</span>}
         <span className={`rounded-full px-2 py-0.5 text-xs ${(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).cls}`}>
           {(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).label}
         </span>
@@ -495,7 +516,8 @@ export default function ProfileEditPage() {
           </div>
         )}
       </section>
-    </main>
+      </div>
+    </DashboardShell>
   );
 }
 

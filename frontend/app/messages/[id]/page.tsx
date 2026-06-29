@@ -44,7 +44,8 @@ export default function ThreadPage() {
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [reads, setReads] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const initedFor = useRef<string | null>(null); // thread id we've already positioned at the bottom
   const liveRef = useRef(false); // true once Firestore is streaming (so REST reloads don't fight it)
   const lastSeen = useRef<string | number | null>(null);
 
@@ -99,10 +100,23 @@ export default function ThreadPage() {
     };
   }, [id, load, router]);
 
-  // Scroll to the newest message; re-mark read when a fresh not-mine message lands while focused
-  // (so the other party's ✓✓ updates live — the initial GET already marked read on open).
+  // Keep the newest message in view WITHOUT scrolling the surrounding page. scrollIntoView() walks
+  // up and scrolls every scrollable ancestor (incl. the window) — on mobile that shoves the whole
+  // screen down on open. Moving the scroller's own scrollTop touches only the message list.
+  // First paint of a thread jumps instantly (no animated jump); later messages glide, but only when
+  // the user is already near the bottom — so scrolling up to read history isn't yanked back down.
+  // Also re-mark read when a fresh not-mine message lands while focused (the other party's ✓✓
+  // updates live — the initial GET already marked read on open).
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scrollerRef.current;
+    if (el && msgs.length) {
+      if (initedFor.current !== id) {
+        el.scrollTop = el.scrollHeight; // instant on first load of this thread
+        initedFor.current = id;
+      } else if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      }
+    }
     const last = msgs[msgs.length - 1];
     if (last && !last.mine && last.id !== lastSeen.current) {
       lastSeen.current = last.id;
@@ -148,7 +162,7 @@ export default function ThreadPage() {
     <div className="flex h-full w-full flex-col overflow-hidden rounded-l border border-line bg-white">
       <ThreadHeader conv={conv} />
 
-      <div className="flex-1 space-y-3 overflow-y-auto bg-bg p-4">
+      <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto bg-bg p-4">
         <div className="mx-auto max-w-md rounded-m bg-tint/60 px-3 py-2 text-center text-[11px] leading-relaxed text-primary-dark">
           إن لم تُقرأ رسالتك خلال 10 دقائق نُرسل للطرف الآخر بريدًا تلقائيًا برابط المحادثة — مرة واحدة لكل رسالة.
         </div>
@@ -162,7 +176,6 @@ export default function ThreadPage() {
             readByOther={m.mine && otherRead > 0 && new Date(m.created_at).getTime() <= otherRead}
           />
         ))}
-        <div ref={bottomRef} />
       </div>
 
       {err && <p className="border-t border-line bg-warn-t p-2 text-center text-sm text-warn">{err}</p>}
