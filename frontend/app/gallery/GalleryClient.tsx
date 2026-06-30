@@ -213,7 +213,7 @@ export default function GalleryClient({
       </section>
 
       <div className="mx-auto flex max-w-screen-2xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
-        <div className="flex-1 space-y-4 lg:min-h-screen">
+        <div className="flex-1 space-y-4">
           {/* active filters bar */}
           {anyFilter && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
@@ -290,7 +290,9 @@ export default function GalleryClient({
           {/* results grid */}
           {!loading && !error && items.length > 0 && (
             <>
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {/* flex-wrap + justify-center (not grid) so a partial last row centers
+                  under the row above instead of being stranded on the start side */}
+              <div className="flex flex-wrap justify-center gap-5">
                 {items.map((it) => (
                   <GalleryCard key={it.id} it={it} favorited={favIds.has(it.id)} />
                 ))}
@@ -444,7 +446,12 @@ function GalleryCard({ it, favorited }: { it: GalleryItem; favorited: boolean })
   const rated = Number(it.worker_rating_count) > 0;
   const views = Number(it.views_count ?? 0);
   return (
-    <Link href={href} className="card-modern group flex flex-col overflow-hidden">
+    <Link
+      href={href}
+      // widths mirror the old grid (1 / 2 / 3 cols, gap-5=1.25rem) so full rows are unchanged;
+      // as flex items they let justify-center balance the final partial row
+      className="card-modern group flex w-full flex-col overflow-hidden sm:w-[calc(50%-0.63rem)] xl:w-[calc(33.333%-0.84rem)]"
+    >
       <div className="relative aspect-video overflow-hidden bg-tint">
         <GalleryThumb it={it} />
         <MediaBadge t={it.media_type} />

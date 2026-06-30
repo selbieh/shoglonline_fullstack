@@ -4,6 +4,7 @@ import { JsonLd, SITE_URL, organizationLd, websiteLd, serverApi } from "@/lib/se
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter, { type SiteSettings } from "@/components/SiteFooter";
 import NavProgress from "@/components/NavProgress";
+import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 const DESC =
@@ -35,6 +36,17 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
+  // iOS home-screen icon. The favicon is handled by the app/icon.png file convention and the rest
+  // of the install icons live in the PWA manifest — so we only add the apple-touch-icon here.
+  icons: { apple: "/logo-mark.png" },
+  // Search Console / Bing Webmaster ownership tags — emitted only when the token env is set, so
+  // dev/preview builds stay clean. Verifying via the HTML meta tag avoids a DNS round-trip.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : {},
+  },
 };
 
 // Mobile browser chrome tint (brand blue) + sane default scaling.
@@ -45,8 +57,9 @@ export const viewport: Viewport = {
 };
 
 // Arabic-first RTL (NFR-LOC-1). Locale routing reserved for future languages (NFR-LOC-2).
-// Tajawal is loaded via <link> (not next/font) so builds never depend on
-// network access to Google Fonts; the font swaps in at runtime.
+// Tajawal is self-hosted (see @font-face in globals.css + /public/fonts) — no render-blocking
+// request to Google Fonts and no runtime third-party dependency. We preload the two critical
+// Arabic weights (400 body, 800 headings/LCP) so they land before first paint.
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Footer contact / app / social links are admin-controlled (GET /site-settings). Fetched here
   // (server-side, cached) so the footer paints with no client flash; null on failure → i18n fallback.
@@ -54,14 +67,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ar" dir="rtl">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
-        />
+        <link rel="preload" href="/fonts/tajawal-400-arabic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/tajawal-800-arabic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className="font-sans">
+        {/* GA4 — no-op unless NEXT_PUBLIC_GA_ID is set; tracks SPA page views */}
+        <Analytics />
         {/* site-wide identity for search engines (Knowledge Panel + sitelinks search box) */}
         <JsonLd data={[organizationLd(), websiteLd()]} />
         <Suspense fallback={null}>

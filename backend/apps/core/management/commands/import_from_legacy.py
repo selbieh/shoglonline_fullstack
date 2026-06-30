@@ -28,6 +28,8 @@ import html
 import re
 from datetime import timezone as _tz
 from urllib.parse import unquote
+
+from apps.core.text import strip_rich_text
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -323,7 +325,9 @@ class Command(BaseCommand):
 
     @staticmethod
     def _clean(value):
-        return html.unescape((value or "").strip())
+        # Legacy post_content / meta is TinyMCE HTML — strip it to plain text so
+        # tags never reach our plain-text fields. See core.text.strip_rich_text.
+        return strip_rich_text(value)
 
     @staticmethod
     def _unquote_clean(value):

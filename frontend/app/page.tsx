@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
 import Link from "next/link";
-import { JsonLd, SITE_URL, serverApi } from "@/lib/seo";
+import { SITE_URL, serverApi } from "@/lib/seo";
 
 const HOME_DESC =
   "ابحث عن أفضل المستقلين العرب أو انشر وظيفتك مجانًا — آلاف الخدمات الجاهزة، عروض من محترفين، ومدفوعات محمية بنظام الضمان. حساب واحد للعمل والتوظيف، ودخول سريع وآمن بنقرة.";
@@ -355,31 +355,12 @@ export default async function Landing() {
   const sections = landing?.sections?.length ? landing.sections : DEFAULTS;
   const cats = catsData ?? [];
 
-  const jsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "شغل أونلاين",
-      url: SITE_URL,
-      description: "منصة عربية للوظائف والخدمات الحرة بمدفوعات آمنة بنظام الضمان",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      name: "شغل أونلاين",
-      url: SITE_URL,
-      potentialAction: {
-        "@type": "SearchAction",
-        target: `${SITE_URL}/jobs?search={query}`,
-        "query-input": "required name=query",
-      },
-    },
-  ];
-
+  // Organization + WebSite (with SearchAction) JSON-LD is emitted site-wide from app/layout.tsx,
+  // so the landing page adds none of its own — duplicating it here would produce two conflicting
+  // Organization/WebSite nodes on the most-crawled URL.
   return (
     <>
       <main className="overflow-hidden">
-        <JsonLd data={jsonLd} />
         {sections.map((s) => {
           if (s.kind === "hero")
             return (

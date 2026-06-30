@@ -62,7 +62,7 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
             <button key={`${src}-${j}`} type="button" onClick={() => setI(j)} aria-label={`صورة ${j + 1}`}
               className={`h-16 w-24 shrink-0 overflow-hidden rounded-m border-2 transition ${j === idx ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full bg-tint object-cover"
+              <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full bg-tint object-cover"
                 onError={() => markBroken(src)} />
             </button>
           ))}

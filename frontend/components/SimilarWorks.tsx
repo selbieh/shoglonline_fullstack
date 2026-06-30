@@ -20,7 +20,7 @@ function Thumb({ src, title }: { src?: string; title: string }) {
   if (src && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={title} className="aspect-video w-full bg-tint object-cover"
+      <img src={src} alt={title} loading="lazy" decoding="async" className="aspect-video w-full bg-tint object-cover"
         onError={() => setFailed(true)} />
     );
   }

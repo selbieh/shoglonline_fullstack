@@ -92,6 +92,9 @@ services:
         NEXT_PUBLIC_SITE_URL: https://shoglonline.bedoonsemsar.com
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
         NEXT_PUBLIC_SOCIAL_LINKS: ${NEXT_PUBLIC_SOCIAL_LINKS:-}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}        # GA4 Measurement ID (G-XXXXXXXXXX); empty → analytics off
+        NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:-}  # Search Console HTML-tag token
+        NEXT_PUBLIC_BING_SITE_VERIFICATION: ${NEXT_PUBLIC_BING_SITE_VERIFICATION:-}      # Bing Webmaster token
     environment:
       # Read at runtime by server components (SSR fetch to backend over the compose network).
       INTERNAL_API_URL: http://backend:8000/api/v1

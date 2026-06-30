@@ -52,6 +52,8 @@ export default function Avatar({
       <img
         src={src!}
         alt={name}
+        loading="lazy"
+        decoding="async"
         onError={() => setBroken(true)}
         className={`${className} rounded-full bg-tint object-cover`}
         referrerPolicy="no-referrer"

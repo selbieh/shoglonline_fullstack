@@ -4,17 +4,15 @@ import { SITE_URL, serverApi } from "@/lib/seo";
 type Slugged = { slug: string; updated_at?: string; published_at?: string };
 type Freelancer = { id: number; updated_at?: string };
 type Paginated<T> = { results: T[] };
-type Cat = { slug: string; children?: Cat[] };
 
 type Entry = MetadataRoute.Sitemap[number];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [jobs, services, freelancers, pages, cats] = await Promise.all([
+  const [jobs, services, freelancers, pages] = await Promise.all([
     serverApi<Paginated<Slugged>>("/jobs?ordering=-published_at"),
     serverApi<Paginated<Slugged>>("/services"),
     serverApi<Paginated<Freelancer>>("/freelancers?ordering=-rating_avg"),
     serverApi<Paginated<Slugged>>("/pages"),
-    serverApi<Cat[]>("/categories"),
   ]);
 
   const entry = (
@@ -37,9 +35,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/faq", { changeFrequency: "monthly", priority: 0.4 }),
   ];
 
-  const categoryUrls = (cats ?? []).map((c) =>
-    entry(`/jobs?category=${c.slug}`, { changeFrequency: "daily", priority: 0.6 }),
-  );
+  // NOTE: category-filtered listing URLs (e.g. /jobs?category=design) are intentionally omitted.
+  // The /jobs and /services pages carry a static self-canonical, so those query-string variants
+  // consolidate to the base listing — including them here would only surface "Duplicate, Google
+  // chose a different canonical" warnings in Search Console. Categories are still discoverable via
+  // internal links from the listing/landing pages.
   const jobUrls = (jobs?.results ?? []).map((j) =>
     entry(`/jobs/${j.slug}`, { lastmod: j.published_at, changeFrequency: "weekly", priority: 0.7 }),
   );
@@ -53,5 +53,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry(`/pages/${p.slug}`, { lastmod: p.updated_at, changeFrequency: "monthly", priority: 0.3 }),
   );
 
-  return [...staticUrls, ...categoryUrls, ...jobUrls, ...serviceUrls, ...freelancerUrls, ...pageUrls];
+  return [...staticUrls, ...jobUrls, ...serviceUrls, ...freelancerUrls, ...pageUrls];
 }

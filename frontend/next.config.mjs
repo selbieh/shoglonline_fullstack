@@ -14,6 +14,26 @@ function imageHosts() {
   ]);
 }
 
+// Security headers applied to every frontend response. The Django backend sets its own header set
+// (incl. CSP) on API/admin responses, but those never touch the HTML the browser + Googlebot fetch
+// from the Next server — so the page shell needs its own. A strict Content-Security-Policy is left
+// to the reverse proxy / a staged rollout because the app embeds PayPal, Firebase, Google Identity
+// and GA, whose origins must be allow-listed and verified in a browser first; the set below is the
+// safe, SEO-positive baseline that can't break third-party flows.
+const securityHeaders = [
+  // Force HTTPS for two years incl. subdomains (honoured only over TLS, ignored on local http).
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  // Stop MIME-sniffing (a content-type confusion / XSS vector).
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  // Disallow being framed by other origins (clickjacking); complements the backend's frame-ancestors.
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  // Send the origin (not the full path) on cross-origin requests — keeps referrers useful but private.
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Drop powerful features the site never uses (PayPal's payment flow is intentionally left enabled).
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -23,6 +43,16 @@ const nextConfig = {
   images: {
     remotePatterns: imageHosts(),
     formats: ["image/avif", "image/webp"],
+  },
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Self-hosted fonts are content-stable — cache them hard so repeat views skip the round-trip.
+      {
+        source: "/fonts/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
   },
 };
 
