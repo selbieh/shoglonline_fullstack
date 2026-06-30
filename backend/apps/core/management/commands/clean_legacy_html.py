@@ -35,12 +35,12 @@ TARGETS: list[tuple[str, list[str]]] = [
     ("profiles.Education", ["description"]),
     ("profiles.Employment", ["job_title", "description"]),
     ("gigs.Service", ["title", "description"]),
-    ("gigs.ServiceAddon", ["description"]),
+    ("gigs.ServiceAddon", ["title"]),
     ("jobs.Job", ["title", "description"]),
     ("jobs.Proposal", ["description"]),
     ("reviews.Review", ["comment"]),
     ("catalog.Category", ["description"]),
-    ("core.Report", ["description"]),
+    ("core.Report", ["detail"]),
 ]
 
 
@@ -77,6 +77,18 @@ class Command(BaseCommand):
             app_label, model_name = label.split(".")
             model = django_apps.get_model(app_label, model_name)
             rows_changed = fields_changed = 0
+
+            # Guard against a stale field map: skip (don't crash on) names that
+            # aren't real concrete fields on this model.
+            concrete = {f.name for f in model._meta.concrete_fields}
+            unknown_fields = [f for f in fields if f not in concrete]
+            if unknown_fields:
+                self.stderr.write(self.style.WARNING(
+                    f"  {label}: skipping unknown field(s): {', '.join(unknown_fields)}"
+                ))
+            fields = [f for f in fields if f in concrete]
+            if not fields:
+                continue
 
             # Only pull rows that contain a tag-like substring in any target field,
             # so we scan the minimum and keep the pass idempotent.
