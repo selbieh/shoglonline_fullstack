@@ -196,8 +196,9 @@ class Command(BaseCommand):
             return [dict(zip(cols, r)) for r in c.fetchall()]
 
     def _iter_paged(self, table, id_col, where_sql, params, select="*"):
-        """Yield rows in ascending id pages so we never load a giant table at once."""
-        last, seen = 0, 0
+        """Yield rows in ascending id pages so we never load a giant table at once. Emits a heartbeat
+        every ~5k rows so long stages (users, profiles…) show live progress instead of looking frozen."""
+        last, seen, beat = 0, 0, 0
         while True:
             page = self._rows(
                 f"SELECT {select} FROM {table} WHERE {id_col} > %s AND ({where_sql}) "
@@ -209,6 +210,9 @@ class Command(BaseCommand):
             for row in page:
                 yield row
                 seen += 1
+                if seen - beat >= 5000:
+                    beat = seen
+                    self.stdout.write(f"    … {seen:,} {table.replace(WP, '')} rows read")
                 if self.limit and seen >= self.limit:
                     return
             last = page[-1][id_col]
