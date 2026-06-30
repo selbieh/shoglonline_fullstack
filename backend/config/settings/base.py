@@ -100,7 +100,13 @@ LEGACY_DATABASE_URL = env("LEGACY_DATABASE_URL", default="")
 if LEGACY_DATABASE_URL:
     DATABASES["legacy"] = {
         **env.db_url_config(LEGACY_DATABASE_URL),
-        "OPTIONS": {"charset": "utf8mb4"},
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "connect_timeout": 30,
+            # keep a remote (e.g. Hostinger) MySQL session alive across batch processing gaps
+            "init_command": "SET SESSION wait_timeout=28800, net_read_timeout=600, net_write_timeout=600",
+        },
+        "CONN_HEALTH_CHECKS": True,
     }
 # Keeps the 'legacy' alias out of migrations + ORM routing (importer reads it via raw cursors only).
 DATABASE_ROUTERS = ["config.db_router.LegacyRouter"]

@@ -146,8 +146,13 @@ class Command(BaseCommand):
             "ENGINE": "django.db.backends.mysql",
             "NAME": opts["db_name"], "USER": opts["db_user"], "PASSWORD": opts["db_password"],
             "HOST": opts["db_host"], "PORT": str(opts["db_port"]),
-            "OPTIONS": {"charset": "utf8mb4"},
-            "TIME_ZONE": None, "CONN_MAX_AGE": 0, "CONN_HEALTH_CHECKS": False,
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "connect_timeout": 30,
+                # keep a remote (e.g. Hostinger) session from dropping while we process a batch
+                "init_command": "SET SESSION wait_timeout=28800, net_read_timeout=600, net_write_timeout=600",
+            },
+            "TIME_ZONE": None, "CONN_MAX_AGE": 0, "CONN_HEALTH_CHECKS": True,
             "AUTOCOMMIT": True, "ATOMIC_REQUESTS": False,
         }
 
@@ -190,10 +195,22 @@ class Command(BaseCommand):
             )
 
     def _rows(self, sql, params=None):
-        with connections[LEGACY].cursor() as c:
-            c.execute(sql, params or [])
-            cols = [d[0] for d in c.description]
-            return [dict(zip(cols, r)) for r in c.fetchall()]
+        # Remote MySQL (e.g. Hostinger) drops idle connections (error 2006/2013 "server has gone
+        # away") while we process a batch on the Postgres side. Retry once after forcing a reconnect.
+        for attempt in range(4):
+            try:
+                with connections[LEGACY].cursor() as c:
+                    c.execute(sql, params or [])
+                    cols = [d[0] for d in c.description]
+                    return [dict(zip(cols, r)) for r in c.fetchall()]
+            except Exception as exc:  # noqa: BLE001
+                msg = str(exc).lower()
+                transient = ("2006" in msg or "2013" in msg or "gone away" in msg
+                             or "lost connection" in msg or "broken pipe" in msg)
+                if transient and attempt < 3:
+                    connections[LEGACY].close()  # next cursor() reopens a fresh connection
+                    continue
+                raise
 
     def _iter_paged(self, table, id_col, where_sql, params, select="*"):
         """Yield rows in ascending id pages so we never load a giant table at once. Emits a heartbeat
