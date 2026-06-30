@@ -8,6 +8,8 @@ import { signinHereHref } from "@/lib/nav";
 import { useFieldErrors } from "@/lib/useFieldErrors";
 import Field from "@/components/Field";
 import FileUpload from "@/components/FileUpload";
+import SkillMultiPicker from "@/components/SkillMultiPicker";
+import { useSkillCatalog } from "@/lib/useSkillCatalog";
 import { TrashIcon } from "@/components/icons";
 
 /* Add a portfolio work (إضافة عمل جديد — ppt slide-23), on the enriched PortfolioItem
@@ -17,9 +19,11 @@ export default function AddPortfolioPage() {
   const router = useRouter();
   const [f, setF] = useState({
     title: "", project_type: "", cover_url: "", description: "", project_link: "",
-    skills: "", duration_value: "", duration_unit: "month", completed_at: "",
+    duration_value: "", duration_unit: "month", completed_at: "",
     budget: "", features: "",
   });
+  const [skills, setSkills] = useState<string[]>([]);
+  const catalog = useSkillCatalog();
   const [ownership, setOwnership] = useState(false);
   const [coverAtt, setCoverAtt] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,7 +40,6 @@ export default function AddPortfolioPage() {
     setF((s) => ({ ...s, ...patch }));
     clearFields(...Object.keys(patch));
   };
-  const skills = f.skills.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
   const features = f.features.split(/[\n]/).map((s) => s.trim()).filter(Boolean);
 
   async function submit() {
@@ -166,14 +169,8 @@ export default function AddPortfolioPage() {
             </div>
           )}
         </Field>
-        <Field label="المهارات المستخدمة" hint="افصل بينها بفاصلة">
-          <input className="field" value={f.skills} placeholder="Figma، React، Node.js"
-            onChange={(e) => set({ skills: e.target.value })} />
-          {skills.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {skills.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
-            </div>
-          )}
+        <Field label="المهارات المستخدمة" hint="اختر من قائمة المهارات">
+          <SkillMultiPicker catalog={catalog} value={skills} onChange={setSkills} />
         </Field>
 
         <div>

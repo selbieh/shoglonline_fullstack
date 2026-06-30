@@ -2,6 +2,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from apps.core.phone import validate_phone
+
 from .managers import UserManager
 
 
@@ -19,7 +21,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     google_sub = models.CharField(max_length=64, unique=True, null=True, blank=True)
     avatar_url = models.URLField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
+    phone = models.CharField(max_length=20, blank=True, validators=[validate_phone])
     phone_verified = models.BooleanField(default=False)
     active_mode = models.CharField(
         max_length=12,

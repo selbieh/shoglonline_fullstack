@@ -1,7 +1,9 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.urls import reverse
 from rest_framework import serializers
 
+from apps.core import phone as phone_utils
 from apps.core.contact_guard import validate_no_contact
 
 from ..models import (
@@ -257,6 +259,28 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
     # a match must not fail the profile save (false positives would block legitimate profiles). The
     # soft gate lives in services.submit_profile_for_publication, which diverts a flagged profile to
     # admin review instead of rejecting it.
+
+    def validate(self, attrs):
+        # When the private contact channel is a phone or WhatsApp number, the value must be a valid
+        # international number (Israel excluded) — same rule the frontend's country dropdown enforces.
+        # email / telegram handles are free text and are left untouched. On PATCH, fall back to the
+        # stored channel/value for whichever side the client didn't send.
+        phone_channels = {
+            WorkerProfile.ContactChannel.PHONE,
+            WorkerProfile.ContactChannel.WHATSAPP,
+        }
+        channel = attrs.get(
+            "private_contact_channel", getattr(self.instance, "private_contact_channel", "")
+        )
+        value = attrs.get(
+            "private_contact_value", getattr(self.instance, "private_contact_value", "")
+        )
+        if channel in phone_channels and value:
+            try:
+                attrs["private_contact_value"] = phone_utils.format_e164(value)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError({"private_contact_value": exc.messages})
+        return attrs
 
     @transaction.atomic  # replace-all sections must be all-or-nothing (no half-wiped profile)
     def update(self, instance, validated_data):

@@ -7,11 +7,13 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import F, Q
 from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, ValidationError
 
+from apps.core import phone as phone_utils
 from apps.core.models import AuditLog
 from apps.core.services import get_setting
 
@@ -438,6 +440,7 @@ def delete_account(user: User, *, reason: str = "", note: str = "", ip=None) -> 
         bio_title="", overview="", cover_image="", is_verified=False
     )
     EmployerProfile.objects.filter(user=user).update(company_name="")
+    set_avatar(user, None)  # retire the public avatar image + clear avatar_url
 
     user.status = User.Status.DELETED
     user.first_name = ""
@@ -459,6 +462,47 @@ def delete_account(user: User, *, reason: str = "", note: str = "", ip=None) -> 
         ip=ip,
     )
     return user
+
+
+# --------------------------------------------------------------- avatar (FR-PROF-1)
+def set_avatar(user, attachment_id, request=None) -> None:
+    """Set the user's avatar from a previously uploaded image attachment.
+
+    An avatar is genuinely PUBLIC (shown on cards, chat, reviews), so — unlike a chat/ticket file —
+    it can't live behind the scoped, auth-gated `GET /uploads/<id>` endpoint that an `<img>` tag
+    can't authenticate to. Instead we LINK the attachment to the User host (so the orphan sweep
+    won't reclaim it) and point `avatar_url` at the public inline `GET /avatars/<id>` endpoint.
+
+    `attachment_id=None` clears the avatar. Any previous avatar attachment is soft-deleted so files
+    don't accumulate. Raises `avatar_invalid` if the id isn't an unlinked image the caller owns.
+    """
+    from django.contrib.contenttypes.models import ContentType  # noqa: PLC0415
+    from django.urls import reverse  # noqa: PLC0415
+
+    from apps.attachments.models import Attachment  # noqa: PLC0415
+    from apps.attachments.services import attach  # noqa: PLC0415
+
+    user_ct = ContentType.objects.get_for_model(User)
+    mine = Attachment.objects.filter(owner=user, host_type=user_ct, is_deleted=False)
+
+    if attachment_id is None:
+        mine.update(is_deleted=True)
+        user.avatar_url = ""
+        user.save(update_fields=["avatar_url"])
+        return
+
+    att = Attachment.objects.filter(id=attachment_id, owner=user, is_deleted=False).first()
+    already_mine = att is not None and att.host_type_id == user_ct.id and att.object_id == user.id
+    if not already_mine:
+        linked = attach([attachment_id], user, user)  # owner-only link to the User host
+        if not linked:
+            raise ValidationError({"code": "avatar_invalid", "message_ar": "تعذّر تعيين الصورة الشخصية"})
+        att = linked[0]
+
+    mine.exclude(id=att.id).update(is_deleted=True)  # retire the previous avatar(s)
+    path = reverse("avatar-media", args=[att.id])
+    user.avatar_url = request.build_absolute_uri(path) if request is not None else path
+    user.save(update_fields=["avatar_url"])
 
 
 # --------------------------------------------------------------- phone OTP (ppt slide-08)
@@ -486,9 +530,12 @@ def request_phone_otp(user, phone: str) -> dict:
     Gated by the `profiles.phone_verification` operator flag (off by default)."""
     if not _phone_verification_enabled():
         raise ValidationError({"code": "phone_verification_disabled", "message_ar": "التحقق عبر الجوال غير مُفعّل حاليًا"})
-    digits = "".join(ch for ch in str(phone) if ch.isdigit())
-    if len(digits) < 8:
-        raise ValidationError({"code": "invalid_phone", "message_ar": "رقم الجوال غير صالح"})
+    # Validate + canonicalise to E.164 (Israel excluded); store/send a single normalized form.
+    try:
+        phone = phone_utils.format_e164(phone)
+    except DjangoValidationError as exc:
+        code = "blocked_phone_region" if getattr(exc, "code", "") == "blocked_phone_region" else "invalid_phone"
+        raise ValidationError({"code": code, "message_ar": exc.messages[0]})
     if cache.get(f"phone_otp_gap:{user.pk}"):
         raise ValidationError({"code": "otp_too_soon", "message_ar": "انتظر قليلًا قبل إعادة الإرسال"})
     code = f"{secrets.randbelow(10000):04d}"

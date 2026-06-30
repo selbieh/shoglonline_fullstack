@@ -14,8 +14,8 @@ import { TrashIcon } from "@/components/icons";
 import { formatUSD } from "@/lib/currency";
 
 /* Multi-step "add service" wizard (إضافة خدمة جديدة — ppt slide-19), on the gig keywords /
-   what-you-get / add-ons backend. Cover/gallery uploads are URL-only for now (attachment
-   upload = follow-up). */
+   what-you-get / add-ons backend. The cover image is either an uploaded attachment (served
+   publicly via /services/cover-media) or a pasted public URL. */
 
 type Cat = { id: number; name_ar: string; children?: Cat[] };
 type Addon = { title: string; price: string; extra_days: string };
@@ -44,6 +44,10 @@ export default function ServiceCreateWizard() {
     keywords: "", description: "", what_you_get: "", cover_image: "",
   });
   const [addons, setAddons] = useState<Addon[]>([]);
+  // Cover image: either an uploaded attachment (id sent on submit, shown via a local blob preview
+  // since the server URL is auth-scoped) OR a pasted public URL in form.cover_image — never both.
+  const [coverAtt, setCoverAtt] = useState<number | null>(null);
+  const [coverPreview, setCoverPreview] = useState("");
   const [busy, setBusy] = useState(false);
   // Per-field validation messages + global banner + API-error mapping live in the shared hook.
   const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
@@ -73,6 +77,19 @@ export default function ServiceCreateWizard() {
     // editing a field clears its (and only its) error so the red mark goes away as you type
     clearFields(...Object.keys(patch));
   };
+
+  // Drop the current blob preview (free the object URL) before replacing/removing it.
+  function resetCoverPreview() {
+    setCoverPreview((prev) => {
+      if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return "";
+    });
+  }
+  function clearCover() {
+    resetCoverPreview();
+    setCoverAtt(null);
+    set({ cover_image: "" });
+  }
   const subcats = cats.find((c) => String(c.id) === form.category)?.children ?? [];
   const keywords = form.keywords.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
   const total = (Number(form.base_price) || 0) + addons.reduce((s, a) => s + (Number(a.price) || 0), 0);
@@ -137,6 +154,7 @@ export default function ServiceCreateWizard() {
           base_price: form.base_price,
           delivery_days: Number(form.delivery_days) || 1,
           cover_image: form.cover_image,
+          cover_attachment_id: coverAtt,
           keywords,
           what_you_get: form.what_you_get,
           addons: addons
@@ -247,13 +265,19 @@ export default function ServiceCreateWizard() {
             <Field label="صورة الخدمة الأساسية (اختياري)" error={errors.cover_image}>
               <FileUpload accept="image/*" multiple={false} label="ارفع صورة الغلاف"
                 hint="يُفضَّل صورة أفقية بنسبة 16:9 (مثل 1280×720 بكسل) لتظهر البطاقة بشكل مثالي دون اقتطاع"
-                onUploaded={(a) => set({ cover_image: a.url })} />
-              {form.cover_image && (
+                onUploaded={(a, preview) => {
+                  // The server url is auth-scoped; preview from the picked file's local blob instead.
+                  resetCoverPreview();
+                  setCoverAtt(a.id);
+                  setCoverPreview(preview ?? "");
+                  set({ cover_image: "" });
+                }} />
+              {(coverPreview || form.cover_image) && (
                 <div className="relative mt-2 overflow-hidden rounded-m border border-line">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={form.cover_image} alt="معاينة صورة الغلاف"
+                  <img src={coverPreview || form.cover_image} alt="معاينة صورة الغلاف"
                     className="aspect-video w-full bg-tint object-cover" />
-                  <button type="button" onClick={() => set({ cover_image: "" })}
+                  <button type="button" onClick={clearCover}
                     className="absolute end-2 top-2 grid h-8 w-8 place-content-center rounded-full bg-white/90 text-danger shadow transition hover:bg-white"
                     aria-label="إزالة الصورة">
                     <TrashIcon />
@@ -263,7 +287,7 @@ export default function ServiceCreateWizard() {
               )}
               <p className="mt-2 text-center text-xs text-sub">أو ألصق رابطًا</p>
               <input className="field mt-1" dir="ltr" value={form.cover_image} placeholder="https://…"
-                onChange={(e) => set({ cover_image: e.target.value })} />
+                onChange={(e) => { resetCoverPreview(); setCoverAtt(null); set({ cover_image: e.target.value }); }} />
             </Field>
             <Field label="وصف الخدمة" error={errors.description} hint={`حد أدنى 30 حرفًا · ${form.description.length.toLocaleString("en-US")}/2500`}>
               <textarea className="field min-h-32" maxLength={2500} value={form.description}

@@ -28,17 +28,23 @@ class ServiceAdmin(ModelAdmin):
 
     @admin.action(description="✅ Approve & publish services")
     def approve_services(self, request, queryset):
+        from apps.notifications.services import notify
         for service in queryset.filter(status=Service.Status.PENDING_REVIEW):
             services.approve_service(service)
+            notify(service.worker, kind="admin_broadcast", title="تم نشر خدمتك",
+                   body=service.title, deep_link=f"/services/{service.slug}", force=True)  # always deliver
             AuditLog.objects.create(actor=request.user, action="admin.service_approved",
                                     model="Service", object_id=str(service.pk))
 
     @admin.action(description="❌ Reject services")
     def reject_services(self, request, queryset):
+        from apps.notifications.services import notify
         for service in queryset.filter(status=Service.Status.PENDING_REVIEW):
             service.status = Service.Status.REJECTED
             service.reject_reason = "مخالفة معايير النشر"
             service.save(update_fields=["status", "reject_reason"])
+            notify(service.worker, kind="admin_broadcast", title="رُفضت خدمتك",
+                   body=service.reject_reason, deep_link="/me/services", force=True)  # sends the Arabic reason
             AuditLog.objects.create(actor=request.user, action="admin.service_rejected",
                                     model="Service", object_id=str(service.pk))
 

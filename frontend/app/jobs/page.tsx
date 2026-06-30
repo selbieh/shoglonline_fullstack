@@ -16,12 +16,14 @@ export default async function JobsPage({ searchParams }: { searchParams: SP }) {
   const filters: JobsFilters = {
     category: one(searchParams.category),
     subcategory: one(searchParams.subcategory),
+    skill: one(searchParams.skill),
     q: one(searchParams.search),
   };
 
   const sp = new URLSearchParams({ ordering: "-published_at", limit: String(PAGE), offset: "0" });
   if (filters.category) sp.set("category", filters.category);
   if (filters.subcategory) sp.set("subcategory", filters.subcategory);
+  if (filters.skill) sp.set("skill", filters.skill);
   if (filters.q) sp.set("search", filters.q);
 
   const [data, cats] = await Promise.all([

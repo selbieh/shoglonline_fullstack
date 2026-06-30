@@ -7,6 +7,8 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
+import SkillMultiPicker from "@/components/SkillMultiPicker";
+import { useSkillCatalog } from "@/lib/useSkillCatalog";
 
 /* Manage / edit a portfolio work (ppt slide-24) — edit the project fields (PATCH), preview, or
    delete. Built on GET/PATCH/DELETE /me/portfolio/<id>. */
@@ -23,9 +25,11 @@ export default function PortfolioManagePage() {
   const params = useParams<{ id: string }>();
   const [f, setF] = useState({
     title: "", project_type: "", cover_url: "", description: "", project_link: "",
-    skills: "", duration_value: "", duration_unit: "month", completed_at: "",
+    duration_value: "", duration_unit: "month", completed_at: "",
     budget: "", features: "",
   });
+  const [skills, setSkills] = useState<string[]>([]);
+  const catalog = useSkillCatalog();
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -41,13 +45,13 @@ export default function PortfolioManagePage() {
       cover_url: it.cover_url ?? "",
       description: it.description ?? "",
       project_link: it.project_link ?? "",
-      skills: (it.skills ?? []).join("، "),
       duration_value: it.duration_value != null ? String(it.duration_value) : "",
       duration_unit: it.duration_unit || "month",
       completed_at: it.completed_at ?? "",
       budget: it.budget != null ? String(it.budget) : "",
       features: (it.features ?? []).join("\n"),
     });
+    setSkills(it.skills ?? []);
     setExistingImage(it.image_url ?? "");
     setLoaded(true);
   }, [params.id]);
@@ -61,7 +65,6 @@ export default function PortfolioManagePage() {
   }, [load, router]);
 
   const set = (patch: Partial<typeof f>) => setF((s) => ({ ...s, ...patch }));
-  const skills = f.skills.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
   const features = f.features.split(/[\n]/).map((s) => s.trim()).filter(Boolean);
 
   async function save() {
@@ -176,13 +179,8 @@ export default function PortfolioManagePage() {
             </div>
           )}
         </Field>
-        <Field label="المهارات المستخدمة" hint="افصل بينها بفاصلة">
-          <input className="field" value={f.skills} onChange={(e) => set({ skills: e.target.value })} />
-          {skills.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {skills.map((s, i) => <span key={`${s}-${i}`} className="tag-soft bg-tint text-primary-dark">{s}</span>)}
-            </div>
-          )}
+        <Field label="المهارات المستخدمة" hint="اختر من قائمة المهارات">
+          <SkillMultiPicker catalog={catalog} value={skills} onChange={setSkills} />
         </Field>
 
         <div className="flex flex-wrap gap-2 border-t border-line/70 pt-4">

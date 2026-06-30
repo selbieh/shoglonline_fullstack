@@ -1,9 +1,12 @@
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from apps.attachments.models import Attachment
 
 from .. import services
 from ..models import BuyingRequest, Favorite, Service, ServiceFavorite
@@ -59,6 +62,30 @@ class PublicServiceDetailView(APIView):
         # count the visit for the owner analytics panel (ppt slide-20)
         Service.objects.filter(pk=service.pk).update(views_count=F("views_count") + 1)
         return Response(ServiceDetailSerializer(service, context={"request": request}).data)
+
+
+class ServiceCoverMediaView(APIView):
+    """GET /services/cover-media/<attachment_id> — PUBLIC inline service cover image.
+
+    Mirrors the portfolio-media pattern: serves the bytes INLINE (so a plain <img> renders it
+    without a bearer token), but ONLY when the attachment is the cover of a LIVE service — or the
+    caller is the owning worker (their own drafts). Any other attachment/kind/host 404s, so the
+    endpoint can't be used to enumerate private files."""
+
+    permission_classes = [AllowAny]  # auth still runs (no authentication_classes override) so an
+    # owner's bearer token is honoured for not-yet-live drafts.
+
+    def get(self, request, pk):
+        att = get_object_or_404(Attachment, pk=pk, is_deleted=False)
+        service = Service.objects.filter(cover_attachment_id=att.pk).select_related("worker").first()
+        if service is None or att.kind != Attachment.Kind.IMAGE:
+            raise Http404
+        is_owner = request.user.is_authenticated and service.worker_id == request.user.id
+        if not is_owner and service.status != Service.Status.LIVE:
+            raise Http404  # existence of an unpublished cover stays hidden from non-owners
+        response = FileResponse(att.file.open("rb"), filename=att.original_name)
+        response["Content-Type"] = att.content_type  # inline (no as_attachment) → browser renders it
+        return response
 
 
 class MyServicesView(ListCreateAPIView):
@@ -145,7 +172,8 @@ class FavoritesView(APIView):
         kind = request.query_params.get("kind", "service")
         if kind == "service":
             favs = ServiceFavorite.objects.filter(user=request.user).select_related("service__category")
-            return Response(ServiceListSerializer([f.service for f in favs], many=True).data)
+            return Response(ServiceListSerializer([f.service for f in favs], many=True,
+                                                  context={"request": request}).data)
 
         ids = list(Favorite.objects.filter(user=request.user, kind=kind).values_list("object_id", flat=True))
         if not ids:

@@ -176,7 +176,7 @@ export default function OwnerServicePage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!edit && <button className="btn-secondary text-sm" onClick={startEdit}>تعديل الخدمة</button>}
-          <a href={`/services/${s.slug}`} className="btn-secondary text-sm">معاينة كمشتري</a>
+          <a href={`/me/services/${s.id}/preview`} className="btn-secondary text-sm">معاينة كمشتري</a>
         </div>
       </div>
 

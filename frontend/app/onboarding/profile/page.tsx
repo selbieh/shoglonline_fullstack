@@ -13,7 +13,9 @@ import { LockIcon } from "@/components/icons";
 import Logo from "@/components/Logo";
 import Field from "@/components/Field";
 import FileUpload from "@/components/FileUpload";
+import PhoneField from "@/components/PhoneField";
 import ContactHint from "@/components/ContactHint";
+import { splitPhone } from "@/lib/countries";
 import SkillPicker from "@/components/SkillPicker";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
 import { formatUSD } from "@/lib/currency";
@@ -140,8 +142,7 @@ export default function ProfileWizard() {
   const [certBusy, setCertBusy] = useState(false);
   const [certMsg, setCertMsg] = useState("");
   // verification step
-  const [cc, setCc] = useState("+966");
-  const [phone, setPhone] = useState("");
+  const [phoneIntl, setPhoneIntl] = useState("+966");
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
   const [otpBusy, setOtpBusy] = useState(false);
@@ -433,7 +434,7 @@ export default function ProfileWizard() {
 
   async function submitIdVerification() {
     const ids = [idFiles.front, idFiles.back, idFiles.selfie].filter(Boolean) as number[];
-    if (ids.length === 0) { setIdMsg("ارفع صورة الهوية أولًا"); return; }
+    if (ids.length < 3) { setIdMsg("ارفع الصور الثلاث: الوجه الأمامي، الخلفي، وصورتك مع الهوية"); return; }
     if (!idConsent) { setIdMsg("يجب الموافقة على معالجة بيانات الهوية"); return; }
     setIdBusy(true);
     setIdMsg("");
@@ -457,7 +458,7 @@ export default function ProfileWizard() {
     try {
       const r = await api<{ sent: boolean; debug_code?: string }>("/auth/phone/request-otp", {
         method: "POST",
-        body: JSON.stringify({ phone: `${cc}${phone}` }),
+        body: JSON.stringify({ phone: phoneIntl }),
       });
       setOtpSent(true);
       setVmsg(r.debug_code ? `رمز التطوير: ${r.debug_code}` : "تم إرسال الرمز إلى جوالك");
@@ -537,13 +538,18 @@ export default function ProfileWizard() {
             {/* ppt slide-02: REQUIRED private contact — for the platform only, never shown on the profile */}
             <Field label="وسيلة تواصل" required error={errors.private_contact_channel || errors.private_contact_value}>
               <div className="flex flex-wrap gap-2">
-                <select className="field w-36" value={draft.private_contact_channel} aria-label="نوع وسيلة التواصل"
+                <select className="field w-36 shrink-0" value={draft.private_contact_channel} aria-label="نوع وسيلة التواصل"
                   onChange={(e) => set({ private_contact_channel: e.target.value })}>
                   {CONTACT_CHANNELS.map((c) => <option key={c.v} value={c.v}>{c.l}</option>)}
                 </select>
-                <input className="field flex-1" dir="ltr" value={draft.private_contact_value}
-                  placeholder={draft.private_contact_channel === "email" ? "name@example.com" : "+9665…"}
-                  onChange={(e) => set({ private_contact_value: e.target.value })} />
+                {draft.private_contact_channel === "phone" || draft.private_contact_channel === "whatsapp" ? (
+                  <PhoneField value={draft.private_contact_value} ariaLabel="رقم التواصل"
+                    onChange={(v) => set({ private_contact_value: v })} />
+                ) : (
+                  <input className="field flex-1" dir="ltr" value={draft.private_contact_value}
+                    placeholder={draft.private_contact_channel === "email" ? "name@example.com" : "@username"}
+                    onChange={(e) => set({ private_contact_value: e.target.value })} />
+                )}
               </div>
               <p className="mt-1.5 flex items-center gap-1 text-xs text-sub">
                 <LockIcon aria-hidden className="inline-block align-[-2px] text-[14px]" /> للمنصة فقط — لن تظهر هذه الوسيلة في ملفك العام إطلاقًا.
@@ -857,14 +863,9 @@ export default function ProfileWizard() {
               ) : (
                 <>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <select className="field w-24" value={cc} aria-label="رمز الدولة"
-                      onChange={(e) => { setCc(e.target.value); setOtpSent(false); setCode(""); }}>
-                      <option value="+966">+966</option>
-                      <option value="+20">+20</option>
-                    </select>
-                    <input className="field flex-1" inputMode="tel" placeholder="50 123 4567" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => { setPhone(digitsOnly(e.target.value)); setOtpSent(false); setCode(""); }} />
-                    <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
+                    <PhoneField value={phoneIntl} ariaLabel="رقم الجوال" placeholder="50 123 4567"
+                      onChange={(v) => { setPhoneIntl(v); setOtpSent(false); setCode(""); }} />
+                    <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !splitPhone(phoneIntl).number}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>
                   {otpSent && (
@@ -899,8 +900,11 @@ export default function ProfileWizard() {
                     <option value="passport">جواز سفر</option>
                     <option value="driver_license">رخصة قيادة</option>
                   </select>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    {([["front", "الوجه الأمامي"], ["back", "الوجه الخلفي"], ["selfie", "صورة شخصية"]] as const).map(([k, label]) => (
+                  <p className="mt-3 text-xs text-sub">
+                    ارفع ٣ صور: الوجه الأمامي للهوية، الوجه الخلفي، وصورة لك وأنت تمسك الهوية بجانب وجهك.
+                  </p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                    {([["front", "الوجه الأمامي للهوية"], ["back", "الوجه الخلفي للهوية"], ["selfie", "صورتك مع الهوية"]] as const).map(([k, label]) => (
                       <div key={k}>
                         <span className="mb-1 block text-xs text-sub">{label}</span>
                         <FileUpload accept="image/*" multiple={false} label="رفع"
@@ -914,7 +918,8 @@ export default function ProfileWizard() {
                       onChange={(e) => setIdConsent(e.target.checked)} />
                     <span>أوافق على معالجة بيانات هويتي لأغراض التحقق وفق سياسة الخصوصية.</span>
                   </label>
-                  <button type="button" className="btn-secondary mt-3 disabled:opacity-50" disabled={idBusy} onClick={submitIdVerification}>
+                  <button type="button" className="btn-secondary mt-3 disabled:opacity-50"
+                    disabled={idBusy || !(idFiles.front && idFiles.back && idFiles.selfie)} onClick={submitIdVerification}>
                     {idBusy ? "جارٍ الإرسال…" : "إرسال للمراجعة"}
                   </button>
                 </>

@@ -6,6 +6,7 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { useFieldErrors } from "@/lib/useFieldErrors";
 import Field from "@/components/Field";
+import PhoneField from "@/components/PhoneField";
 
 /* Receive-earnings / payout methods hub (ppt slides 38–42), on the PayoutMethod backend.
    PayPal + bank transfer are international; e-wallet / bank card / Instapay are Egypt-only. */
@@ -36,7 +37,7 @@ const KINDS: KindDef[] = [
     { k: "provider", label: "مزود المحفظة (Vodafone / Orange / Etisalat / WE)" },
   ] },
   { v: "instapay", t: "Instapay", region: "مصر فقط", egyptOnly: true, fields: [
-    { k: "link_or_phone", label: "رابط الدفع أو رقم الهاتف المرتبط" },
+    { k: "link_or_phone", label: "رابط الدفع أو رقم الهاتف المرتبط", type: "link_or_phone" },
     { k: "display_name", label: "الاسم الذي يظهر عند التحويل" },
   ] },
 ];
@@ -48,6 +49,9 @@ export default function PayoutsPage() {
   const [methods, setMethods] = useState<PayoutMethod[] | null>(null);
   const [kind, setKind] = useState<string>("");
   const [details, setDetails] = useState<Record<string, string>>({});
+  // Instapay accepts a payment link OR a phone number; the toggle picks which control to show so the
+  // phone case gets the country-code dropdown (Israel excluded) while a link stays free text.
+  const [instapayMode, setInstapayMode] = useState<"phone" | "link">("phone");
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const { errors, formError, applyApiError, reset } = useFieldErrors();
@@ -71,6 +75,7 @@ export default function PayoutsPage() {
   function pickKind(v: string) {
     setKind(v);
     setDetails({});
+    setInstapayMode("phone");
     setLabel("");
     reset();
   }
@@ -170,12 +175,45 @@ export default function PayoutsPage() {
           <div className="mt-4 space-y-3">
             {active.fields.map((f) => (
               <Field key={f.k} label={f.label} error={errors[f.k]}>
-                <input
-                  className="field"
-                  type={f.type ?? "text"}
-                  value={details[f.k] ?? ""}
-                  onChange={(e) => setDetails((d) => ({ ...d, [f.k]: e.target.value }))}
-                />
+                {f.type === "link_or_phone" ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2 text-sm">
+                      {(["phone", "link"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => { setInstapayMode(m); setDetails((d) => ({ ...d, [f.k]: "" })); }}
+                          className={`rounded-m border px-3 py-1.5 transition ${instapayMode === m ? "border-primary bg-tint text-ink" : "border-line text-sub hover:border-primary/40"}`}
+                        >
+                          {m === "phone" ? "رقم هاتف" : "رابط دفع"}
+                        </button>
+                      ))}
+                    </div>
+                    {instapayMode === "phone" ? (
+                      <PhoneField
+                        value={details[f.k] ?? ""}
+                        defaultDial="+20"
+                        ariaLabel="رقم الهاتف المرتبط"
+                        onChange={(v) => setDetails((d) => ({ ...d, [f.k]: v }))}
+                      />
+                    ) : (
+                      <input
+                        className="field"
+                        dir="ltr"
+                        placeholder="https://ipn.eg/…"
+                        value={details[f.k] ?? ""}
+                        onChange={(e) => setDetails((d) => ({ ...d, [f.k]: e.target.value }))}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <input
+                    className="field"
+                    type={f.type ?? "text"}
+                    value={details[f.k] ?? ""}
+                    onChange={(e) => setDetails((d) => ({ ...d, [f.k]: e.target.value }))}
+                  />
+                )}
               </Field>
             ))}
             <Field label="اسم مستعار (اختياري)" error={errors.label}>

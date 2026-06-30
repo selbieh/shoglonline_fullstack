@@ -56,6 +56,28 @@ class MyWorkerProfileView(RetrieveUpdateAPIView):
         return profile
 
 
+class MyWorkerProfilePreviewView(APIView):
+    """GET /api/v1/me/profile/preview — the owner's own profile rendered through the *public*
+    serializer, so they can see it exactly as employers do (slide-12) before publishing.
+
+    Unlike the public /freelancers/<id> endpoint this deliberately skips the visibility/publish
+    gate (rule D-1) so a draft or pending-review profile can still be previewed; it only ever
+    serves the requesting (authenticated) user's own profile, so no unpublished data leaks."""
+
+    def get(self, request):
+        WorkerProfile.objects.get_or_create(user=request.user)  # never 404 for a fresh account
+        profile = get_object_or_404(
+            WorkerProfile.objects.select_related("user").prefetch_related(
+                "skills__skill", "languages", "educations", "employments",
+                "portfolio__attachments", "certificates", "user__addresses",
+            ),
+            user=request.user,
+        )
+        return Response(
+            PublicWorkerDetailSerializer(profile, context={"request": request}).data
+        )
+
+
 class PublishProfileView(APIView):
     """POST /api/v1/me/profile/publish — submit the profile for publication (rule D-1).
 
@@ -328,6 +350,12 @@ class PublicWorkerListView(ListAPIView):
                 | Q(specialization_id=subcategory)
                 | Q(skills__skill__subcategory_id=subcategory)
             )
+        # Single-skill filter (mirrors the gallery's `?skill=`): a freelancer matches when they hold
+        # that catalog skill. Matched by name so the param is shared verbatim across the gallery /
+        # jobs / freelancers filters, which all feed off the same `name_ar` catalog vocabulary.
+        skill = self.request.query_params.get("skill")
+        if skill:
+            qs = qs.filter(skills__skill__name_ar__icontains=skill)
         return qs.distinct()
 
 

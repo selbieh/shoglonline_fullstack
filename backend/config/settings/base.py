@@ -6,6 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -260,11 +261,28 @@ if env.bool("USE_S3", default=False):
     _s3_endpoint = env("AWS_S3_ENDPOINT_URL", default="").split("#")[0].strip()
     if _s3_endpoint:
         AWS_S3_ENDPOINT_URL = _s3_endpoint
-    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="")
+    AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="").split("#")[0].strip()
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = True  # signed, expiring URLs — private by default
+    # Fail loud at boot, not with a 500 on the first upload. With NEITHER a custom endpoint nor a
+    # region, boto3 builds the AWS host template "s3.<region>.amazonaws.com" with an empty region —
+    # literally "s3..amazonaws.com" — and raises "Invalid endpoint" deep inside a request. Catch the
+    # whole incomplete-config class here so a half-filled .env can never reach runtime.
+    _s3_missing = [
+        name for name, value in (
+            ("AWS_STORAGE_BUCKET_NAME", AWS_STORAGE_BUCKET_NAME),
+            ("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID),
+            ("AWS_SECRET_ACCESS_KEY", AWS_SECRET_ACCESS_KEY),
+        ) if not value
+    ]
+    if not _s3_endpoint and not AWS_S3_REGION_NAME:
+        _s3_missing.append("AWS_S3_REGION_NAME (or AWS_S3_ENDPOINT_URL for an S3-compatible store)")
+    if _s3_missing:
+        raise ImproperlyConfigured(
+            "USE_S3=1 but these S3 settings are blank: " + ", ".join(_s3_missing)
+        )
 
 # ---------------------------------------------------------------- celery
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://redis:6379/0")

@@ -1,6 +1,8 @@
 """Content pages + FAQ (SRS ADM-6: Content Pages & FAQ CRUD)."""
 from django.db import models
 
+from apps.core.phone import validate_phone
+
 
 class ContentPage(models.Model):
     slug = models.SlugField(max_length=80, unique=True)         # e.g. about, terms, privacy
@@ -97,7 +99,7 @@ class SiteSettings(models.Model):
 
     # Contact ("تواصل معنا")
     contact_email = models.EmailField(blank=True, default="support@shoglonline.com")
-    contact_phone = models.CharField(max_length=40, blank=True, default="+20 123 456 7890")
+    contact_phone = models.CharField(max_length=40, blank=True, default="+20 123 456 7890", validators=[validate_phone])
     contact_address = models.CharField(max_length=200, blank=True, default="القاهرة، مصر")
 
     # Mobile app store links (footer badges) — blank hides the badge.

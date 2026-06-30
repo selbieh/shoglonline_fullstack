@@ -1,6 +1,16 @@
+from django.urls import reverse
 from rest_framework import serializers
 
 from ..models import BuyingRequest, Service, ServiceAddon
+
+
+def _cover_url(service, request) -> str:
+    """The cover's browser-usable URL: an uploaded cover resolves to the PUBLIC inline
+    service-cover-media endpoint; otherwise the pasted cover_image URL is returned as-is."""
+    if service.cover_attachment_id:
+        path = reverse("service-cover-media", args=[service.cover_attachment_id])
+        return request.build_absolute_uri(path) if request else path
+    return service.cover_image
 
 
 class AddonSerializer(serializers.ModelSerializer):
@@ -13,12 +23,16 @@ class ServiceListSerializer(serializers.ModelSerializer):
     worker_name = serializers.SerializerMethodField()
     category_name = serializers.CharField(source="category.name_ar", read_only=True)
     category_slug = serializers.CharField(source="category.slug", read_only=True)
+    cover_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
         fields = ["id", "title", "slug", "description", "base_price", "delivery_days", "cover_image",
                   "category", "category_name", "category_slug", "worker_name", "favorites_count",
                   "created_at", "status"]
+
+    def get_cover_image(self, obj) -> str:
+        return _cover_url(obj, self.context.get("request"))
 
     def get_worker_name(self, obj) -> str:
         w = obj.worker
@@ -124,16 +138,38 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
         min_length=30, max_length=2500,
         error_messages={"min_length": "الوصف قصير جدًا — اكتب 30 حرفًا على الأقل"},
     )
+    # Id of an image uploaded via POST /uploads to use as the cover (vs. the pasted cover_image
+    # URL). Maps directly onto the cover_attachment FK column; an upload wins over a pasted URL.
+    cover_attachment_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Service
         fields = [
             "title", "description", "category", "subcategory", "base_price", "delivery_days",
-            "cover_image", "keywords", "what_you_get", "addons",
+            "cover_image", "cover_attachment_id", "keywords", "what_you_get", "addons",
         ]
+
+    def validate_cover_attachment_id(self, value):
+        if value in (None, ""):
+            return None
+        from apps.attachments.models import Attachment  # noqa: PLC0415 (avoid app import cycle)
+        owner = self.context["request"].user
+        exists = Attachment.objects.filter(
+            pk=value, owner=owner, is_deleted=False, kind=Attachment.Kind.IMAGE,
+        ).exists()
+        if not exists:  # not the caller's own image → refuse (no linking someone else's file)
+            raise serializers.ValidationError("صورة الغلاف غير صالحة")
+        return value
+
+    @staticmethod
+    def _apply_cover(validated_data):
+        # An uploaded cover supersedes a pasted URL; clear the stale URL so reads resolve the file.
+        if validated_data.get("cover_attachment_id"):
+            validated_data["cover_image"] = ""
 
     def create(self, validated_data):
         addons = validated_data.pop("addons", [])
+        self._apply_cover(validated_data)
         service = super().create(validated_data)
         ServiceAddon.objects.bulk_create([ServiceAddon(service=service, **a) for a in addons])
         return service
@@ -141,6 +177,7 @@ class ServiceWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # replace-all add-ons when provided (mirrors the profile nested-write pattern)
         addons = validated_data.pop("addons", None)
+        self._apply_cover(validated_data)
         instance = super().update(instance, validated_data)
         if addons is not None:
             instance.addons.all().delete()

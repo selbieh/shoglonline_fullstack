@@ -145,6 +145,31 @@ class MeView(RetrieveUpdateAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class AvatarMediaView(APIView):
+    """GET /api/v1/avatars/<id> — PUBLIC inline avatar image.
+
+    Avatars are public profile data (shown on cards, chat, reviews), so — like PortfolioMediaView —
+    this serves the bytes INLINE to anyone, but ONLY when the attachment is hosted by a User (i.e. it
+    really is someone's avatar). Never serves any other attachment. This is what makes an uploaded
+    avatar renderable in a plain `<img>` (the scoped `/uploads/<id>` endpoint can't be)."""
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    def get(self, request, pk):
+        from django.http import FileResponse, Http404  # noqa: PLC0415
+        from django.shortcuts import get_object_or_404  # noqa: PLC0415
+
+        from apps.attachments.models import Attachment  # noqa: PLC0415
+
+        att = get_object_or_404(Attachment, pk=pk, is_deleted=False)
+        if not isinstance(att.host, User):
+            raise Http404
+        response = FileResponse(att.file.open("rb"), filename=att.original_name)
+        response["Content-Type"] = att.content_type  # inline (no as_attachment) → browser renders it
+        return response
+
+
 class ModeView(APIView):
     """PATCH /api/v1/auth/me/mode — view-toggle preference only (FR-MODE-1/2/4).
 

@@ -2,10 +2,12 @@
 import re
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models, transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from apps.core import phone as phone_utils
 from apps.core.money import fmt_usd
 from .models import PaymentMethod, PayoutMethod, Transaction, Wallet, WithdrawalRequest
 
@@ -16,6 +18,7 @@ ERR = {
     "token": {"code": "token_required", "message_ar": "رمز البوابة مطلوب"},
     "payout_kind": {"code": "invalid_payout_kind", "message_ar": "وسيلة استلام غير معروفة"},
     "payout_details": {"code": "payout_details_required", "message_ar": "أكمل بيانات وسيلة الاستلام"},
+    "payout_phone": {"code": "invalid_phone", "message_ar": "رقم هاتف غير صالح أو رمز دولة غير مدعوم"},
 }
 
 # PCI SAQ-A: a raw PAN must never reach our servers. We refuse any field that smells like card data
@@ -276,6 +279,16 @@ def add_payout_method(user, data: dict) -> PayoutMethod:
     details = data.get("details")
     if not isinstance(details, dict) or not details:
         raise ValidationError(ERR["payout_details"])
+    # Instapay accepts EITHER a payment link OR a linked phone number. Only validate the phone case
+    # (a link must pass through untouched): when the value is phone-shaped, require a valid
+    # international number (Israel excluded) and store it canonicalised to E.164.
+    if kind == PayoutMethod.Kind.INSTAPAY:
+        handle = str(details.get("link_or_phone") or "").strip()
+        if handle and phone_utils.looks_like_phone(handle):
+            try:
+                details["link_or_phone"] = phone_utils.format_e164(handle)
+            except DjangoValidationError:
+                raise ValidationError(ERR["payout_phone"])
     country = str(data.get("country") or "").upper()[:2]
     if kind in PayoutMethod.EGYPT_ONLY:
         country = "EG"

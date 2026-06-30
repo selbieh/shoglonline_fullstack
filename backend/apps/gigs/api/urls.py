@@ -5,6 +5,8 @@ from . import views
 urlpatterns = [
     # public discovery
     path("services", views.PublicServiceListView.as_view(), name="services"),
+    # must precede the <slug> catch-all below, else "cover-media" is parsed as a service slug
+    path("services/cover-media/<int:pk>", views.ServiceCoverMediaView.as_view(), name="service-cover-media"),
     path("services/<str:slug>", views.PublicServiceDetailView.as_view(), name="service-detail"),
     # worker management
     path("me/services", views.MyServicesView.as_view(), name="my-services"),

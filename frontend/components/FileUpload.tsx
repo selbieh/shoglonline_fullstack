@@ -98,8 +98,19 @@ export default function FileUpload({
         tabIndex={0}
         aria-label={label}
         aria-busy={busy}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
+        onClick={(e) => {
+          // When this control sits inside a <label> (e.g. our Field wrapper), a click both runs
+          // this handler AND triggers the label's default activation of the file input — opening
+          // the picker twice. preventDefault cancels the implicit forward; we open it explicitly.
+          e.preventDefault();
+          inputRef.current?.click();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragOver={(e) => {
           e.preventDefault();
           setDragOver(true);

@@ -76,4 +76,35 @@ describe("ServiceCreateWizard", () => {
     expect(await screen.findByText("15 يومًا")).toBeInTheDocument();
     expect(screen.queryByText("15 أيام")).not.toBeInTheDocument();
   });
+
+  // The reported bug: an uploaded cover must preview from the picked file's local blob — the
+  // server `url` is an auth-scoped endpoint a plain <img> can't load, so it must NOT be the src.
+  it("previews an uploaded cover from a local blob, not the auth-scoped server url", async () => {
+    const blobUrl = "blob:cover-preview";
+    URL.createObjectURL = vi.fn(() => blobUrl);
+    URL.revokeObjectURL = vi.fn();
+    const scopedUrl = `${API_URL}/uploads/10`;
+    server.use(
+      http.post(`${API_URL}/uploads`, () =>
+        HttpResponse.json(
+          { id: 10, url: scopedUrl, kind: "image", original_name: "cover.png",
+            content_type: "image/png", size: 3, created_at: "" },
+          { status: 201 },
+        ),
+      ),
+    );
+    const { user } = render(<ServiceCreateWizard />);
+    // step 0 -> 1 (the cover field lives on the description step)
+    await user.type(await screen.findByPlaceholderText("مثال: تصميم شعار احترافي لشركتك"), "تصميم شعار");
+    await user.selectOptions(screen.getByDisplayValue("اختر التصنيف"), "1");
+    await user.type(screen.getByPlaceholderText("مثال: 100"), "100");
+    await user.click(screen.getByText("التالي"));
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, new File([new Uint8Array([1, 2, 3])], "cover.png", { type: "image/png" }));
+
+    const img = (await screen.findByAltText("معاينة صورة الغلاف")) as HTMLImageElement;
+    expect(img).toHaveAttribute("src", blobUrl);
+    expect(img.getAttribute("src")).not.toBe(scopedUrl);
+  });
 });

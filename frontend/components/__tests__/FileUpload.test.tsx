@@ -61,6 +61,22 @@ describe("<FileUpload>", () => {
     expect(uploadSpy).not.toHaveBeenCalled();
   });
 
+  it("opens the file picker once when wrapped in a <label> (no double-open)", async () => {
+    // Field wraps its children in a <label>; clicking the drop-zone used to fire both our
+    // explicit input.click() AND the label's implicit activation of the file input, opening
+    // the picker twice. The drop-zone click must now reach the input exactly once.
+    const { container, user } = render(
+      <label>
+        <FileUpload onUploaded={() => {}} />
+      </label>,
+    );
+    const input = fileInput(container);
+    const clicks = vi.fn();
+    input.addEventListener("click", clicks);
+    await user.click(screen.getByRole("button"));
+    expect(clicks).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the Arabic error envelope when the server rejects the file", async () => {
     server.use(
       http.post(`${API_URL}/uploads`, () =>

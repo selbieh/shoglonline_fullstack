@@ -93,6 +93,20 @@ def test_public_budget_filters(employer, category):
     assert res.json()["count"] == 1
 
 
+def test_public_skill_filter(employer, category):
+    """`?skill=<name_ar>` narrows the board to jobs requiring that catalog skill (shared param
+    with the gallery / freelancers filters)."""
+    from apps.catalog.models import Category, Skill
+    sub = Category.objects.create(name_ar="واجهات", name_en="UI", slug="ui", parent=category)
+    react = Skill.objects.create(name_ar="React", slug="react", subcategory=sub)
+    figma = Skill.objects.create(name_ar="Figma", slug="figma", subcategory=sub)
+    react_job = _create_job(employer, category, skill_ids=[react.pk])
+    _create_job(employer, category, skill_ids=[figma.pk])
+
+    rows = APIClient().get("/api/v1/jobs?skill=React").json()["results"]
+    assert [r["id"] for r in rows] == [react_job["id"]]
+
+
 def test_owner_can_patch_before_proposals(employer, category):
     job = _create_job(employer, category)
     res = auth(employer).patch(

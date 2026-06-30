@@ -8,11 +8,12 @@ import { signinHereHref } from "@/lib/nav";
 import { apiError, apiFieldErrors, isAuthError } from "@/lib/errors";
 import FileUpload from "@/components/FileUpload";
 import ContactHint from "@/components/ContactHint";
+import PhoneField from "@/components/PhoneField";
 import SkillPicker from "@/components/SkillPicker";
 import DashboardShell from "@/components/DashboardShell";
 import MeTabs from "@/components/MeTabs";
 import type { PortfolioItem, PortfolioMediaType, WorkerEducation, WorkerEmployment, WorkerLanguage } from "@/lib/types";
-import { CheckIcon, ExternalLinkIcon, GridIcon, ImageIcon, LockIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { CheckIcon, ExternalLinkIcon, EyeIcon, GridIcon, ImageIcon, LockIcon, PlayIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
 /** Prefer the backend's per-field reasons (joined) over the generic envelope message,
  * so a save failure names what's wrong (e.g. "الوصف قصير جدًا") instead of "تحقّق من الحقول". */
@@ -111,7 +112,12 @@ export default function ProfileEditPage() {
   // Local object-URL previews for just-picked images (the server url is auth-scoped and can't
   // render in a plain <img>). Cleared/replaced on each new pick.
   const [avatarPreview, setAvatarPreview] = useState<string>("");
-  const [idPreview, setIdPreview] = useState<string>("");
+  // Id of a freshly uploaded avatar image, pending save. The server links it and rewrites
+  // avatar_url to a public URL — we never persist the scoped /uploads url ourselves.
+  const [avatarAttachmentId, setAvatarAttachmentId] = useState<number | undefined>(undefined);
+  // ID verification needs three images: the ID front, the ID back, and a selfie holding the ID
+  // next to your face (ppt slide-08). Collect the three attachment ids, then submit them together.
+  const [idFiles, setIdFiles] = useState<{ front?: number; back?: number; selfie?: number }>({});
 
   useEffect(() => {
     if (!tokens.access) {
@@ -185,8 +191,15 @@ export default function ProfileEditPage() {
     // blanket "nothing saved" error, so the user knows to retry only the profile fields.
     let identitySaved = false;
     try {
-      await api("/auth/me", { method: "PATCH", body: JSON.stringify({ first_name: me.first_name, last_name: me.last_name, avatar_url: me.avatar_url || "" }) });
+      // avatar is set by id (server links it + returns a public avatar_url); only send when changed.
+      const identity: Record<string, unknown> = { first_name: me.first_name, last_name: me.last_name };
+      if (avatarAttachmentId !== undefined) identity.avatar_attachment_id = avatarAttachmentId;
+      const updatedMe = await api<Me>("/auth/me", { method: "PATCH", body: JSON.stringify(identity) });
       identitySaved = true;
+      // Merge in the server response to pick up the public avatar_url it resolved from the upload.
+      setMe((prev) => (prev ? { ...prev, ...updatedMe } : prev));
+      setAvatarAttachmentId(undefined);
+      setAvatarPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return ""; });
       const updated = await api<Profile>("/me/profile", { method: "PATCH", body: JSON.stringify({
         display_name: profile.display_name,
         bio_title: profile.bio_title,
@@ -247,8 +260,14 @@ export default function ProfileEditPage() {
 
   async function addPortfolio(payload: Record<string, unknown>) {
     const item = await api<PortfolioItem>("/me/portfolio", { method: "POST", body: JSON.stringify(payload) });
-    setProfile((p) => (p ? { ...p, portfolio: [...p.portfolio, item] } : p));
-    setMsg({ ok: true, text: "✅ أُضيف العمل إلى معرضك" });
+    // Mirror the new item into the cache too: a later reload paints from myProfileCache first, so a
+    // stale snapshot would briefly drop the item until the /me/profile re-fetch lands.
+    setProfile((p) => {
+      if (!p) return p;
+      const next = { ...p, portfolio: [...p.portfolio, item] };
+      myProfileCache.write(next);
+      return next;
+    });
   }
 
   async function deletePortfolio(id: number) {
@@ -256,7 +275,12 @@ export default function ProfileEditPage() {
     // yet reappears on the next reload, with no error shown.
     try {
       await api(`/me/portfolio/${id}`, { method: "DELETE" });
-      setProfile((p) => (p ? { ...p, portfolio: p.portfolio.filter((x) => x.id !== id) } : p));
+      setProfile((p) => {
+        if (!p) return p;
+        const next = { ...p, portfolio: p.portfolio.filter((x) => x.id !== id) };
+        myProfileCache.write(next);
+        return next;
+      });
     } catch (e) {
       setMsg({ ok: false, text: errText(e) });
     }
@@ -278,10 +302,13 @@ export default function ProfileEditPage() {
     }
   }
 
-  async function submitId(attachmentId: number) {
+  async function submitId() {
+    const ids = [idFiles.front, idFiles.back, idFiles.selfie].filter(Boolean) as number[];
+    if (ids.length < 3) { setMsg({ ok: false, text: "ارفع الصور الثلاث للهوية أولًا (الوجه الأمامي، الخلفي، وصورتك مع الهوية)" }); return; }
     try {
-      const res = await api<Idv>("/me/id-verification", { method: "POST", body: JSON.stringify({ attachment_ids: [attachmentId] }) });
+      const res = await api<Idv>("/me/id-verification", { method: "POST", body: JSON.stringify({ attachment_ids: ids }) });
       setIdv(res);
+      setIdFiles({});
       setMsg({ ok: true, text: "✅ أُرسلت هويتك للمراجعة" });
     } catch (e) {
       setMsg({ ok: false, text: errText(e) });
@@ -312,6 +339,12 @@ export default function ProfileEditPage() {
         <span className={`rounded-full px-2 py-0.5 text-xs ${(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).cls}`}>
           {(PUBLISH_STATE[profile.publish_state] ?? PUBLISH_STATE.draft).label}
         </span>
+        {/* Preview the profile exactly as employers see it (slide-12). Opens in a new tab so the
+            edit form's unsaved state is kept; works for drafts too via /me/profile/preview. */}
+        <a href="/me/profile/preview" target="_blank" rel="noopener noreferrer"
+          className="btn-secondary ms-auto inline-flex items-center gap-1.5 text-sm">
+          <EyeIcon className="text-[15px]" /> معاينة كما يراها العميل
+        </a>
       </div>
       {profile.publish_state === "rejected" && profile.publish_reject_reason && (
         <p className="mt-1 text-xs text-warn">سبب الرفض: {profile.publish_reject_reason}</p>
@@ -340,7 +373,7 @@ export default function ProfileEditPage() {
               hint="يُفضَّل صورة مربعة (مثل 512×512 بكسل) لأن الصورة الشخصية تظهر داخل دائرة"
               onUploaded={(a, preview) => {
                 setAvatarPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return preview ?? ""; });
-                setMe({ ...me, avatar_url: a.url });
+                setAvatarAttachmentId(a.id);  // saved server-side → public avatar_url on save
               }} />
           </div>
         </div>
@@ -427,14 +460,19 @@ export default function ProfileEditPage() {
         <div>
           <span className="block text-sm font-bold">وسيلة تواصل (للمنصة فقط)</span>
           <div className="mt-1 flex flex-wrap gap-2">
-            <select className={`w-36 ${inputCls}`} aria-label="نوع وسيلة التواصل" value={profile.private_contact_channel}
+            <select className={`w-36 shrink-0 ${inputCls}`} aria-label="نوع وسيلة التواصل" value={profile.private_contact_channel}
               onChange={(e) => setProfile({ ...profile, private_contact_channel: e.target.value })}>
               {CONTACT_CHANNELS.map((c) => <option key={c.v} value={c.v}>{c.l}</option>)}
             </select>
-            <input className={`flex-1 ${inputCls}`} dir="ltr" aria-label="وسيلة التواصل"
-              placeholder={profile.private_contact_channel === "email" ? "name@example.com" : "+9665…"}
-              value={profile.private_contact_value}
-              onChange={(e) => setProfile({ ...profile, private_contact_value: e.target.value })} />
+            {profile.private_contact_channel === "phone" || profile.private_contact_channel === "whatsapp" ? (
+              <PhoneField value={profile.private_contact_value} ariaLabel="رقم التواصل"
+                onChange={(v) => setProfile({ ...profile, private_contact_value: v })} />
+            ) : (
+              <input className={`flex-1 ${inputCls}`} dir="ltr" aria-label="وسيلة التواصل"
+                placeholder={profile.private_contact_channel === "email" ? "name@example.com" : "@username"}
+                value={profile.private_contact_value}
+                onChange={(e) => setProfile({ ...profile, private_contact_value: e.target.value })} />
+            )}
           </div>
           <p className="mt-1.5 flex items-center gap-1 text-xs text-sub">
             <LockIcon aria-hidden className="inline-block align-[-2px] text-[14px]" /> لن تظهر هذه الوسيلة في ملفك العام إطلاقًا — تُستخدم من إدارة المنصة عند الحاجة فقط.
@@ -495,25 +533,31 @@ export default function ProfileEditPage() {
       <CertificatesSection items={profile.certificates} onAdd={addCert} onDelete={deleteCert} onError={(t) => setMsg({ ok: false, text: t })} />
 
       {/* معرض الأعمال */}
-      <PortfolioSection items={profile.portfolio} onAdd={addPortfolio} onDelete={deletePortfolio} onError={(t) => setMsg({ ok: false, text: t })} />
+      <PortfolioSection items={profile.portfolio} onAdd={addPortfolio} onDelete={deletePortfolio} />
 
       <section className="card mt-6">
         <h2 className="font-bold">توثيق الهوية</h2>
         <p className="mt-1 text-sm text-sub">الحالة: {IDV_LABEL[idv.status]}{idv.status === "rejected" && idv.reject_reason ? ` — ${idv.reject_reason}` : ""}</p>
         {idv.status !== "approved" && idv.status !== "pending" && (
-          <div className="mt-3 flex items-start gap-4">
-            {idPreview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={idPreview} alt="" className="h-24 w-24 shrink-0 rounded-m border border-line object-cover" />
-            )}
-            <div className="flex-1">
-              <FileUpload accept="image/*,application/pdf" multiple={false} label="ارفع صورة الهوية الوطنية"
-                onUploaded={(a, preview) => {
-                  setIdPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return preview ?? ""; });
-                  submitId(a.id);
-                }} />
+          <>
+            <p className="mt-3 text-xs text-sub">
+              ارفع ٣ صور: الوجه الأمامي للهوية، الوجه الخلفي، وصورة لك وأنت تمسك الهوية بجانب وجهك.
+            </p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              {([["front", "الوجه الأمامي للهوية"], ["back", "الوجه الخلفي للهوية"], ["selfie", "صورتك مع الهوية"]] as const).map(([k, label]) => (
+                <div key={k}>
+                  <span className="mb-1 block text-xs text-sub">{label}</span>
+                  <FileUpload accept="image/*" multiple={false} label="رفع"
+                    onUploaded={(a) => setIdFiles((f) => ({ ...f, [k]: a.id }))} />
+                  {idFiles[k] && <span className="mt-1 block text-[11px] text-success">تم الرفع ✓</span>}
+                </div>
+              ))}
             </div>
-          </div>
+            <button type="button" className="btn-secondary mt-3 disabled:opacity-50"
+              disabled={!(idFiles.front && idFiles.back && idFiles.selfie)} onClick={submitId}>
+              إرسال للمراجعة
+            </button>
+          </>
         )}
       </section>
       </div>
@@ -628,6 +672,7 @@ function CertificatesSection({
   onError: (text: string) => void;
 }) {
   const [draft, setDraft] = useState<Certificate>(EMPTY_CERT);
+  const [certFile, setCertFile] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit() {
@@ -639,8 +684,10 @@ function CertificatesSection({
         issuer: draft.issuer,
         issued_year: draft.issued_year ? Number(draft.issued_year) : null,
         verification_link: draft.verification_link,
+        attachment_ids: certFile ? [certFile] : undefined,
       });
       setDraft(EMPTY_CERT);
+      setCertFile(null);
     } catch (e) {
       onError(errText(e));
     } finally {
@@ -676,6 +723,11 @@ function CertificatesSection({
           <input type="number" className="field" placeholder="سنة الإصدار" aria-label="سنة الإصدار" value={draft.issued_year} onChange={(e) => setDraft({ ...draft, issued_year: e.target.value })} />
           <input className="field" dir="ltr" placeholder="رابط التحقق (اختياري)" aria-label="رابط التحقق" value={draft.verification_link} onChange={(e) => setDraft({ ...draft, verification_link: e.target.value })} />
         </div>
+        <div>
+          <FileUpload accept="image/*,application/pdf" multiple={false} label="ملف الشهادة (اختياري — JPG أو PDF)"
+            onUploaded={(a) => setCertFile(a.id)} />
+          {certFile && <span className="mt-1 block text-xs text-success">تم رفع الملف ✓</span>}
+        </div>
         <button className="btn-secondary w-fit" disabled={busy} onClick={submit}>{busy ? "جارٍ الإضافة…" : "+ إضافة شهادة"}</button>
       </div>
     </section>
@@ -700,28 +752,32 @@ function PortfThumb({ thumb, title, mediaType }: { thumb?: string; title: string
 }
 
 function PortfolioSection({
-  items, onAdd, onDelete, onError,
+  items, onAdd, onDelete,
 }: {
   items: PortfolioItem[];
   onAdd: (payload: Record<string, unknown>) => Promise<void>;
   onDelete: (id: number) => void;
-  onError: (text: string) => void;
 }) {
   const [draft, setDraft] = useState(EMPTY_PORTFOLIO);
   const [ownership, setOwnership] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Feedback lives next to the add button: the page-level banner is far up the page, so a rejected
+  // add (most often the unticked ownership gate below) used to look like a silent no-op down here.
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const reset = () => { setDraft(EMPTY_PORTFOLIO); setOwnership(false); };
 
   async function submit(extra: Record<string, unknown>) {
-    if (!draft.title.trim()) { onError("أدخل عنوانًا للعمل أولًا"); return; }
+    setNotice(null);
+    if (!draft.title.trim()) { setNotice({ ok: false, text: "أدخل عنوانًا للعمل أولًا" }); return; }
     // P1-04: mirror the server-side ownership gate so the quick-add path can't bypass it.
-    if (!ownership) { onError("يجب تأكيد ملكيتك لهذا العمل قبل إضافته إلى معرضك."); return; }
+    if (!ownership) { setNotice({ ok: false, text: "يجب تأكيد ملكيتك لهذا العمل قبل إضافته إلى معرضك." }); return; }
     setBusy(true);
     try {
       await onAdd({ title: draft.title, description: draft.description, media_type: draft.media_type, url: draft.url, cover_url: draft.cover_url, ownership_confirmed: ownership, ...extra });
       reset();
+      setNotice({ ok: true, text: "✅ أُضيف العمل إلى معرضك" });
     } catch (e) {
-      onError(errText(e));
+      setNotice({ ok: false, text: errText(e) });
     } finally {
       setBusy(false);
     }
@@ -800,6 +856,10 @@ function PortfolioSection({
               <PlusIcon className="text-[16px]" /> إضافة العمل
             </button>
           </div>
+        )}
+
+        {notice && (
+          <p className={`rounded-m p-2.5 text-sm ${notice.ok ? "bg-success-t text-success" : "bg-warn-t text-warn"}`} role="status">{notice.text}</p>
         )}
       </div>
     </section>

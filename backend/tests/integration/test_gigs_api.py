@@ -1,6 +1,7 @@
 """Gig service management + buying-request actions over the API (FR-SVC). Targets the view
 branches the service-level suite skips: status actions, favorites, request reject/cancel, lists."""
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
 from apps.core.services import set_setting
@@ -8,6 +9,8 @@ from apps.gigs.models import BuyingRequest, Service
 from tests.factories import CategoryFactory, ServiceFactory, UserFactory
 
 pytestmark = [pytest.mark.integration, pytest.mark.django_db]
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 64
 
 
 def auth(user):
@@ -85,3 +88,62 @@ def test_request_cancel_by_employer_and_unknown_action(worker, service):
     # unknown action → 400
     rid2 = auth(employer).post(f"/api/v1/services/{service.pk}/requests", {"quantity": 1}, format="json").json()["id"]
     assert auth(worker).post(f"/api/v1/requests/{rid2}/frobnicate", format="json").status_code == 400
+
+
+# ----------------------------------------------------------------- cover image (upload vs. URL)
+def _upload_png(user, name="cover.png"):
+    f = SimpleUploadedFile(name, PNG, content_type="image/png")
+    res = auth(user).post("/api/v1/uploads", {"file": f}, format="multipart")
+    assert res.status_code == 201, res.content
+    return res.json()["id"]
+
+
+def _create_service(user, **extra):
+    body = {"title": "خدمة بغلاف", "description": "وصف تفصيلي وواضح لهذه الخدمة الاحترافية",
+            "category": CategoryFactory().id, "base_price": "50", "delivery_days": 5}
+    body.update(extra)
+    return auth(user).post("/api/v1/me/services", body, format="json")
+
+
+def test_uploaded_cover_served_inline_publicly(worker):
+    """An uploaded cover resolves to the PUBLIC cover-media URL and renders inline to anyone."""
+    att = _upload_png(worker)
+    res = _create_service(worker, cover_attachment_id=att)
+    assert res.status_code == 201, res.content
+    body = res.json()
+    assert body["status"] == "live"  # _flags sets auto_publish ON
+    assert body["cover_image"].endswith(f"/api/v1/services/cover-media/{att}")
+
+    media = APIClient().get(f"/api/v1/services/cover-media/{att}")  # unauthenticated
+    assert media.status_code == 200
+    assert media["Content-Type"] == "image/png"
+    assert "attachment" not in media.get("Content-Disposition", "")  # inline, not a forced download
+
+
+def test_cover_media_rejects_non_cover_attachment(worker):
+    """A file that isn't any service's cover must never leak via the public endpoint."""
+    att = _upload_png(worker)  # uploaded but never set as a cover
+    assert APIClient().get(f"/api/v1/services/cover-media/{att}").status_code == 404
+
+
+def test_cover_media_hidden_until_live_but_visible_to_owner(worker):
+    set_setting("services.auto_publish", False)  # new service → pending_review, not live
+    att = _upload_png(worker)
+    res = _create_service(worker, cover_attachment_id=att)
+    assert res.status_code == 201 and res.json()["status"] != "live"
+    assert APIClient().get(f"/api/v1/services/cover-media/{att}").status_code == 404      # anon hidden
+    assert auth(worker).get(f"/api/v1/services/cover-media/{att}").status_code == 200     # owner sees draft
+
+
+def test_cannot_use_another_users_attachment_as_cover(worker):
+    """Linking someone else's upload as your cover is refused (no exposing a stranger's file)."""
+    att = _upload_png(UserFactory())
+    res = _create_service(worker, cover_attachment_id=att)
+    assert res.status_code == 400
+    assert "cover_attachment_id" in res.json()["fields"]
+
+
+def test_pasted_cover_url_returned_unchanged(worker):
+    res = _create_service(worker, cover_image="https://cdn.example/x.png")
+    assert res.status_code == 201, res.content
+    assert res.json()["cover_image"] == "https://cdn.example/x.png"

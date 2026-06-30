@@ -165,11 +165,15 @@ def can_access(attachment: Attachment, user) -> bool:
 
 def _host_allows(host, user) -> bool:
     """Explicit, auditable per-host authorization. Unknown host types → deny."""
-    from apps.chat.models import Message  # noqa: PLC0415 (avoid import cycle)
+    from django.contrib.auth import get_user_model  # noqa: PLC0415 (avoid import cycle)
+
+    from apps.chat.models import Message  # noqa: PLC0415
     from apps.contracts.models import Submission  # noqa: PLC0415
     from apps.profiles.models import Certificate, IDVerification, PortfolioItem  # noqa: PLC0415
     from apps.tickets.models import Ticket  # noqa: PLC0415
 
+    if isinstance(host, get_user_model()):  # a user's own avatar attachment (FR-PROF-1)
+        return host.id == user.id
     if isinstance(host, Message):
         return host.conversation.has_member(user)
     if isinstance(host, Submission):

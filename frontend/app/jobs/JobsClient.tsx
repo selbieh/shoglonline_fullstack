@@ -16,13 +16,15 @@ import CardActions from "@/components/CardActions";
 import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
+import SkillPicker from "@/components/SkillPicker";
+import { useSkillCatalog } from "@/lib/useSkillCatalog";
 import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCard";
 import SubscribeCategoryButton from "@/components/SubscribeCategoryButton";
 import { formatUSDRange } from "@/lib/currency";
 
 const PAGE = 12; // load-more page size (server caps limit at 100)
 
-export type JobsFilters = { category: string; subcategory: string; q: string };
+export type JobsFilters = { category: string; subcategory: string; skill: string; q: string };
 
 /* Client island for /jobs. The server component (page.tsx) reads the URL filters, fetches the
    matching first page + the category tree, and seeds this — so crawlers/visitors get real SSR HTML;
@@ -45,8 +47,10 @@ export default function JobsClient({
   const [error, setError] = useState(false);
   const [category, setCategory] = useState<string>(initialFilters.category); // id OR slug (normalized below)
   const [subcategory, setSubcategory] = useState<string>(initialFilters.subcategory);
+  const [skill, setSkill] = useState(initialFilters.skill);
   const [q, setQ] = useState(initialFilters.q);
   const [ordering, setOrdering] = useState("-published_at");
+  const catalog = useSkillCatalog(); // full skills catalog → searchable skill filter
   const favIds = useFavoriteIds("job"); // pre-fill hearts for items the user already saved
   const router = useRouter();
   const pathname = usePathname();
@@ -58,10 +62,11 @@ export default function JobsClient({
     if (ordering && ordering !== "-published_at") sp.set("ordering", ordering);
     if (category) sp.set("category", category);
     if (subcategory) sp.set("subcategory", subcategory);
+    if (skill) sp.set("skill", skill);
     if (q) sp.set("search", q);
     const qs = sp.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [ordering, category, subcategory, q, pathname, router]);
+  }, [ordering, category, subcategory, skill, q, pathname, router]);
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
   const activeCat = categories.find((c) => String(c.id) === category);
@@ -77,6 +82,7 @@ export default function JobsClient({
         const sp = new URLSearchParams({ ordering, limit: String(PAGE), offset: String(offset) });
         if (category) sp.set("category", category);
         if (subcategory) sp.set("subcategory", subcategory);
+        if (skill) sp.set("skill", skill);
         if (q) sp.set("search", q);
         const res = await fetch(`${API_URL}/jobs?${sp}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -97,7 +103,7 @@ export default function JobsClient({
         setLoadingMore(false);
       }
     },
-    [category, subcategory, q, ordering],
+    [category, subcategory, skill, q, ordering],
   );
 
   function pickCategory(id: string) {
@@ -108,6 +114,7 @@ export default function JobsClient({
   function clearFilters() {
     setCategory("");
     setSubcategory("");
+    setSkill("");
     setQ("");
   }
 
@@ -141,7 +148,7 @@ export default function JobsClient({
     syncUrl();
     load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, subcategory, ordering]);
+  }, [category, subcategory, skill, ordering]);
   // Live search: debounce the free-text query so it applies automatically like the
   // category/sort filters — no manual "apply" button needed. Skips the initial mount.
   const qMounted = useRef(false);
@@ -198,7 +205,7 @@ export default function JobsClient({
       <div className="mx-auto flex max-w-screen-2xl flex-col gap-6 px-6 pb-14 pt-6 lg:flex-row">
         <div className="flex-1 space-y-4 lg:min-h-screen">
           {/* active filters bar */}
-          {(activeCat || activeSub || q) && (
+          {(activeCat || activeSub || skill || q) && (
             <div className="card flex flex-wrap items-center gap-2 px-4 py-3">
               <span className="text-sm font-bold text-ink">الفلاتر النشطة</span>
               {activeCat && (
@@ -210,6 +217,12 @@ export default function JobsClient({
               {activeSub && (
                 <button onClick={() => setSubcategory("")} className="chip-removable" title="إزالة الفلتر">
                   {activeSub.name_ar}
+                  <span className="chip-x" aria-hidden>✕</span>
+                </button>
+              )}
+              {skill && (
+                <button onClick={() => setSkill("")} className="chip-removable" title="إزالة المهارة">
+                  {skill}
                   <span className="chip-x" aria-hidden>✕</span>
                 </button>
               )}
@@ -355,18 +368,18 @@ export default function JobsClient({
               <div className="mx-auto grid h-14 w-14 place-content-center rounded-full bg-tint text-[26px] text-primary"><SearchIcon /></div>
               <p className="mt-3 font-bold">لا توجد وظائف تطابق بحثك</p>
               <p className="text-sm">جرّب توسيع الفلاتر أو امسحها كلها</p>
-              {(activeCat || activeSub || q) && (
+              {(activeCat || activeSub || skill || q) && (
                 <button onClick={clearFilters} className="btn-secondary mt-4 text-sm">مسح الفلاتر</button>
               )}
             </div>
           )}
         </div>
 
-        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (q ? 1 : 0)}>
+        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (skill ? 1 : 0) + (q ? 1 : 0)}>
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
-              {(activeCat || activeSub || q) && (
+              {(activeCat || activeSub || skill || q) && (
                 <button onClick={clearFilters} className="btn-ghost" aria-label="مسح كل الفلاتر">
                   <span aria-hidden>✕</span> مسح
                 </button>
@@ -405,6 +418,20 @@ export default function JobsClient({
                 }
               }}
             />
+            {catalog.length > 0 && (
+              <div className="space-y-1.5 text-sm">
+                <p className="text-xs font-medium text-sub">المهارة</p>
+                <SkillPicker
+                  options={catalog}
+                  value={catalog.find((c) => c.name_ar === skill)?.id?.toString() ?? ""}
+                  onSelect={(id) => {
+                    const opt = catalog.find((c) => c.id === id);
+                    if (opt) setSkill(skill === opt.name_ar ? "" : opt.name_ar);
+                  }}
+                  placeholder="كل المهارات"
+                />
+              </div>
+            )}
           </div>
           {activeCat ? (
             <SubscribeCategoryButton categoryId={activeCat.id} categoryName={activeCat.name_ar} />

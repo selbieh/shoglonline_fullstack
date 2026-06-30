@@ -356,7 +356,7 @@ export default function ActivityPage() {
           inboxReqs === null ? <SkeletonList /> : inboxReqs.length === 0 ? (
             <EmptyState
               title="لا توجد طلبات خدمات واردة"
-              hint="انشر خدماتك المميزة ليصلك المشترون"
+              hint="انشر خدماتك المصغرة ليصلك المشترون"
               href="/me/services" cta="إدارة خدماتي"
             />
           ) : (

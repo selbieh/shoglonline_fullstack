@@ -12,6 +12,8 @@ import { ListingStat, ListingStats, ListingFooter } from "@/components/ListingCa
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
+import SkillPicker from "@/components/SkillPicker";
+import { useSkillCatalog } from "@/lib/useSkillCatalog";
 import { AlertIcon, ArrowLeftIcon, BadgeCheckIcon, BriefcaseIcon, ClockIcon, GridIcon, MapPinIcon, SearchIcon, StarIcon } from "@/components/icons";
 import { formatUSD } from "@/lib/currency";
 
@@ -47,8 +49,10 @@ export default function FreelancersClient({
   const [expertise, setExpertise] = useState("");
   const [category, setCategory] = useState("");
   const [subcategory, setSubcategory] = useState("");
+  const [skill, setSkill] = useState("");
   const [q, setQ] = useState("");
   const [ordering, setOrdering] = useState("-rating_avg");
+  const catalog = useSkillCatalog(); // full skills catalog → searchable skill filter
   const favIds = useFavoriteIds("freelancer"); // pre-fill hearts for items the user already saved
 
   const subcats = categories.find((c) => String(c.id) === category)?.children ?? [];
@@ -66,6 +70,7 @@ export default function FreelancersClient({
         if (expertise) params.set("expertise_level", expertise);
         if (category) params.set("category", category);
         if (subcategory) params.set("subcategory", subcategory);
+        if (skill) params.set("skill", skill);
         if (q) params.set("search", q);
         const res = await fetch(`${API_URL}/freelancers?${params}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -86,7 +91,7 @@ export default function FreelancersClient({
         setLoadingMore(false);
       }
     },
-    [expertise, category, subcategory, q, ordering],
+    [expertise, category, subcategory, skill, q, ordering],
   );
 
   // Refetch on filter/sort change, skipping the first run when the server already seeded the list.
@@ -98,7 +103,7 @@ export default function FreelancersClient({
     }
     load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expertise, category, subcategory, ordering]);
+  }, [expertise, category, subcategory, skill, ordering]);
   // Live search: debounced auto-apply (consistent with the jobs/services filters).
   const qMounted = useRef(false);
   useEffect(() => {
@@ -119,10 +124,11 @@ export default function FreelancersClient({
     setExpertise("");
     setCategory("");
     setSubcategory("");
+    setSkill("");
     setQ("");
   }
 
-  const hasFilters = !!(expertise || activeCat || activeSub || q);
+  const hasFilters = !!(expertise || activeCat || activeSub || skill || q);
 
   return (
     <main className="min-h-screen bg-bg">
@@ -183,6 +189,12 @@ export default function FreelancersClient({
               {expertise && (
                 <button onClick={() => setExpertise("")} className="chip-removable" title="إزالة الفلتر">
                   {EXPERTISE_LABEL[expertise]}
+                  <span className="chip-x" aria-hidden>✕</span>
+                </button>
+              )}
+              {skill && (
+                <button onClick={() => setSkill("")} className="chip-removable" title="إزالة المهارة">
+                  {skill}
                   <span className="chip-x" aria-hidden>✕</span>
                 </button>
               )}
@@ -271,7 +283,7 @@ export default function FreelancersClient({
           )}
         </div>
 
-        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (q ? 1 : 0) + (expertise ? 1 : 0)}>
+        <FilterPanel activeCount={(activeCat ? 1 : 0) + (activeSub ? 1 : 0) + (skill ? 1 : 0) + (q ? 1 : 0) + (expertise ? 1 : 0)}>
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold">تصفية النتائج</h3>
@@ -316,6 +328,20 @@ export default function FreelancersClient({
               label="فئة المهارة"
               allLabel="كل الفئات"
             />
+            {catalog.length > 0 && (
+              <div className="space-y-1.5 text-sm">
+                <p className="text-xs font-medium text-sub">المهارة</p>
+                <SkillPicker
+                  options={catalog}
+                  value={catalog.find((c) => c.name_ar === skill)?.id?.toString() ?? ""}
+                  onSelect={(id) => {
+                    const opt = catalog.find((c) => c.id === id);
+                    if (opt) setSkill(skill === opt.name_ar ? "" : opt.name_ar);
+                  }}
+                  placeholder="كل المهارات"
+                />
+              </div>
+            )}
             <div className="space-y-1 text-sm">
               <p className="mb-1 text-xs font-medium text-sub">مستوى الخبرة</p>
               <label className={`filter-row ${expertise === "" ? "filter-row-active" : ""}`}>

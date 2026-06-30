@@ -46,10 +46,24 @@ def test_archive_is_soft_delete(admin_request):
     assert Job.objects.filter(pk=job.pk).exists()
 
 
-def test_service_reject_audited(admin_request):
+def test_approve_service_publishes_notifies_and_audits(admin_request):
+    staff = StaffUserFactory()
+    service = ServiceFactory(status=Service.Status.PENDING_REVIEW)
+    ServiceAdmin(Service, AdminSite()).approve_services(admin_request(staff), Service.objects.filter(pk=service.pk))
+
+    service.refresh_from_db()
+    assert service.status == Service.Status.LIVE
+    assert service.published_at is not None
+    assert AuditLog.objects.filter(action="admin.service_approved", object_id=str(service.pk)).exists()
+    assert Notification.objects.filter(user=service.worker, title="تم نشر خدمتك").exists()
+
+
+def test_service_reject_audited_and_notifies(admin_request):
     staff = StaffUserFactory()
     service = ServiceFactory(status=Service.Status.PENDING_REVIEW)
     ServiceAdmin(Service, AdminSite()).reject_services(admin_request(staff), Service.objects.filter(pk=service.pk))
     service.refresh_from_db()
     assert service.status == Service.Status.REJECTED
     assert AuditLog.objects.filter(action="admin.service_rejected", object_id=str(service.pk)).exists()
+    note = Notification.objects.get(user=service.worker, title="رُفضت خدمتك")
+    assert note.body == service.reject_reason  # Arabic reason delivered

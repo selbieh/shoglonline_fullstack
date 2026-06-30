@@ -29,7 +29,7 @@ const NAV: { key: string; label: string; href: string; Icon: IconCmp }[] = [
   { key: "proposals", label: "عروضي", href: "/me/proposals", Icon: ClipboardIcon },
   { key: "activity", label: "طلباتي ونشاطي", href: "/me/activity", Icon: SendIcon },
   { key: "tasks", label: "مهامي", href: "/contracts", Icon: BriefcaseIcon },
-  { key: "services", label: "خدماتي المميزة", href: "/me/services", Icon: SparklesIcon },
+  { key: "services", label: "خدماتي المصغرة", href: "/me/services", Icon: SparklesIcon },
   { key: "portfolio", label: "معرض أعمالي", href: "/me/profile#portfolio", Icon: GridIcon },
   { key: "messages", label: "الرسائل", href: "/messages", Icon: EnvelopeIcon },
   { key: "wallet", label: "المحفظة", href: "/wallet", Icon: WalletIcon },

@@ -10,7 +10,9 @@ import { fetchPublicSettings, phoneVerifyEnabled } from "@/lib/settings";
 import { digitsOnly } from "@/lib/arabic";
 import Logo from "@/components/Logo";
 import Field from "@/components/Field";
+import PhoneField from "@/components/PhoneField";
 import WizardStepper, { type WizardStep } from "@/components/WizardStepper";
+import { splitPhone } from "@/lib/countries";
 
 /* Employer profile setup (أنشئ ملفك كصاحب عمل — ppt slides 26/27): basic data + optional
    verification. Built on /me/employer-profile + the shared phone-OTP endpoints. */
@@ -30,8 +32,7 @@ export default function EmployerWizard() {
   const [busy, setBusy] = useState(false);
   const { errors, setErrors, clearFields, formError, setFormError, applyApiError } = useFieldErrors();
   // verify
-  const [cc, setCc] = useState("+966");
-  const [phone, setPhone] = useState("");
+  const [phoneIntl, setPhoneIntl] = useState("+966");
   const [otpSent, setOtpSent] = useState(false);
   const [code, setCode] = useState("");
   const [otpBusy, setOtpBusy] = useState(false);
@@ -96,7 +97,7 @@ export default function EmployerWizard() {
     setOtpBusy(true); setVmsg("");
     try {
       const r = await api<{ sent: boolean; debug_code?: string }>("/auth/phone/request-otp", {
-        method: "POST", body: JSON.stringify({ phone: `${cc}${phone}` }),
+        method: "POST", body: JSON.stringify({ phone: phoneIntl }),
       });
       setOtpSent(true);
       setVmsg(r.debug_code ? `رمز التطوير: ${r.debug_code}` : "تم إرسال الرمز إلى جوالك");
@@ -178,14 +179,9 @@ export default function EmployerWizard() {
               ) : (
                 <>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <select className="field w-24" value={cc} aria-label="رمز الدولة"
-                      onChange={(e) => { setCc(e.target.value); setOtpSent(false); setCode(""); }}>
-                      <option value="+966">+966</option>
-                      <option value="+20">+20</option>
-                    </select>
-                    <input className="field flex-1" inputMode="tel" placeholder="5XXXXXXXX" value={phone}
-                      aria-label="رقم الجوال" onChange={(e) => { setPhone(digitsOnly(e.target.value)); setOtpSent(false); setCode(""); }} />
-                    <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !phone}
+                    <PhoneField value={phoneIntl} ariaLabel="رقم الجوال" placeholder="5XXXXXXXX"
+                      onChange={(v) => { setPhoneIntl(v); setOtpSent(false); setCode(""); }} />
+                    <button type="button" className="btn-secondary whitespace-nowrap" disabled={otpBusy || !splitPhone(phoneIntl).number}
                       onClick={requestOtp}>إرسال رمز التحقق</button>
                   </div>
                   {otpSent && (

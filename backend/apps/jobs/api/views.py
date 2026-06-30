@@ -57,6 +57,13 @@ class PublicJobListView(ListAPIView):
             else:
                 qs = qs.none()
 
+        # Single-skill filter (shared `?skill=` param with the gallery / freelancers filters): a job
+        # matches when it requires that catalog skill. Matched by name so the value is interchangeable
+        # across all three filters, which feed off the same `name_ar` catalog vocabulary.
+        skill = self.request.query_params.get("skill")
+        if skill:
+            qs = qs.filter(skills__name_ar__icontains=skill)
+
         budget_min = self.request.query_params.get("budget_min")
         budget_max = self.request.query_params.get("budget_max")
         if budget_min:

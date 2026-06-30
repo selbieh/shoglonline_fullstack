@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AuditedTokenRefreshView,
+    AvatarMediaView,
     EmailChangeConfirmView,
     EmailChangeRequestView,
     EmailOTPRequestView,
@@ -15,6 +16,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("avatars/<int:pk>", AvatarMediaView.as_view(), name="avatar-media"),
     path("google", GoogleLoginView.as_view(), name="auth-google"),
     path("refresh", AuditedTokenRefreshView.as_view(), name="auth-refresh"),
     path("logout", LogoutView.as_view(), name="auth-logout"),

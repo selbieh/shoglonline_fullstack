@@ -98,11 +98,11 @@ export default function MyServicesPage() {
     }
   }
 
-  // per-row action menu (ppt slide-17). Owner edit page (slide-20) is a follow-up → معاينة links
-  // to the public detail for now.
+  // per-row action menu (ppt slide-17). "معاينة" opens the owner preview (authed, any status) rather
+  // than the public detail, which is LIVE-only and 404s for a draft / pending / paused service.
   const rowActions = (s: Service): RowAction[] => [
     { label: "لوحة الخدمة", href: `/me/services/${s.id}` },
-    { label: "معاينة", href: `/services/${s.slug}` },
+    { label: "معاينة", href: `/me/services/${s.id}/preview` },
     { label: "نشر", hidden: !(s.status === "draft" || s.status === "rejected"), onSelect: () => action(s.id, "publish") },
     { label: "إيقاف مؤقت", hidden: s.status !== "live", onSelect: () => action(s.id, "pause") },
     { label: "استئناف", hidden: s.status !== "paused", onSelect: () => action(s.id, "resume") },

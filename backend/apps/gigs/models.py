@@ -28,6 +28,12 @@ class Service(models.Model):
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     delivery_days = models.PositiveSmallIntegerField(default=7)
     cover_image = models.URLField(blank=True)
+    # An uploaded cover, served inline via the PUBLIC service-cover-media endpoint (so a plain <img>
+    # can render it without a bearer token). Takes precedence over the pasted cover_image URL.
+    cover_attachment = models.ForeignKey(
+        "attachments.Attachment", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+",
+    )
     keywords = models.JSONField(default=list, blank=True)   # ppt slide-19: كلمات مفتاحية (list[str])
     what_you_get = models.TextField(blank=True)             # ppt slide-19: ماذا سيحصل عليه المشتري
     # Optional SEO overrides — when blank the frontend falls back to title / a description excerpt.

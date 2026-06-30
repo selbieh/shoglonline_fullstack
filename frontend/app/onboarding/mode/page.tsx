@@ -46,14 +46,14 @@ export default function ModeSelect() {
             <span className="mx-auto grid h-16 w-16 place-content-center rounded-2xl bg-tint text-[30px] text-primary-dark"><BriefcaseIcon /></span>
             <h2 className="mt-3 text-2xl font-bold text-primary-dark">أبحث عن عمل</h2>
             <p className="mt-2 text-sm text-sub">
-              تصفّح الوظائف، قدّم العروض، أنشئ خدماتك المميزة، واستلم أرباحك بأمان
+              تصفّح الوظائف، قدّم العروض، أنشئ خدماتك المصغرة، واستلم أرباحك بأمان
             </p>
           </button>
           <button className={card} disabled={busy} onClick={() => choose("find_worker")}>
             <span className="mx-auto grid h-16 w-16 place-content-center rounded-2xl bg-accent-sky text-[30px] text-primary-deep"><UsersIcon /></span>
             <h2 className="mt-3 text-2xl font-bold">أوظِّف الآن</h2>
             <p className="mt-2 text-sm text-sub">
-              انشر وظائف، استقبل العروض، اشترِ خدمات مميزة، وأدر عقودك ومدفوعاتك
+              انشر وظائف، استقبل العروض، اشترِ خدمات مصغرة، وأدر عقودك ومدفوعاتك
             </p>
           </button>
         </div>

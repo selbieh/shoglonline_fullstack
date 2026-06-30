@@ -11,6 +11,8 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
 import FilterPanel from "@/components/FilterPanel";
 import CardActions from "@/components/CardActions";
+import SkillPicker from "@/components/SkillPicker";
+import { useSkillCatalog } from "@/lib/useSkillCatalog";
 import { useFavoriteIds } from "@/lib/useFavoriteIds";
 import {
   AlertIcon,
@@ -81,6 +83,7 @@ export default function GalleryClient({
   const [skill, setSkill] = useState(initialFilters.skill);
   const [q, setQ] = useState(initialFilters.q);
   const [ordering, setOrdering] = useState(initialFilters.ordering);
+  const catalog = useSkillCatalog(); // full skills catalog → searchable skill filter (not just this page's)
   const favIds = useFavoriteIds("portfolio"); // pre-fill hearts for items the user already saved
 
   // Mirror the active filters into the querystring (defaults omitted to keep links clean).
@@ -374,6 +377,22 @@ export default function GalleryClient({
                 allLabel="كل التصنيفات"
                 searchPlaceholder="ابحث عن تصنيف…"
               />
+            )}
+
+            {/* skill filter — searchable, catalog-backed: pick ANY skill, not only ones on this page */}
+            {catalog.length > 0 && (
+              <div className="space-y-1.5 text-sm">
+                <p className="text-xs font-medium text-sub">المهارة</p>
+                <SkillPicker
+                  options={catalog}
+                  value={catalog.find((c) => c.name_ar === skill)?.id?.toString() ?? ""}
+                  onSelect={(id) => {
+                    const opt = catalog.find((c) => c.id === id);
+                    if (opt) setSkill(skill === opt.name_ar ? "" : opt.name_ar);
+                  }}
+                  placeholder="كل المهارات"
+                />
+              </div>
             )}
 
             {/* skill quick-filters (from the loaded works) */}
