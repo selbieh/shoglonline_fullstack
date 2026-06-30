@@ -9,25 +9,32 @@ import { useEffect, useState } from "react";
 export default function MediaGallery({ images, alt }: { images: string[]; alt: string }) {
   const [i, setI] = useState(0);
   const [open, setOpen] = useState(false);
+  // URLs that fail to load (e.g. dead legacy links that 403/404) are dropped so a broken <img> never
+  // shows — the gallery degrades to the elegant placeholder instead of an empty frame.
+  const [broken, setBroken] = useState<Set<string>>(() => new Set());
+  const markBroken = (src: string) => setBroken((s) => (s.has(src) ? s : new Set(s).add(src)));
 
-  if (!images || images.length === 0) {
+  const live = (images ?? []).filter((src) => src && !broken.has(src));
+  if (live.length === 0) {
     return <MediaPlaceholder />;
   }
-  const go = (d: number) => setI((p) => (p + d + images.length) % images.length);
-  const many = images.length > 1;
+  const idx = i % live.length;
+  const cur = live[idx];
+  const go = (d: number) => setI((p) => (p + d + live.length) % live.length);
+  const many = live.length > 1;
 
   return (
     <div>
       <div className="relative h-[clamp(200px,30vh,340px)] overflow-hidden rounded-l border border-line bg-tint">
         {/* soft blurred backdrop fills the frame so any aspect ratio (logo, portrait, wide) looks elegant */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[i]} alt="" aria-hidden
+        <img src={cur} alt="" aria-hidden
           className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-2xl" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[i]} alt={alt}
+        <img src={cur} alt={alt}
           className="relative h-full w-full cursor-zoom-in object-contain transition-transform duration-300 hover:scale-[1.02]"
           onClick={() => setOpen(true)}
-          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+          onError={() => markBroken(cur)} />
         {/* zoom hint */}
         <button type="button" onClick={() => setOpen(true)} aria-label="عرض بالحجم الكامل"
           className="absolute left-3 top-3 grid h-9 w-9 place-content-center rounded-full bg-white/90 text-ink shadow-card transition hover:bg-white">
@@ -42,8 +49,8 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
             <button type="button" onClick={() => go(1)} aria-label="التالي"
               className="absolute left-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-content-center rounded-full bg-white/90 text-lg text-ink shadow-card transition hover:bg-white">›</button>
             <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-              {images.map((_, j) => (
-                <span key={j} className={`h-1.5 rounded-full transition-all ${j === i ? "w-5 bg-white" : "w-1.5 bg-white/60"}`} />
+              {live.map((src, j) => (
+                <span key={`${src}-${j}`} className={`h-1.5 rounded-full transition-all ${j === idx ? "w-5 bg-white" : "w-1.5 bg-white/60"}`} />
               ))}
             </div>
           </>
@@ -51,12 +58,12 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
       </div>
       {many && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          {images.map((src, j) => (
-            <button key={j} type="button" onClick={() => setI(j)} aria-label={`صورة ${j + 1}`}
-              className={`h-16 w-24 shrink-0 overflow-hidden rounded-m border-2 transition ${j === i ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
+          {live.map((src, j) => (
+            <button key={`${src}-${j}`} type="button" onClick={() => setI(j)} aria-label={`صورة ${j + 1}`}
+              className={`h-16 w-24 shrink-0 overflow-hidden rounded-m border-2 transition ${j === idx ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={src} alt="" className="h-full w-full bg-tint object-cover"
-                onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+                onError={() => markBroken(src)} />
             </button>
           ))}
         </div>
@@ -64,11 +71,12 @@ export default function MediaGallery({ images, alt }: { images: string[]; alt: s
 
       {open && (
         <Lightbox
-          images={images}
-          index={i}
+          images={live}
+          index={idx}
           alt={alt}
           onIndex={setI}
           onClose={() => setOpen(false)}
+          onBroken={markBroken}
         />
       )}
     </div>
@@ -98,10 +106,10 @@ function MediaPlaceholder() {
 }
 
 function Lightbox({
-  images, index, alt, onIndex, onClose,
+  images, index, alt, onIndex, onClose, onBroken,
 }: {
   images: string[]; index: number; alt: string;
-  onIndex: (i: number) => void; onClose: () => void;
+  onIndex: (i: number) => void; onClose: () => void; onBroken: (src: string) => void;
 }) {
   const [shown, setShown] = useState(false);
   const many = images.length > 1;
@@ -137,7 +145,7 @@ function Lightbox({
       <img src={images[index]} alt={alt}
         onClick={(e) => e.stopPropagation()}
         className={`max-h-[88vh] max-w-[92vw] rounded-l object-contain shadow-2xl transition-all duration-300 ${shown ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
-        onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
+        onError={() => onBroken(images[index])} />
 
       {many && (
         <>

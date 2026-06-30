@@ -104,6 +104,21 @@ export default function MyFavoritesPage() {
     portfolio: { text: "لا أعمال محفوظة بعد" },
   };
 
+  /* A missing OR broken thumbnail (e.g. a dead legacy cover) degrades to the branded icon tile
+     instead of the browser's broken-image glyph. */
+  function FavThumb({ thumb, round }: { thumb?: string; round: boolean }) {
+    const [broken, setBroken] = useState(false);
+    const shape = round ? "rounded-full" : "rounded-m";
+    if (!thumb || broken) {
+      return <div className={`icon-tile h-16 w-16 shrink-0 text-[26px] sm:h-20 sm:w-20 ${shape}`}><SparklesIcon /></div>;
+    }
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={thumb} alt="" loading="lazy" onError={() => setBroken(true)}
+        className={`h-16 w-16 shrink-0 object-cover ring-1 ring-line sm:h-20 sm:w-20 ${shape}`} />
+    );
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -153,13 +168,8 @@ export default function MyFavoritesPage() {
             return (
               <li key={it.id} className="card-modern p-5">
                 <div className="flex items-start gap-4">
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt="" loading="lazy"
-                      className={`h-16 w-16 shrink-0 object-cover ring-1 ring-line sm:h-20 sm:w-20 ${tab === "freelancers" ? "rounded-full" : "rounded-m"}`} />
-                  ) : (
-                    <div className="icon-tile h-16 w-16 shrink-0 text-[26px] sm:h-20 sm:w-20"><SparklesIcon /></div>
-                  )}
+                  <FavThumb thumb={thumb} round={tab === "freelancers"} />
+
                   <div className="min-w-0 flex-1">
                     {href ? (
                       <Link href={href} className="text-lg font-bold leading-snug transition hover:text-primary-dark">{title}</Link>

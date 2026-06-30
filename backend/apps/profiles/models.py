@@ -86,6 +86,10 @@ class WorkerProfile(models.Model):
     is_verified = models.BooleanField(default=False)  # FR-PROF-6: national-ID verified badge
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress freelancers post ID (data migration).",
+    )
 
     def __str__(self) -> str:
         return f"worker:{self.user_id}"
@@ -123,6 +127,10 @@ class EmployerProfile(models.Model):
     rating_count = models.PositiveIntegerField(default=0)
     total_spent = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress employers post ID (data migration).",
+    )
 
     def __str__(self) -> str:
         return f"employer:{self.user_id}"
@@ -186,6 +194,10 @@ class PortfolioItem(models.Model):
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # الميزانية
     features = models.JSONField(default=list, blank=True)             # مميزات المشروع (list[str])
     views_count = models.PositiveIntegerField(default=0)             # مشاهدات العمل
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress wt_portfolio post ID (data migration).",
+    )
     attachments = GenericRelation(
         "attachments.Attachment", content_type_field="host_type", object_id_field="object_id"
     )

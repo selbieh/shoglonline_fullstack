@@ -353,7 +353,7 @@ function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean })
     >
       {/* header: identity (right) + actions (left) */}
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3.5">
+        <div className="flex min-w-0 flex-1 items-start gap-3.5">
           <div className="relative shrink-0">
             <Avatar name={f.name} src={f.avatar_url} className="h-16 w-16" textClassName="text-xl" />
             {f.availability === "available_now" && (
@@ -361,7 +361,7 @@ function FreelancerCard({ f, favorited }: { f: Freelancer; favorited: boolean })
             )}
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-base font-bold leading-tight text-ink">
+            <p className="flex min-w-0 items-center gap-1.5 text-base font-bold leading-tight text-ink">
               <span className="truncate">{f.name}</span>
               {f.is_verified && <BadgeCheckIcon className="shrink-0 text-[16px] text-primary" />}
             </p>

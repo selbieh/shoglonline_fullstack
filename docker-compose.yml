@@ -2,6 +2,11 @@
 services:
   db:
     image: postgres:16-alpine
+    # Postgres parallel workers allocate shared-memory segments under /dev/shm.
+    # Docker's default 64 MB is too small and surfaces as the misleading
+    # "could not resize shared memory segment ... No space left on device"
+    # error on parallel scans/sorts. Bump it so parallel queries have room.
+    shm_size: 256m
     environment:
       POSTGRES_DB: shoghl
       POSTGRES_USER: shoghl

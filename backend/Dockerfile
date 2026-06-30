@@ -4,6 +4,11 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 
 FROM base AS deps
+# mysqlclient is a C extension: it needs the MySQL client headers + a compiler at build time.
+# They stay in this stage; the runtime stage builds FROM deps, so the compiled wheel carries over.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential default-libmysqlclient-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements/ requirements/
 ARG REQUIREMENTS=requirements/production.txt
 RUN pip install --no-cache-dir -r ${REQUIREMENTS}

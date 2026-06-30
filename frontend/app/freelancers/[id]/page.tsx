@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { JsonLd, SITE_URL, serverApi, encodeSegment, personLd, breadcrumbLd, freelancerMetaDescription } from "@/lib/seo";
 import { type FreelancerDetail, EXPERTISE_LABEL } from "@/lib/types";
 import Avatar from "@/components/Avatar";
+import CoverImage from "@/components/CoverImage";
 import StarRating from "@/components/StarRating";
 import ServiceCard, { type ServiceCardData } from "@/components/ServiceCard";
 import PortfolioCard from "@/components/PortfolioCard";
@@ -143,7 +144,7 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
               right with stats + actions on the left. Cover image when supplied, else a brand gradient. ── */}
         <section className="card mt-4 overflow-hidden p-0">
           <div className="relative h-28 bg-hero sm:h-36">
-            {f.cover_image && <img src={f.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+            {f.cover_image && <CoverImage src={f.cover_image} className="absolute inset-0 h-full w-full object-cover" />}
             <div className="absolute inset-0 dots opacity-30" />
           </div>
 

@@ -78,6 +78,10 @@ class Report(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress reports post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]

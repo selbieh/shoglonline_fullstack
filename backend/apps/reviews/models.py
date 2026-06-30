@@ -19,6 +19,10 @@ class Review(models.Model):
     is_locked = models.BooleanField(default=False)  # frozen at warranty end (BR-13)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress reviews post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]

@@ -54,6 +54,10 @@ class Ticket(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     solved_at = models.DateTimeField(null=True, blank=True)
     closed_at = models.DateTimeField(null=True, blank=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress emd_ticket post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-last_activity_at"]

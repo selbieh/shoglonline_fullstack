@@ -54,6 +54,10 @@ class Job(models.Model):
     source_job = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="reposts")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress projects post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-published_at", "-created_at"]
@@ -127,6 +131,10 @@ class Proposal(models.Model):
     viewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress proposals post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]

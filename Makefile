@@ -1,4 +1,4 @@
-.PHONY: up down logs test lint seed superuser reset admin verify
+.PHONY: up down logs test lint seed superuser reset admin verify migrate-legacy
 
 up:            ## start the full stack
 	docker compose up -d --build
@@ -40,3 +40,10 @@ seed:
 
 superuser:     ## create an admin (staff) account — FR-AUTH-8
 	docker compose exec backend python manage.py createsuperuser
+
+migrate-legacy: ## migrate legacy WP MySQL → app. Vars: DB_HOST [DB_PORT=3306] DB_NAME DB_USER DB_PASS [ARGS]
+	@test -n "$(DB_HOST)" || { echo "set DB_HOST (and DB_NAME/DB_USER/DB_PASS). e.g.:"; \
+	  echo '  make migrate-legacy DB_HOST=host.docker.internal DB_PORT=3307 DB_NAME=shogl DB_USER=user DB_PASS=password ARGS="--dry-run"'; exit 1; }
+	docker compose exec -T backend python manage.py import_from_legacy \
+	  --db-host "$(DB_HOST)" --db-port "$(or $(DB_PORT),3306)" --db-name "$(DB_NAME)" \
+	  --db-user "$(DB_USER)" --db-password "$(DB_PASS)" $(ARGS)

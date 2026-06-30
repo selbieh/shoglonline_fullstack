@@ -20,7 +20,7 @@ class Category(models.Model):
 
     name_ar = models.CharField(max_length=80)
     name_en = models.CharField(max_length=80, blank=True)  # reserved for future locales
-    slug = models.SlugField(unique=True, allow_unicode=True)
+    slug = models.SlugField(max_length=160, unique=True, allow_unicode=True)
     description = models.TextField(blank=True)
     icon = models.CharField(
         max_length=32,
@@ -33,6 +33,10 @@ class Category(models.Model):
     )
     is_active = models.BooleanField(default=True)
     order = models.PositiveSmallIntegerField(default=0)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress term_id (service_categories/project_cat; data migration).",
+    )
 
     class Meta:
         ordering = ["order", "name_ar"]
@@ -44,11 +48,15 @@ class Category(models.Model):
 
 class Skill(models.Model):
     name_ar = models.CharField(max_length=80)
-    slug = models.SlugField(unique=True, allow_unicode=True)
+    slug = models.SlugField(max_length=160, unique=True, allow_unicode=True)
     subcategory = models.ForeignKey(
         Category, null=True, blank=True, on_delete=models.SET_NULL, related_name="skills"
     )
     is_active = models.BooleanField(default=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress term_id (skills taxonomy; data migration).",
+    )
 
     class Meta:
         ordering = ["name_ar"]

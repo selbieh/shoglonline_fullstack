@@ -73,6 +73,10 @@ class Contract(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress wt_earnings.id (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -110,6 +114,10 @@ class Submission(models.Model):
     reject_reason = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     decided_at = models.DateTimeField(null=True, blank=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress wt-milestone post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]

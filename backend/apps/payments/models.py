@@ -104,6 +104,10 @@ class WithdrawalRequest(models.Model):
     gateway_ref = models.CharField(max_length=128, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress wt_payouts_history.id (data migration).",
+    )
 
     class Meta:
         ordering = ["-created_at"]

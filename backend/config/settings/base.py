@@ -93,6 +93,17 @@ TEMPLATES = [
 DATABASES = {
     "default": env.db("DATABASE_URL", default="postgres://shoghl:shoghl@db:5432/shoghl"),
 }
+# Read-only connection to the legacy WordPress MySQL, used only by `manage.py import_from_legacy`.
+# Absent unless LEGACY_DATABASE_URL is set, so normal runs, tests and CI never touch it.
+# Example: mysql://user:password@host.docker.internal:3307/shogl
+LEGACY_DATABASE_URL = env("LEGACY_DATABASE_URL", default="")
+if LEGACY_DATABASE_URL:
+    DATABASES["legacy"] = {
+        **env.db_url_config(LEGACY_DATABASE_URL),
+        "OPTIONS": {"charset": "utf8mb4"},
+    }
+# Keeps the 'legacy' alias out of migrations + ORM routing (importer reads it via raw cursors only).
+DATABASE_ROUTERS = ["config.db_router.LegacyRouter"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # A single namespace prefixes every Redis key this app owns (Django cache + Celery broker/result),
@@ -237,7 +248,12 @@ if env.bool("USE_S3", default=False):
     # reverted media back to the local filesystem even when USE_S3=1.
     STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
     AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
-    AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL", default="")  # set for MinIO; blank for AWS S3
+    # Only set a custom endpoint when one is genuinely provided (MinIO/S3-compatible). A blank or
+    # comment-polluted value must NOT reach boto3 — an empty/garbage endpoint raises "Invalid endpoint"
+    # and breaks ALL media. `.split("#")` also tolerates an accidental inline comment in the .env value.
+    _s3_endpoint = env("AWS_S3_ENDPOINT_URL", default="").split("#")[0].strip()
+    if _s3_endpoint:
+        AWS_S3_ENDPOINT_URL = _s3_endpoint
     AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="")
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
     AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")

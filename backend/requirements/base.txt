@@ -9,6 +9,7 @@ django-unfold>=0.40
 celery[redis]>=5.4
 redis>=5.0
 psycopg[binary]>=3.2
+mysqlclient>=2.2  # MySQL/MariaDB driver (Postgres→MySQL data migration + optional MySQL runtime)
 google-auth>=2.30
 firebase-admin>=6.5  # custom tokens + Firestore Admin SDK (real-time chat, SRS §10.4/§14)
 django-storages[boto3]>=1.14  # S3-compatible file storage in prod (attachments, Part 03)

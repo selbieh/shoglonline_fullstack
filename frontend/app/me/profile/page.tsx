@@ -682,6 +682,23 @@ function CertificatesSection({
   );
 }
 
+/* Portfolio tile thumbnail: a missing OR broken image (e.g. a dead legacy link that 403/404s)
+   degrades to the branded cover glyph for its media type instead of the broken-image icon. */
+function PortfThumb({ thumb, title, mediaType }: { thumb?: string; title: string; mediaType?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (thumb && !broken) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={thumb} alt={title} loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
+    );
+  }
+  return (
+    <div className="cover-c grid h-full w-full place-content-center text-2xl text-white/90">
+      {mediaType === "video" ? <PlayIcon /> : mediaType === "link" ? <ExternalLinkIcon /> : <ImageIcon />}
+    </div>
+  );
+}
+
 function PortfolioSection({
   items, onAdd, onDelete, onError,
 }: {
@@ -731,14 +748,7 @@ function PortfolioSection({
             return (
               <div key={p.id} className="card-modern group overflow-hidden">
                 <div className="relative aspect-video bg-tint">
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt={p.title} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="cover-c grid h-full w-full place-content-center text-2xl text-white/90">
-                      {p.media_type === "video" ? <PlayIcon /> : <ExternalLinkIcon />}
-                    </div>
-                  )}
+                  <PortfThumb thumb={thumb} title={p.title} mediaType={p.media_type} />
                   <button aria-label="حذف العمل" onClick={() => onDelete(p.id)}
                     className="absolute end-2 top-2 grid h-7 w-7 place-content-center rounded-full bg-white/90 text-danger shadow-sm transition hover:bg-danger hover:text-white">
                     <TrashIcon className="text-[16px]" />

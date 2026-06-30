@@ -41,6 +41,10 @@ class Service(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress micro-services post ID (data migration).",
+    )
 
     class Meta:
         ordering = ["-published_at", "-created_at"]
@@ -57,6 +61,10 @@ class ServiceAddon(models.Model):
     title = models.CharField(max_length=120)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     extra_days = models.PositiveSmallIntegerField(default=0)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress addons-services post ID (data migration).",
+    )
 
     def __str__(self) -> str:
         return f"{self.title} (+{self.price})"

@@ -1,10 +1,12 @@
 import { StarIcon } from "@/components/icons";
+import { ServiceThumb } from "@/components/ServiceCover";
 import { formatUSD } from "@/lib/currency";
 import { pluralizeDays } from "@/lib/arabic";
 
-/* Service offer card (ppt slides 11/12/17/18 grids). Cover with hover-zoom + gradient fallback,
-   title, 2-line description, delivery + rating footer, "يبدأ من" price, and a «عرض الخدمة» button —
-   matching the deck's service-grid card. Server-renderable. */
+/* Service offer card (ppt slides 11/12/17/18 grids). Cover with hover-zoom + branded per-category
+   fallback (a missing OR broken cover degrades to {@link ServiceCover} instead of the broken-image
+   glyph), title, 2-line description, delivery + rating footer, "يبدأ من" price, and a «عرض الخدمة»
+   button — matching the deck's service-grid card. Server-renderable. */
 
 export type ServiceCardData = {
   id: number;
@@ -13,6 +15,7 @@ export type ServiceCardData = {
   base_price: string;
   delivery_days: number;
   cover_image?: string;
+  category_slug?: string;
   description?: string;
   rating?: number | null;
   rating_count?: number;
@@ -25,10 +28,7 @@ export default function ServiceCard({ service }: { service: ServiceCardData }) {
     <div className="card-modern group flex flex-col overflow-hidden">
       <a href={href} className="block">
         <div className="relative aspect-video overflow-hidden bg-tint">
-          {s.cover_image
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={s.cover_image} alt={s.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-            : <div className="cover-c h-full w-full" />}
+          <ServiceThumb cover={s.cover_image} slug={s.category_slug} alt={s.title} />
         </div>
       </a>
       <div className="flex flex-1 flex-col p-4">

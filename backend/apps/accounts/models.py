@@ -29,6 +29,10 @@ class User(AbstractUser):
     )
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.ACTIVE)
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    legacy_id = models.BigIntegerField(
+        null=True, blank=True, unique=True,
+        help_text="WordPress wp_users.ID (data migration); null for app-created users.",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
