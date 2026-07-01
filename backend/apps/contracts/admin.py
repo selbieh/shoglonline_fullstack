@@ -13,6 +13,36 @@ from . import services
 from .models import Contract, ContractEvent, Submission, UpdateRequest
 
 
+class OverdueFilter(admin.SimpleListFilter):
+    """Surface active contracts past their deadline (the queue's stated purpose)."""
+
+    title = "التأخير"
+    parameter_name = "overdue"
+
+    def lookups(self, request, model_admin):
+        return (("yes", "متأخر (نشط بعد الموعد)"),)
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(status=Contract.Status.ACTIVE, deadline__lt=timezone.now().date())
+        return queryset
+
+
+class WarrantyPendingFilter(admin.SimpleListFilter):
+    """Completed contracts whose warranty funds are not yet released (force-release targets)."""
+
+    title = "الضمان"
+    parameter_name = "warranty"
+
+    def lookups(self, request, model_admin):
+        return (("pending", "مكتمل — الضمان غير محرَّر"),)
+
+    def queryset(self, request, queryset):
+        if self.value() == "pending":
+            return queryset.filter(status=Contract.Status.COMPLETED, funds_released=False)
+        return queryset
+
+
 class SubmissionInline(TabularInline):
     model = Submission
     extra = 0
@@ -41,7 +71,7 @@ class ContractEventInline(TabularInline):
 class ContractAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "title", "employer", "worker", "budget", "status",
                     "deadline", "is_overdue", "warranty_ends_at")
-    list_filter = ("status", "funds_released", "created_at")
+    list_filter = (OverdueFilter, WarrantyPendingFilter, "status", "funds_released", "created_at")
     search_fields = ("title", "employer__email", "worker__email", "dispute_ticket_ref")
     list_select_related = ("employer", "worker", "job", "service")
     date_hierarchy = "created_at"

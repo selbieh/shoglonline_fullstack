@@ -174,6 +174,9 @@ def _chart_data(days: int = 14) -> dict:
         ("pending_funding", "Pending funding"), ("active", "Active"), ("delivered", "Delivered"),
         ("completed", "Completed"), ("disputed", "Disputed"), ("cancelled", "Cancelled"),
     ]
+    cat_rows = list(
+        Job.objects.values("category__name_ar").annotate(c=Count("id")).order_by("-c")[:8]
+    )
     return {
         "trend": {
             "labels": sign_labels,
@@ -185,7 +188,51 @@ def _chart_data(days: int = 14) -> dict:
             "labels": [lbl for _k, lbl in status_order],
             "data": [status_map.get(k, 0) for k, _lbl in status_order],
         },
+        "jobs_by_category": {
+            "labels": [(r["category__name_ar"] or "—") for r in cat_rows],
+            "data": [r["c"] for r in cat_rows],
+        },
     }
+
+
+# Deep links: each stat box → the exact filtered changelist an operator would act on.
+# Values mirror the model TextChoices / the custom SimpleListFilters added in the per-app admins
+# (e.g. contracts `?overdue=yes`). Query params use Django's `<field>__exact` filter convention.
+_STAT_LINKS = {
+    "users_total": ("accounts_user", ""),
+    "active_jobs": ("jobs_job", "status__exact=published"),
+    "live_services": ("gigs_service", "status__exact=live"),
+    "total_proposals": ("jobs_proposal", ""),
+    "total_buying_requests": ("gigs_buyingrequest", ""),
+    "total_reviews": ("reviews_review", ""),
+    "active_contracts": ("contracts_contract", ""),
+    "gmv": ("contracts_contract", ""),
+    "platform_commission": ("contracts_contract", "status__exact=completed"),
+    "wallet_escrow_held": ("payments_wallet", ""),
+    "wallet_earnings_pending": ("payments_wallet", ""),
+    "open_tickets": ("tickets_ticket", ""),
+    "pending_jobs": ("jobs_job", "status__exact=pending_review"),
+    "pending_services": ("gigs_service", "status__exact=pending_review"),
+    "pending_buying_requests": ("gigs_buyingrequest", "status__exact=pending"),
+    "pending_id_verifications": ("profiles_idverification", "status__exact=pending"),
+    "open_chat_reports": ("chat_chatreport", "status__exact=open"),
+    "open_reports": ("core_report", "status__exact=open"),
+    "disputed_contracts": ("contracts_contract", "status__exact=disputed"),
+    "overdue_contracts": ("contracts_contract", "overdue=yes"),
+}
+
+
+def _stat_links() -> dict:
+    """Resolve each stat key to a filtered admin changelist URL (None if unregistered)."""
+    from django.urls import NoReverseMatch, reverse
+    links = {}
+    for key, (name, qs) in _STAT_LINKS.items():
+        try:
+            url = reverse(f"admin:{name}_changelist")
+            links[key] = f"{url}?{qs}" if qs else url
+        except NoReverseMatch:  # pragma: no cover - defensive
+            links[key] = None
+    return links
 
 
 def analytics_widgets() -> dict:
@@ -229,6 +276,7 @@ def dashboard_callback(request, context):
     """Inject KPI stat boxes + chart datasets into the Unfold admin index (ADM-2)."""
     kpis = compute_kpis()
     days = (request.GET.get("days") if request is not None else None) or 14
+    links = _stat_links()
     context["kpis"] = kpis
     context["kpi_cards"] = [{"label": label, "value": kpis.get(key, 0)} for key, label in _CARDS]
     context["stat_boxes"] = [
@@ -237,9 +285,11 @@ def dashboard_callback(request, context):
             "value": (f"{kpis.get(key, 0)} {box[4]}" if len(box) > 4 else kpis.get(key, 0)),
             "emoji": emoji,
             "tone": tone,
+            "link": links.get(key),
         }
         for box in _STAT_BOXES
         for (label, key, emoji, tone) in [box[:4]]
     ]
+    context["widgets"] = analytics_widgets()
     context["chart_data_json"] = json.dumps(_chart_data(days))
     return context

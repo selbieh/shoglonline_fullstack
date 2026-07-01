@@ -94,7 +94,7 @@ class ProposalAdmin(ExportCsvMixin, ModelAdmin):
 
 
 @admin.register(Invitation)
-class InvitationAdmin(ModelAdmin):
+class InvitationAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("job", "employer", "worker", "status", "created_at")
     list_filter = ("status", "created_at")
     search_fields = ("job__title", "employer__email", "worker__email")
@@ -102,13 +102,20 @@ class InvitationAdmin(ModelAdmin):
     list_select_related = ("job", "employer", "worker")
     readonly_fields = ("frozen_prev_status", "created_at")
     date_hierarchy = "created_at"
+    list_per_page = 50
+    export_fields = ("id", "job", "employer", "worker", "status", "created_at")
+    actions = ["export_as_csv"]
 
 
 @admin.register(WatchlistItem)
-class WatchlistItemAdmin(ModelAdmin):
+class WatchlistItemAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("worker", "job", "created_at")
+    list_filter = ("created_at",)
     search_fields = ("worker__email", "job__title")
     autocomplete_fields = ("worker", "job")
     list_select_related = ("worker", "job")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("created_at",)
+    export_fields = ("id", "worker", "job", "created_at")
+    actions = ["export_as_csv"]

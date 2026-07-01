@@ -2,20 +2,43 @@ from django.contrib import admin
 from django.utils import timezone
 from unfold.admin import ModelAdmin
 
+from apps.core.admin_export import ExportCsvMixin
 from apps.core.models import AuditLog
 
 from . import services
 from .models import Notification, NotificationPreference, ScheduledNotification
 
 
+class ReadStatusFilter(admin.SimpleListFilter):
+    title = "حالة القراءة"
+    parameter_name = "read"
+
+    def lookups(self, request, model_admin):
+        return (("unread", "غير مقروء"), ("read", "مقروء"))
+
+    def queryset(self, request, queryset):
+        if self.value() == "unread":
+            return queryset.filter(read_at__isnull=True)
+        if self.value() == "read":
+            return queryset.filter(read_at__isnull=False)
+        return queryset
+
+
 @admin.register(Notification)
-class NotificationAdmin(ModelAdmin):
-    list_display = ("id", "user", "kind", "title", "read_at", "emailed", "pushed", "created_at")
-    list_filter = ("kind", "emailed", "pushed", "read_at", "created_at")
+class NotificationAdmin(ExportCsvMixin, ModelAdmin):
+    list_display = ("id", "user", "kind", "title", "is_read", "emailed", "pushed", "created_at")
+    list_filter = ("kind", "emailed", "pushed", ReadStatusFilter, "created_at")
     search_fields = ("user__email", "title", "body")
     list_select_related = ("user",)
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = [f.name for f in Notification._meta.fields]
+    export_fields = ("id", "user", "kind", "title", "read_at", "emailed", "pushed", "created_at")
+    actions = ["export_as_csv"]
+
+    @admin.display(boolean=True, description="مقروء", ordering="read_at")
+    def is_read(self, obj):
+        return obj.read_at is not None
 
     def has_add_permission(self, request):
         return False

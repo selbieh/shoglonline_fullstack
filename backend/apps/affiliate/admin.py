@@ -9,13 +9,20 @@ from .models import AffiliateClick, AffiliateCommission, AffiliateProfile, Commi
 
 
 @admin.register(AffiliateClick)
-class AffiliateClickAdmin(ModelAdmin):
-    list_display = ("id", "referrer", "slug", "referred_user", "ip", "created_at")
+class AffiliateClickAdmin(ExportCsvMixin, ModelAdmin):
+    list_display = ("id", "referrer", "slug", "referred_user", "converted", "ip", "created_at")
     list_filter = ("created_at",)
-    search_fields = ("referrer__email", "referred_user__email", "slug")
+    search_fields = ("referrer__email", "referred_user__email", "slug", "ip")
     list_select_related = ("referrer", "referred_user")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = [f.name for f in AffiliateClick._meta.fields]
+    export_fields = ("id", "referrer", "slug", "ip", "referred_user", "created_at")
+    actions = ["export_as_csv"]
+
+    @admin.display(description="حوّل؟", boolean=True)
+    def converted(self, obj):
+        return obj.referred_user_id is not None
 
     def has_add_permission(self, request):
         return False
@@ -24,19 +31,23 @@ class AffiliateClickAdmin(ModelAdmin):
 @admin.register(CommissionRule)
 class CommissionRuleAdmin(ModelAdmin):
     list_display = ("applies_to", "min_amount", "max_amount", "rate_pct", "is_active")
+    list_display_links = ("applies_to",)
+    list_editable = ("rate_pct", "is_active")
     list_filter = ("applies_to", "is_active")
 
 
 @admin.register(AffiliateProfile)
-class AffiliateProfileAdmin(ModelAdmin):
+class AffiliateProfileAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("slug", "user", "is_frozen", "total_earned", "created_at")
     list_filter = ("is_frozen", "created_at")
     search_fields = ("slug", "user__email")
     autocomplete_fields = ("user",)
     list_select_related = ("user",)
     date_hierarchy = "created_at"
+    ordering = ("-total_earned",)
     readonly_fields = ("total_earned", "created_at")
-    actions = ["freeze", "activate"]
+    export_fields = ("id", "slug", "user", "is_frozen", "total_earned", "created_at")
+    actions = ["freeze", "activate", "export_as_csv"]
 
     @admin.action(description="❄️ Freeze participation")
     def freeze(self, request, queryset):
@@ -68,11 +79,14 @@ class AffiliateCommissionAdmin(ExportCsvMixin, ModelAdmin):
 
 
 @admin.register(Referral)
-class ReferralAdmin(ModelAdmin):
+class ReferralAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("referrer", "referred_user", "earning_window_end", "created_at")
     list_filter = ("earning_window_end", "created_at")
     search_fields = ("referrer__email", "referred_user__email")
     autocomplete_fields = ("referrer", "referred_user")
     list_select_related = ("referrer", "referred_user")
     date_hierarchy = "created_at"
+    ordering = ("-created_at",)
     readonly_fields = ("created_at",)
+    export_fields = ("id", "referrer", "referred_user", "earning_window_end", "created_at")
+    actions = ["export_as_csv"]

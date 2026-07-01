@@ -29,6 +29,25 @@ Unfold CSS build; colors mirror the frontend brand tokens.
   .sh-card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
   .sh-card h3 { margin:0 0 10px; font-size:14px; color:var(--ink); }
   .sh-h1 { font-size:20px; font-weight:800; color:var(--ink); margin:4px 0 14px; }
+  .sh-h2 { font-size:14px; font-weight:700; color:var(--sub); text-transform:uppercase;
+           letter-spacing:.04em; margin:22px 0 10px; }
+  /* clickable stat boxes → filtered changelists */
+  a.sh-box { color:inherit; text-decoration:none; transition:transform .12s, box-shadow .12s, border-color .12s; }
+  a.sh-box:hover { border-color:var(--primary); box-shadow:0 3px 12px rgba(108,112,220,.20); transform:translateY(-1px); }
+  a.sh-box::after { content:"→"; margin-inline-start:auto; color:var(--sub); opacity:0; transition:opacity .12s; }
+  a.sh-box:hover::after { opacity:1; }
+  .sh-widgets { display:grid; gap:14px; grid-template-columns:1fr; margin-top:14px; }
+  @media(min-width:980px){ .sh-widgets{ grid-template-columns:1fr 1fr;} }
+  .sh-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+  .sh-tbl td { padding:7px 4px; border-bottom:1px solid var(--line); color:var(--ink); }
+  .sh-tbl td:last-child { text-align:right; font-weight:700; }
+  .sh-tbl tr:last-child td { border-bottom:0; }
+  .sh-empty { color:var(--sub); font-size:13px; padding:6px 0; }
+  .sh-funnel { display:flex; flex-direction:column; gap:8px; }
+  .sh-step { display:flex; align-items:center; gap:10px; }
+  .sh-bar { height:26px; border-radius:6px; background:var(--tint); min-width:2px; }
+  .sh-step .sh-n { font-weight:800; color:var(--ink); font-size:14px; width:64px; }
+  .sh-step .sh-k { color:var(--sub); font-size:12px; }
 </style>
 
 <div class="sh-wrap" dir="ltr">
@@ -36,13 +55,13 @@ Unfold CSS build; colors mirror the frontend brand tokens.
 
   <div class="sh-grid">
     {% for b in stat_boxes %}
-      <div class="sh-box">
+      {% if b.link %}<a class="sh-box" href="{{ b.link }}" title="فتح القائمة المُصفّاة">{% else %}<div class="sh-box">{% endif %}
         <div class="sh-ico sh-t-{{ b.tone }}">{{ b.emoji }}</div>
         <div>
           <div class="sh-val">{{ b.value }}</div>
           <div class="sh-lbl">{{ b.label }}</div>
         </div>
-      </div>
+      {% if b.link %}</a>{% else %}</div>{% endif %}
     {% endfor %}
   </div>
 
@@ -54,6 +73,52 @@ Unfold CSS build; colors mirror the frontend brand tokens.
     <div class="sh-card">
       <h3>Contracts by status</h3>
       <canvas id="shStatus" height="120"></canvas>
+    </div>
+  </div>
+
+  <div class="sh-h2">Insights</div>
+  <div class="sh-charts">
+    <div class="sh-card">
+      <h3>Jobs by category (top 8)</h3>
+      <canvas id="shCats" height="120"></canvas>
+    </div>
+    <div class="sh-card">
+      <h3>Funnels</h3>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:4px;">Affiliate</div>
+      <div class="sh-funnel">
+        <div class="sh-step"><span class="sh-n">{{ widgets.affiliate_funnel.clicks }}</span><span class="sh-bar" style="width:100%"></span><span class="sh-k">clicks</span></div>
+        <div class="sh-step"><span class="sh-n">{{ widgets.affiliate_funnel.registrations }}</span><span class="sh-bar" style="width:60%"></span><span class="sh-k">registrations</span></div>
+        <div class="sh-step"><span class="sh-n">{{ widgets.affiliate_funnel.transactions }}</span><span class="sh-bar" style="width:30%"></span><span class="sh-k">transactions</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--sub);margin:12px 0 4px;">Signups</div>
+      <div class="sh-funnel">
+        <div class="sh-step"><span class="sh-n">{{ widgets.signup_funnel.tracked_visits }}</span><span class="sh-bar" style="width:100%"></span><span class="sh-k">tracked visits</span></div>
+        <div class="sh-step"><span class="sh-n">{{ widgets.signup_funnel.signups }}</span><span class="sh-bar" style="width:70%"></span><span class="sh-k">signups</span></div>
+        <div class="sh-step"><span class="sh-n">{{ widgets.signup_funnel.first_action }}</span><span class="sh-bar" style="width:40%"></span><span class="sh-k">took first action</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sh-widgets">
+    <div class="sh-card">
+      <h3>🏆 Top earning workers</h3>
+      <table class="sh-tbl">
+        {% for w in widgets.top_workers %}
+          <tr><td>{{ w.worker__email|default:"—" }}</td><td>{{ w.earned|default:0 }} USD</td></tr>
+        {% empty %}
+          <tr><td class="sh-empty">لا توجد عقود مكتملة بعد</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="sh-card">
+      <h3>🧑‍💼 Top employers (by jobs posted)</h3>
+      <table class="sh-tbl">
+        {% for e in widgets.top_employers %}
+          <tr><td>{{ e.employer__email|default:"—" }}</td><td>{{ e.jobs }}</td></tr>
+        {% empty %}
+          <tr><td class="sh-empty">لا توجد وظائف بعد</td></tr>
+        {% endfor %}
+      </table>
     </div>
   </div>
 </div>
@@ -89,6 +154,16 @@ Unfold CSS build; colors mirror the frontend brand tokens.
         data: { labels: d.contract_status.labels, datasets: [{ data: d.contract_status.data,
           backgroundColor: ["#9A6A08","#6C70DC","#3E418F","#1B8A5A","#D93843","#B9BED9"] }] },
         options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+      });
+    }
+    var c = document.getElementById("shCats");
+    if (c && d.jobs_by_category) {
+      new Chart(c, {
+        type: "bar",
+        data: { labels: d.jobs_by_category.labels, datasets: [{ label: "Jobs", data: d.jobs_by_category.data,
+          backgroundColor: brand, borderRadius: 6 }] },
+        options: { indexAxis: "y", responsive: true, plugins: { legend: { display: false } },
+                   scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
       });
     }
   }

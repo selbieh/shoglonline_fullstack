@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html_join
 from unfold.admin import ModelAdmin, TabularInline
 
+from apps.core.admin_export import ExportCsvMixin
+
 from .models import (
     Address,
     Certificate,
@@ -18,13 +20,18 @@ from .services import review_id_verification, review_profile_publish
 
 
 @admin.register(EmployerProfile)
-class EmployerProfileAdmin(ModelAdmin):
+class EmployerProfileAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("user", "company_name", "field", "country", "city", "rating_avg", "rating_count", "total_spent")
     list_filter = ("country", "city", "field")
     search_fields = ("user__email", "company_name", "field", "city", "country")
     autocomplete_fields = ("user",)
     list_select_related = ("user",)
+    date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("rating_avg", "rating_count", "total_spent", "created_at")
+    export_fields = ("id", "user", "company_name", "field", "country", "city",
+                     "rating_avg", "rating_count", "total_spent")
+    actions = ["export_as_csv"]
 
 
 @admin.register(Address)
@@ -68,7 +75,7 @@ class PortfolioInline(TabularInline):
 
 
 @admin.register(WorkerProfile)
-class WorkerProfileAdmin(ModelAdmin):
+class WorkerProfileAdmin(ExportCsvMixin, ModelAdmin):
     """Profiles + the publish-review queue (rule D-1). A worker submits at ≥70% → PENDING_REVIEW;
     the reviewer sees the completeness % and approves (→ live) or rejects (uses publish_reject_reason)."""
 
@@ -82,11 +89,14 @@ class WorkerProfileAdmin(ModelAdmin):
     autocomplete_fields = ("user", "main_category", "specialization")
     list_select_related = ("user", "main_category")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("completeness", "publish_reviewed_by", "publish_reviewed_at",
                        "rating_avg", "rating_count", "total_earned",
                        "visibility_changed_at", "created_at", "updated_at")
+    export_fields = ("id", "user", "display_name", "bio_title", "publish_state", "expertise_level",
+                     "visibility", "is_verified", "rating_avg", "rating_count", "total_earned", "created_at")
     inlines = [SkillInline, EducationInline, EmploymentInline, LanguageInline, CertificateInline, PortfolioInline]
-    actions = ["approve_publish", "reject_publish"]
+    actions = ["approve_publish", "reject_publish", "export_as_csv"]
 
     @admin.display(description="نسبة الاكتمال")
     def completeness(self, obj) -> str:

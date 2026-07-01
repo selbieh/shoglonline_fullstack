@@ -4,16 +4,20 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
 from . import reports as report_targets
+from .admin_export import ExportCsvMixin
 from .models import AuditLog, GlobalSetting, Report, SettingChangeLog
 
 
 @admin.register(GlobalSetting)
-class GlobalSettingAdmin(ModelAdmin):
+class GlobalSettingAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("key", "value", "value_type", "category", "is_public", "updated_by", "updated_at")
     list_filter = ("category", "value_type", "is_public")
     search_fields = ("key", "description")
+    date_hierarchy = "updated_at"
     readonly_fields = ("updated_by", "updated_at")
     list_select_related = ("updated_by",)
+    export_fields = ("id", "key", "value", "value_type", "category", "is_public", "updated_by", "updated_at")
+    actions = ["export_as_csv"]
 
     def save_model(self, request, obj, form, change):
         from django.core.cache import cache
@@ -31,13 +35,16 @@ class GlobalSettingAdmin(ModelAdmin):
 
 
 @admin.register(SettingChangeLog)
-class SettingChangeLogAdmin(ModelAdmin):
+class SettingChangeLogAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("key", "old_value", "new_value", "changed_by", "changed_at")
-    list_filter = ("key",)
-    search_fields = ("key",)
+    list_filter = ("key", "changed_at")
+    search_fields = ("key", "changed_by__email")
     date_hierarchy = "changed_at"
+    list_per_page = 50
     list_select_related = ("changed_by",)
     readonly_fields = [f.name for f in SettingChangeLog._meta.fields]
+    export_fields = ("id", "key", "old_value", "new_value", "changed_by", "changed_at")
+    actions = ["export_as_csv"]
 
     def has_add_permission(self, request):
         return False
@@ -57,7 +64,7 @@ REASON_LABELS = {
 
 
 @admin.register(Report)
-class ReportAdmin(ModelAdmin):
+class ReportAdmin(ExportCsvMixin, ModelAdmin):
     """Abuse-report review queue: open the reported item, then remove it (archive/reject/withdraw/
     cancel/delete depending on kind) or dismiss the report. Removing an item also resolves every
     other open report on the same item and notifies its owner. Actions are audit-logged (SEC-10)."""
@@ -68,9 +75,12 @@ class ReportAdmin(ModelAdmin):
     search_fields = ("object_id", "reason", "detail", "reporter__email")
     list_select_related = ("reporter", "reviewed_by")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("kind", "object_id", "reporter", "reason_label", "detail", "created_at",
                        "reviewed_by", "reviewed_at", "reported_item", "times_reported")
-    actions = ["remove_item", "dismiss"]
+    export_fields = ("id", "kind", "object_id", "reporter", "reason", "status", "resolution",
+                     "reviewed_by", "reviewed_at", "created_at")
+    actions = ["remove_item", "dismiss", "export_as_csv"]
 
     def get_queryset(self, request):
         # default view leads with the open queue, newest first (status is a filter, not a lock-in)
@@ -156,13 +166,16 @@ class ReportAdmin(ModelAdmin):
 
 
 @admin.register(AuditLog)
-class AuditLogAdmin(ModelAdmin):
+class AuditLogAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("at", "actor", "action", "model", "object_id", "ip")
-    list_filter = ("action", "model")
-    search_fields = ("object_id", "action", "model", "ip")
+    list_filter = ("action", "model", "at")
+    search_fields = ("object_id", "action", "model", "ip", "actor__email")
     date_hierarchy = "at"
+    list_per_page = 50
     list_select_related = ("actor",)
     readonly_fields = [f.name for f in AuditLog._meta.fields]
+    export_fields = ("id", "at", "actor", "action", "model", "object_id", "ip")
+    actions = ["export_as_csv"]
 
     def has_add_permission(self, request):
         return False

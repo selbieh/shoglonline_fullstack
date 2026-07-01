@@ -1,5 +1,8 @@
 from django.contrib import admin
+from django.db.models import Count
 from unfold.admin import ModelAdmin, TabularInline
+
+from apps.core.admin_export import ExportCsvMixin
 
 from .models import ContentPage, FAQItem, LandingCard, LandingSection, SiteSettings
 
@@ -17,22 +20,32 @@ def unpublish_selected(modeladmin, request, queryset):
 
 
 @admin.register(ContentPage)
-class ContentPageAdmin(ModelAdmin):
+class ContentPageAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("slug", "title", "is_published", "updated_at")
-    list_filter = ("is_published",)
+    list_display_links = ("title",)
+    list_editable = ("is_published",)
+    list_filter = ("is_published", "updated_at")
     search_fields = ("slug", "title", "body")
     prepopulated_fields = {"slug": ("title",)}
+    date_hierarchy = "updated_at"
     readonly_fields = ("updated_at",)
-    actions = [publish_selected, unpublish_selected]
+    fieldsets = (
+        (None, {"fields": ("slug", "title", "body", "is_published")}),
+        ("SEO", {"fields": ("meta_title", "meta_description"), "classes": ("collapse",)}),
+        ("معلومات", {"fields": ("updated_at",)}),
+    )
+    export_fields = ("id", "slug", "title", "is_published", "updated_at")
+    actions = [publish_selected, unpublish_selected, "export_as_csv"]
 
 
 @admin.register(FAQItem)
-class FAQItemAdmin(ModelAdmin):
+class FAQItemAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("question", "category", "order", "is_published")
     list_editable = ("order", "is_published")
     list_filter = ("is_published", "category")
     search_fields = ("question", "answer")
-    actions = [publish_selected, unpublish_selected]
+    export_fields = ("id", "question", "category", "order", "is_published")
+    actions = [publish_selected, unpublish_selected, "export_as_csv"]
 
 
 class LandingCardInline(TabularInline):
@@ -45,11 +58,18 @@ class LandingCardInline(TabularInline):
 class LandingSectionAdmin(ModelAdmin):
     """Edit the public home page without a deploy (FR-CMS-1)."""
 
-    list_display = ("key", "kind", "heading", "is_active", "order")
+    list_display = ("key", "kind", "heading", "card_count", "is_active", "order")
     list_editable = ("is_active", "order")
     list_filter = ("kind", "is_active")
     search_fields = ("key", "heading", "subheading")
     inlines = [LandingCardInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_cards=Count("cards"))
+
+    @admin.display(description="بطاقات", ordering="_cards")
+    def card_count(self, obj):
+        return obj._cards
 
 
 @admin.register(SiteSettings)
@@ -65,6 +85,7 @@ class SiteSettingsAdmin(ModelAdmin):
         ("روابط التواصل الاجتماعي", {
             "fields": ("facebook_url", "twitter_url", "instagram_url", "youtube_url", "linkedin_url"),
         }),
+        ("معلومات", {"fields": ("updated_at",)}),
     )
     readonly_fields = ("updated_at",)
 

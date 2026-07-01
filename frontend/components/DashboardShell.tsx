@@ -181,6 +181,8 @@ export default function DashboardShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* top bar */}
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/90 px-5 py-3 backdrop-blur">
+          {/* The dashboard ("لوحة التحكم") link lives in the sidebar's first nav item — the
+              top bar only needs the mobile menu trigger, so we don't duplicate it here. */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -191,9 +193,6 @@ export default function DashboardShell({
             >
               <MenuIcon />
             </button>
-            <Link href="/dashboard" className="flex items-center gap-1.5 text-sm font-medium text-ink">
-              <BarChartIcon className="text-[18px] text-primary" /> لوحة التحكم
-            </Link>
           </div>
           <div className="flex items-center gap-1.5">
             <Link href="/notifications" aria-label="الإشعارات" className="relative grid h-10 w-10 place-content-center rounded-full text-[19px] text-sub transition hover:bg-tint hover:text-primary-dark">

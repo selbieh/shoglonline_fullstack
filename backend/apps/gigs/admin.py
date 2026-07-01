@@ -2,6 +2,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
 
+from apps.core.admin_export import ExportCsvMixin
 from apps.core.models import AuditLog
 
 from . import services
@@ -14,17 +15,19 @@ class AddonInline(TabularInline):
 
 
 @admin.register(Service)
-class ServiceAdmin(ModelAdmin):
+class ServiceAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "title", "worker", "category", "base_price", "status", "favorites_count", "views_count")
-    list_filter = ("status", "category", "published_at")
+    list_filter = ("status", "category", "published_at", "created_at")
     search_fields = ("title", "slug", "worker__email", "description")
     autocomplete_fields = ("worker", "category", "subcategory")
     list_select_related = ("worker", "category")
     date_hierarchy = "created_at"
     readonly_fields = ("slug", "favorites_count", "views_count", "frozen_prev_status",
                        "published_at", "created_at", "updated_at")
+    export_fields = ("id", "title", "worker", "category", "base_price", "status",
+                     "favorites_count", "views_count", "published_at", "created_at")
     inlines = [AddonInline]
-    actions = ["approve_services", "reject_services"]
+    actions = ["approve_services", "reject_services", "export_as_csv"]
 
     @admin.action(description="✅ Approve & publish services")
     def approve_services(self, request, queryset):
@@ -50,35 +53,44 @@ class ServiceAdmin(ModelAdmin):
 
 
 @admin.register(BuyingRequest)
-class BuyingRequestAdmin(ModelAdmin):
+class BuyingRequestAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("id", "service", "employer", "quantity", "total_price", "status", "created_at")
     list_filter = ("status", "created_at")
     search_fields = ("service__title", "employer__email")
     list_select_related = ("service", "employer")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = [f.name for f in BuyingRequest._meta.fields]
+    export_fields = ("id", "service", "employer", "quantity", "total_price", "status", "created_at")
+    actions = ["export_as_csv"]
 
     def has_add_permission(self, request):
         return False
 
 
 @admin.register(ServiceFavorite)
-class ServiceFavoriteAdmin(ModelAdmin):
+class ServiceFavoriteAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("user", "service", "created_at")
     list_filter = ("created_at",)
     search_fields = ("user__email", "service__title")
     autocomplete_fields = ("user", "service")
     list_select_related = ("user", "service")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("created_at",)
+    export_fields = ("id", "user", "service", "created_at")
+    actions = ["export_as_csv"]
 
 
 @admin.register(Favorite)
-class FavoriteAdmin(ModelAdmin):
+class FavoriteAdmin(ExportCsvMixin, ModelAdmin):
     list_display = ("user", "kind", "object_id", "created_at")
     list_filter = ("kind", "created_at")
-    search_fields = ("user__email",)
+    search_fields = ("user__email", "object_id")
     autocomplete_fields = ("user",)
     list_select_related = ("user",)
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("created_at",)
+    export_fields = ("id", "user", "kind", "object_id", "created_at")
+    actions = ["export_as_csv"]

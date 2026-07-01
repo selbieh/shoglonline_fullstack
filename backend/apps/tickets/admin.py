@@ -1,5 +1,6 @@
 """Ticket Types CRUD + Tickets queue with reply/solve/close (ADM-6, AC-9)."""
 from django.contrib import admin
+from django.db.models import Count
 from unfold.admin import ModelAdmin, TabularInline
 
 from apps.core.admin_export import ExportCsvMixin
@@ -12,6 +13,8 @@ from .models import Ticket, TicketReply, TicketType
 @admin.register(TicketType)
 class TicketTypeAdmin(ModelAdmin):
     list_display = ("name_ar", "slug", "is_dispute", "is_active")
+    list_display_links = ("name_ar",)
+    list_editable = ("is_active",)
     list_filter = ("is_dispute", "is_active")
     search_fields = ("name_ar", "slug")
     prepopulated_fields = {"slug": ("name_ar",)}
@@ -21,21 +24,30 @@ class TicketReplyInline(TabularInline):
     model = TicketReply
     extra = 0
     fields = ("author", "message", "is_staff", "created_at")
-    readonly_fields = ("author", "created_at")
+    # is_staff is set by services.reply() on save (admin replies are always staff) — show, don't edit.
+    readonly_fields = ("author", "is_staff", "created_at")
 
 
 @admin.register(Ticket)
 class TicketAdmin(ExportCsvMixin, ModelAdmin):
-    list_display = ("id", "title", "user", "type", "status", "contract", "last_activity_at")
+    list_display = ("id", "title", "user", "type", "status", "reply_count", "contract", "last_activity_at")
     list_filter = ("status", "type", "last_activity_at")
     search_fields = ("title", "user__email", "message")
     list_select_related = ("user", "type", "contract")
     date_hierarchy = "created_at"
+    list_per_page = 50
     readonly_fields = ("user", "type", "contract", "job", "created_at", "solved_at", "closed_at",
                        "on_hold_at")
     export_fields = ("id", "title", "user", "type", "status", "contract", "created_at", "last_activity_at")
     inlines = [TicketReplyInline]
     actions = ["mark_pending", "mark_on_hold", "resume_hold", "mark_solved", "mark_closed", "export_as_csv"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_replies=Count("replies"))
+
+    @admin.display(description="ردود", ordering="_replies")
+    def reply_count(self, obj):
+        return obj._replies
 
     def save_formset(self, request, form, formset, change):
         """Admin replies are staff replies (sets status → Answered)."""

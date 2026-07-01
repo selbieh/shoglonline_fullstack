@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from unfold.admin import ModelAdmin
 
 from apps.core.admin_export import ExportCsvMixin
@@ -21,7 +21,10 @@ class CommissionTierAdmin(ModelAdmin):
     existing contracts keep their frozen rate."""
 
     list_display = ("applies_to", "min_amount", "max_amount", "rate_pct", "is_active", "created_at")
+    list_display_links = ("applies_to",)
+    list_editable = ("rate_pct", "is_active")  # safe: edits apply to FUTURE contracts only
     list_filter = ("applies_to", "is_active")
+    ordering = ("applies_to", "min_amount")
     readonly_fields = ("created_at",)
 
 
@@ -57,7 +60,7 @@ class PayoutMethodAdmin(ModelAdmin):
 
 
 @admin.register(Wallet)
-class WalletAdmin(ModelAdmin):
+class WalletAdmin(ExportCsvMixin, ModelAdmin):
     """Balances are ledger-derived — read-only by design (FR-PAY-9)."""
 
     list_display = ("__str__", "available", "escrow_held", "earnings_pending", "is_platform")
@@ -65,6 +68,8 @@ class WalletAdmin(ModelAdmin):
     search_fields = ("user__email",)
     list_select_related = ("user",)
     readonly_fields = [f.name for f in Wallet._meta.fields]
+    export_fields = ("id", "user", "available", "escrow_held", "earnings_pending", "is_platform")
+    actions = ["export_as_csv"]
 
     def has_add_permission(self, request):
         return False
@@ -113,29 +118,47 @@ class WithdrawalAdmin(ExportCsvMixin, ModelAdmin):
     def has_add_permission(self, request):
         return False
 
+    # Only these states are actionable; already paid/rejected rows are skipped (the service is
+    # idempotent, but pre-filtering keeps the result counts honest and avoids needless gateway calls).
+    _ACTIONABLE = (WithdrawalRequest.Status.REQUESTED, WithdrawalRequest.Status.PROCESSING)
+
     @admin.action(description="✅ Paid via PayPal")
     def mark_paid(self, request, queryset):
-        from django.contrib import messages
-
+        actionable = queryset.filter(status__in=self._ACTIONABLE)
+        skipped = queryset.count() - actionable.count()
         paid = failed = 0
-        for withdrawal in queryset:
+        for withdrawal in actionable:
             try:
                 # Sends the PayPal payout for real; isolate per row so one failed/declined payout
                 # (insufficient PayPal balance, bad email) doesn't abort the rest or mark it paid.
-                services.process_withdrawal(withdrawal, paid=True, actor=request.user)
-                AuditLog.objects.create(actor=request.user, action="admin.withdrawal_paid",
-                                        model="WithdrawalRequest", object_id=str(withdrawal.pk))
-                paid += 1
+                result = services.process_withdrawal(withdrawal, paid=True, actor=request.user)
+                if result.status == WithdrawalRequest.Status.PAID:
+                    AuditLog.objects.create(actor=request.user, action="admin.withdrawal_paid",
+                                            model="WithdrawalRequest", object_id=str(withdrawal.pk))
+                    paid += 1
+                else:  # settled to a non-paid state under a race — surface, don't silently count as paid
+                    failed += 1
             except Exception as exc:  # noqa: BLE001 — surface, don't crash the batch
                 failed += 1
                 self.message_user(request, f"#{withdrawal.pk}: تعذّر الدفع — {exc}", level=messages.ERROR)
         if paid:
             self.message_user(request, f"دُفع {paid} طلب سحب عبر PayPal.", level=messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f"تُخطّي {skipped} طلبًا (تمت معالجته مسبقًا).", level=messages.WARNING)
 
     @admin.action(description="❌ Reject & return funds")
     def reject_with_refund(self, request, queryset):
-        for withdrawal in queryset:
-            services.process_withdrawal(withdrawal, paid=False, actor=request.user,
-                                        reason="رفض إداري — راجع بيانات حسابك")
-            AuditLog.objects.create(actor=request.user, action="admin.withdrawal_rejected",
-                                    model="WithdrawalRequest", object_id=str(withdrawal.pk))
+        actionable = queryset.filter(status__in=self._ACTIONABLE)
+        skipped = queryset.count() - actionable.count()
+        rejected = 0
+        for withdrawal in actionable:
+            result = services.process_withdrawal(withdrawal, paid=False, actor=request.user,
+                                                 reason="رفض إداري — راجع بيانات حسابك")
+            if result.status == WithdrawalRequest.Status.REJECTED:
+                AuditLog.objects.create(actor=request.user, action="admin.withdrawal_rejected",
+                                        model="WithdrawalRequest", object_id=str(withdrawal.pk))
+                rejected += 1
+        if rejected:
+            self.message_user(request, f"رُفض {rejected} طلب سحب وأُعيدت الأموال.", level=messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f"تُخطّي {skipped} طلبًا (تمت معالجته مسبقًا).", level=messages.WARNING)
