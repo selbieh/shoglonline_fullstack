@@ -1,0 +1,337 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% comment %}
+Chat Inbox (ADM-6) — a two-pane reader: conversations on the left, the selected thread
+rendered as chat bubbles on the right. Threads load via fetch() from admin:chat_inbox_thread
+(Firestore live, Postgres mirror fallback); inline moderation POSTs to admin:chat_inbox_action.
+Styling is self-contained (inline) so it renders regardless of the Unfold CSS build; colors
+mirror the frontend brand tokens (#6C70DC family).
+{% endcomment %}
+
+{% block content %}
+<style>
+  .ci { --primary:#6C70DC; --primary-deep:#3E418F; --tint:#E9ECFA; --tint-2:#F2F3FC;
+        --success:#1B8A5A; --success-t:#E3F5EC; --warn:#9A6A08; --warn-t:#FCF3DD;
+        --danger:#D93843; --danger-t:#FCE9EA; --ink:#23263F; --sub:#5D6275; --line:#DADDEC;
+        color:var(--ink); }
+  .ci-h1 { font-size:20px; font-weight:800; margin:2px 0 14px; display:flex; align-items:center; gap:8px; }
+  .ci-grid { display:grid; grid-template-columns:360px 1fr; gap:16px; align-items:start; }
+  @media (max-width:900px){ .ci-grid{ grid-template-columns:1fr; } }
+
+  /* ---- left: conversation list ---- */
+  .ci-list { background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+             display:flex; flex-direction:column; max-height:78vh; }
+  .ci-filter { display:flex; gap:8px; padding:12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .ci-filter input[type=search]{ flex:1 1 140px; min-width:120px; padding:8px 10px; border:1px solid var(--line);
+             border-radius:9px; font-size:13px; }
+  .ci-filter select{ padding:8px 8px; border:1px solid var(--line); border-radius:9px; font-size:13px; background:#fff; }
+  .ci-filter button{ padding:8px 12px; border:0; border-radius:9px; background:var(--primary); color:#fff;
+             font-weight:700; font-size:13px; cursor:pointer; }
+  .ci-check{ display:flex; align-items:center; gap:5px; font-size:12px; color:var(--sub); cursor:pointer;
+             flex:1 1 100%; }
+  .ci-presets{ display:flex; gap:8px; padding:0 12px 10px; flex-wrap:wrap; }
+  .ci-preset{ font-size:12px; font-weight:700; text-decoration:none; padding:5px 10px; border-radius:20px;
+             background:var(--tint); color:var(--primary-deep); }
+  .ci-preset:hover{ background:#dfe3f8; }
+  .ci-preset--clear{ background:var(--danger-t); color:var(--danger); }
+  .ci-count { padding:8px 14px; font-size:12px; color:var(--sub); border-bottom:1px solid var(--line); }
+  .ci-scroll { overflow-y:auto; flex:1; }
+  .ci-conv { display:block; width:100%; text-align:inherit; background:none; border:0; cursor:pointer;
+             padding:12px 14px; border-bottom:1px solid var(--line); transition:background .12s; }
+  .ci-conv:hover { background:var(--tint-2); }
+  .ci-conv.is-active { background:var(--tint); box-shadow:inset 3px 0 0 var(--primary); }
+  .ci-conv-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .ci-names { font-weight:700; font-size:13px; color:var(--ink); overflow:hidden; text-overflow:ellipsis;
+              white-space:nowrap; }
+  .ci-sep { color:var(--sub); font-weight:400; margin:0 3px; }
+  .ci-time { font-size:11px; color:var(--sub); white-space:nowrap; }
+  .ci-snippet { font-size:12px; color:var(--sub); margin-top:4px; overflow:hidden; text-overflow:ellipsis;
+                white-space:nowrap; }
+  .ci-badges { margin-top:7px; display:flex; gap:6px; }
+  .ci-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; text-transform:uppercase;
+              letter-spacing:.03em; }
+  .ci-badge--ctx { background:var(--tint); color:var(--primary-deep); }
+  .ci-badge--active { background:var(--success-t); color:var(--success); }
+  .ci-badge--read_only { background:var(--warn-t); color:var(--warn); }
+  .ci-pager { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px;
+              border-top:1px solid var(--line); font-size:12px; color:var(--sub); }
+  .ci-pager a { color:var(--primary-deep); font-weight:700; text-decoration:none; padding:4px 8px;
+              border:1px solid var(--line); border-radius:8px; }
+  .ci-pager a:hover { border-color:var(--primary); }
+  .ci-pager .is-off { opacity:.4; pointer-events:none; }
+  .ci-empty { padding:26px 16px; text-align:center; color:var(--sub); font-size:13px; }
+
+  /* ---- right: thread ---- */
+  .ci-thread { background:#fff; border:1px solid var(--line); border-radius:14px; display:flex;
+               flex-direction:column; min-height:60vh; max-height:78vh; }
+  .ci-th-empty { flex:1; display:grid; place-content:center; color:var(--sub); font-size:14px; text-align:center;
+                 padding:30px; gap:6px; }
+  .ci-th-empty .ci-big { font-size:34px; opacity:.5; }
+  .ci-th-head { display:none; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .ci-th-head.is-on { display:block; }
+  .ci-th-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ci-th-title strong { font-size:15px; }
+  .ci-src { font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; }
+  .ci-src--firestore { background:var(--success-t); color:var(--success); }
+  .ci-src--postgres { background:var(--warn-t); color:var(--warn); }
+  .ci-th-meta { font-size:11px; color:var(--sub); margin-top:6px; }
+  .ci-tools { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+  .ci-btn { font-size:12px; font-weight:700; padding:6px 11px; border-radius:9px; border:1px solid var(--line);
+            background:#fff; color:var(--ink); cursor:pointer; }
+  .ci-btn:hover { border-color:var(--primary); }
+  .ci-btn--danger { color:var(--danger); border-color:var(--danger-t); background:var(--danger-t); }
+  .ci-btn--primary { color:#fff; background:var(--primary); border-color:var(--primary); }
+  .ci-btn[disabled]{ opacity:.45; cursor:not-allowed; }
+
+  .ci-body { flex:1; overflow-y:auto; padding:18px 16px; display:flex; flex-direction:column; gap:12px;
+             background:linear-gradient(#fbfbfe,#f6f7fd); }
+  .ci-msg { max-width:74%; display:flex; flex-direction:column; gap:3px; }
+  .ci-msg--a { align-self:flex-start; }
+  .ci-msg--b { align-self:flex-end; }
+  .ci-who { font-size:11px; color:var(--sub); font-weight:700; padding:0 4px; }
+  .ci-bubble { padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.55; white-space:pre-wrap;
+               word-break:break-word; }
+  .ci-msg--a .ci-bubble { background:#fff; border:1px solid var(--line); border-top-left-radius:5px; }
+  .ci-msg--b .ci-bubble { background:var(--primary); color:#fff; border-top-right-radius:5px; }
+  .ci-when { font-size:10px; color:var(--sub); padding:0 4px; }
+  .ci-msg--b .ci-when { text-align:right; }
+  .ci-files { display:flex; flex-wrap:wrap; gap:6px; margin-top:5px; }
+  .ci-file { display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:4px 8px; border-radius:8px;
+             background:rgba(0,0,0,.06); color:inherit; }
+  .ci-msg--b .ci-file { background:rgba(255,255,255,.22); }
+  .ci-loading { flex:1; display:grid; place-content:center; color:var(--sub); font-size:13px; }
+</style>
+
+{% csrf_token %}
+<div class="ci" dir="rtl">
+  <div class="ci-h1">💬 <span>محادثات — Chat Inbox</span></div>
+
+  <div class="ci-grid">
+    <!-- LEFT: conversation list -->
+    <div class="ci-list">
+      <form class="ci-filter" method="get">
+        <input type="search" name="q" value="{{ q }}" placeholder="بحث بالبريد أو الاسم…">
+        <select name="status">
+          <option value="">كل الحالات</option>
+          <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+          <option value="read_only" {% if status == 'read_only' %}selected{% endif %}>Read-only</option>
+        </select>
+        <select name="context">
+          <option value="">كل السياقات</option>
+          <option value="contract" {% if context == 'contract' %}selected{% endif %}>Contract</option>
+          <option value="proposal" {% if context == 'proposal' %}selected{% endif %}>Proposal</option>
+          <option value="service" {% if context == 'service' %}selected{% endif %}>Service</option>
+          <option value="direct" {% if context == 'direct' %}selected{% endif %}>Direct</option>
+        </select>
+        <label class="ci-check"><input type="checkbox" name="has_messages" value="1" {% if has_messages %}checked{% endif %}> لديها رسائل فقط</label>
+        <button type="submit">تطبيق</button>
+      </form>
+      <div class="ci-presets">
+        <a class="ci-preset" href="?context=contract&status=active&has_messages=1">⚡ عقود نشطة</a>
+        {% if q or status or context or has_messages %}<a class="ci-preset ci-preset--clear" href="?">✕ مسح الفلاتر</a>{% endif %}
+      </div>
+      <div class="ci-count">{{ total }} محادثة</div>
+      <div class="ci-scroll">
+        {% for c in conversations %}
+          <button type="button" class="ci-conv" data-conv-id="{{ c.id }}"
+                  data-thread-url="{% url 'admin:chat_inbox_thread' c.id %}"
+                  data-action-url="{% url 'admin:chat_inbox_action' c.id %}">
+            <div class="ci-conv-top">
+              <span class="ci-names">{{ c.participants.0.name }}<span class="ci-sep">↔</span>{{ c.participants.1.name }}</span>
+              <span class="ci-time" data-ts="{{ c.last_message_at|date:'c' }}">{{ c.last_message_at|date:'Y-m-d H:i'|default:'—' }}</span>
+            </div>
+            <div class="ci-snippet">{{ c.snippet|default:'—' }}</div>
+            <div class="ci-badges">
+              <span class="ci-badge ci-badge--ctx">{{ c.context }}</span>
+              <span class="ci-badge ci-badge--{{ c.status }}">{{ c.status }}</span>
+            </div>
+          </button>
+        {% empty %}
+          <div class="ci-empty">لا توجد محادثات مطابقة</div>
+        {% endfor %}
+      </div>
+      {% if num_pages > 1 %}
+      <div class="ci-pager">
+        <a class="{% if not has_prev %}is-off{% endif %}" href="?q={{ q|urlencode }}&status={{ status }}&context={{ context }}&has_messages={% if has_messages %}1{% endif %}&page={{ prev_page }}">‹ السابق</a>
+        <span>صفحة {{ page }} / {{ num_pages }}</span>
+        <a class="{% if not has_next %}is-off{% endif %}" href="?q={{ q|urlencode }}&status={{ status }}&context={{ context }}&has_messages={% if has_messages %}1{% endif %}&page={{ next_page }}">التالي ›</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT: thread -->
+    <div class="ci-thread" id="ci-thread" data-can-moderate="{{ can_moderate|yesno:'1,0' }}">
+      <div class="ci-th-head" id="ci-head">
+        <div class="ci-th-title">
+          <strong id="ci-head-title">—</strong>
+          <span class="ci-src" id="ci-src"></span>
+        </div>
+        <div class="ci-th-meta" id="ci-head-meta"></div>
+        <div class="ci-tools" id="ci-tools"></div>
+      </div>
+      <div class="ci-th-empty" id="ci-empty">
+        <div class="ci-big">💬</div>
+        <div>اختر محادثة لعرض الرسائل</div>
+      </div>
+      <div class="ci-body" id="ci-body" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var thread = document.getElementById("ci-thread");
+  var head = document.getElementById("ci-head");
+  var headTitle = document.getElementById("ci-head-title");
+  var headMeta = document.getElementById("ci-head-meta");
+  var srcBadge = document.getElementById("ci-src");
+  var tools = document.getElementById("ci-tools");
+  var emptyPane = document.getElementById("ci-empty");
+  var body = document.getElementById("ci-body");
+  var canModerate = thread.getAttribute("data-can-moderate") === "1";
+  var current = null; // {actionUrl, participants}
+
+  function csrf() {
+    var el = document.querySelector("[name=csrfmiddlewaretoken]");
+    return el ? el.value : "";
+  }
+  function esc(s) { var d = document.createElement("div"); d.textContent = (s == null ? "" : String(s)); return d.innerHTML; }
+  function fmt(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleString();
+  }
+  function humanSize(n) {
+    if (!n && n !== 0) return "";
+    var u = ["B","KB","MB","GB"], i = 0; n = Number(n);
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (i ? n.toFixed(1) : n) + " " + u[i];
+  }
+  var KIND = { image:"🖼️", video:"🎬", audio:"🎵", document:"📄", archive:"🗜️", other:"📎" };
+
+  // localize the list timestamps to the viewer's zone
+  document.querySelectorAll(".ci-time[data-ts]").forEach(function (el) {
+    var ts = el.getAttribute("data-ts");
+    if (ts) { var d = new Date(ts); if (!isNaN(d)) el.textContent = d.toLocaleString(); }
+  });
+
+  function renderMessages(data) {
+    var parts = (data.conversation && data.conversation.participants) || [];
+    var aId = parts[0] ? String(parts[0].id) : null; // party A → left
+    body.innerHTML = "";
+    if (!data.messages || !data.messages.length) {
+      body.innerHTML = '<div class="ci-loading">لا توجد رسائل في هذه المحادثة</div>';
+      return;
+    }
+    data.messages.forEach(function (m) {
+      var sid = m.sender_id == null ? "" : String(m.sender_id);
+      var side = (sid && sid === aId) ? "a" : "b";
+      var wrap = document.createElement("div");
+      wrap.className = "ci-msg ci-msg--" + side;
+      var files = "";
+      if (m.files && m.files.length) {
+        files = '<div class="ci-files">' + m.files.map(function (f) {
+          return '<span class="ci-file">' + (KIND[f.kind] || KIND.other) + " " + esc(f.name) +
+                 (f.size ? " · " + humanSize(f.size) : "") + "</span>";
+        }).join("") + "</div>";
+      }
+      var bodyHtml = m.body ? esc(m.body) : '<em style="opacity:.6">(بدون نص)</em>';
+      wrap.innerHTML =
+        '<span class="ci-who">' + esc(m.sender_name) + "</span>" +
+        '<div class="ci-bubble">' + bodyHtml + files + "</div>" +
+        '<span class="ci-when">' + esc(fmt(m.created_at)) + "</span>";
+      body.appendChild(wrap);
+    });
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function renderHead(data) {
+    var conv = data.conversation || {};
+    var parts = conv.participants || [];
+    headTitle.textContent = parts.map(function (p) { return p.name; }).join("  ↔  ");
+    srcBadge.textContent = data.source === "firestore" ? "🟢 Firestore (live)" : "🟡 Postgres mirror";
+    srcBadge.className = "ci-src ci-src--" + (data.source === "firestore" ? "firestore" : "postgres");
+
+    var reads = conv.reads || {};
+    var meta = [];
+    meta.push("#" + conv.id + " · " + (conv.context || ""));
+    parts.forEach(function (p) {
+      var r = reads[String(p.id)];
+      meta.push(esc(p.email || p.name) + (p.status && p.status !== "active" ? " (" + p.status + ")" : "") +
+                (r ? " — قرأ حتى " + fmt(r) : " — لم يُقرأ"));
+    });
+    headMeta.innerHTML = meta.join(" &nbsp;•&nbsp; ");
+
+    tools.innerHTML = "";
+    if (!canModerate) return;
+    // Archive / Reactivate depending on current status
+    if (conv.status === "read_only") {
+      tools.appendChild(mkBtn("إعادة تفعيل", "ci-btn ci-btn--primary", function () { doAction("reactivate"); }));
+    } else {
+      tools.appendChild(mkBtn("أرشفة (قراءة فقط)", "ci-btn", function () {
+        if (confirm("جعل هذه المحادثة للقراءة فقط؟")) doAction("archive");
+      }));
+    }
+    parts.forEach(function (p) {
+      var frozen = p.status && p.status !== "active";
+      var b = mkBtn((frozen ? "مجمّد: " : "تجميد ") + p.name, "ci-btn ci-btn--danger", function () {
+        if (confirm("تجميد حساب " + (p.email || p.name) + "؟ سيُطبَّق أثر التجميد (BR-23).")) doAction("freeze", p.id);
+      });
+      if (frozen) b.disabled = true;
+      tools.appendChild(b);
+    });
+  }
+
+  function mkBtn(label, cls, onClick) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = cls; b.textContent = label; b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function doAction(action, userId) {
+    if (!current) return;
+    var fd = new FormData();
+    fd.append("action", action);
+    if (userId != null) fd.append("user_id", userId);
+    fetch(current.actionUrl, {
+      method: "POST", body: fd, credentials: "same-origin",
+      headers: { "X-CSRFToken": csrf(), "X-Requested-With": "XMLHttpRequest" },
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { alert("تعذّر تنفيذ الإجراء: " + (res.j.error || "")); return; }
+        if (res.j.message) alert(res.j.message);
+        loadThread(current.el, true); // refresh head/status/messages
+      }).catch(function () { alert("خطأ في الشبكة"); });
+  }
+
+  function loadThread(el, keepActive) {
+    if (!keepActive) {
+      document.querySelectorAll(".ci-conv.is-active").forEach(function (n) { n.classList.remove("is-active"); });
+      el.classList.add("is-active");
+    }
+    current = { actionUrl: el.getAttribute("data-action-url"), el: el };
+    emptyPane.style.display = "none";
+    head.classList.add("is-on");
+    body.style.display = "flex";
+    body.innerHTML = '<div class="ci-loading">جارٍ التحميل…</div>';
+    fetch(el.getAttribute("data-thread-url"), {
+      credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" },
+    }).then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      }).then(function (data) {
+        renderHead(data);
+        renderMessages(data);
+      }).catch(function () {
+        body.innerHTML = '<div class="ci-loading">تعذّر تحميل المحادثة</div>';
+      });
+  }
+
+  document.querySelectorAll(".ci-conv").forEach(function (el) {
+    el.addEventListener("click", function () { loadThread(el, false); });
+  });
+})();
+</script>
+{% endblock %}

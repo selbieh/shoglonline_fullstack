@@ -41,7 +41,22 @@ function VideoAttachment({ att, mine }: { att: ChatAttachment; mine: boolean }) 
 }
 
 function FileChip({ att, mine }: { att: ChatAttachment; mine: boolean }) {
-  const { url } = useAttachmentUrl(att.id);
+  const { url, error } = useAttachmentUrl(att.id);
+  // Distinct failed state — otherwise a download error (expired token, deleted upload) renders
+  // identically to the still-loading state (greyed, non-clickable) and looks like it loads forever.
+  if (error) {
+    return (
+      <span
+        className={`inline-flex max-w-full items-center gap-2 rounded-m border px-3 py-2 text-xs ${
+          mine ? "border-white/30 bg-white/10 text-white" : "border-line bg-white text-ink"
+        }`}
+      >
+        <DocumentIcon className="shrink-0 text-[16px]" />
+        <span className="truncate">{att.name}</span>
+        <span className="shrink-0 opacity-70">تعذّر تحميل الملف</span>
+      </span>
+    );
+  }
   return (
     <a
       href={url || undefined}

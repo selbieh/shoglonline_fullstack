@@ -48,10 +48,41 @@ Unfold CSS build; colors mirror the frontend brand tokens.
   .sh-bar { height:26px; border-radius:6px; background:var(--tint); min-width:2px; }
   .sh-step .sh-n { font-weight:800; color:var(--ink); font-size:14px; width:64px; }
   .sh-step .sh-k { color:var(--sub); font-size:12px; }
+  /* action queue — clickable "needs attention" pills (only non-zero queues render) */
+  .sh-queue { display:flex; flex-wrap:wrap; gap:10px; margin:2px 0 20px; }
+  .sh-pill { display:inline-flex; align-items:center; gap:8px; text-decoration:none; padding:9px 12px;
+             border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink);
+             font-size:13px; font-weight:600; transition:transform .12s, box-shadow .12s, border-color .12s; }
+  .sh-pill:hover { transform:translateY(-1px); box-shadow:0 3px 12px rgba(35,38,63,.12); }
+  .sh-pill .sh-c { font-weight:800; border-radius:999px; padding:1px 8px; font-size:12px; }
+  .sh-pill.t-danger { border-color:#F3C0C4; } .sh-pill.t-danger .sh-c { background:var(--danger-t); color:var(--danger); }
+  .sh-pill.t-warn   { border-color:#EBD79B; } .sh-pill.t-warn   .sh-c { background:var(--warn-t);   color:var(--warn); }
+  .sh-pill.t-info   { border-color:#BEC3EE; } .sh-pill.t-info   .sh-c { background:var(--tint);     color:var(--primary-deep); }
+  .sh-allclear { color:var(--success); font-size:13px; font-weight:600; background:var(--success-t);
+                 border:1px solid #B7E3CC; border-radius:10px; padding:10px 14px; }
+  /* date-range selector for the charts */
+  .sh-rangebar { display:flex; align-items:center; gap:8px; margin:18px 0 0; }
+  .sh-range { text-decoration:none; font-size:12px; font-weight:700; color:var(--sub); border:1px solid var(--line);
+              background:#fff; border-radius:8px; padding:5px 10px; }
+  .sh-range.is-active { background:var(--primary); color:#fff; border-color:var(--primary); }
+  .sh-range:hover:not(.is-active) { border-color:var(--primary); color:var(--primary-deep); }
 </style>
 
 <div class="sh-wrap" dir="ltr">
   <div class="sh-h1">📊 Dashboard</div>
+
+  <div class="sh-h2" dir="rtl">يحتاج إجراءً — قوائم العمل</div>
+  {% if action_queue %}
+    <div class="sh-queue" dir="rtl">
+      {% for q in action_queue %}
+        <a class="sh-pill t-{{ q.tone }}" href="{{ q.link }}" title="فتح القائمة المُصفّاة">
+          <span>{{ q.emoji }}</span><span>{{ q.label }}</span><span class="sh-c">{{ q.count }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="sh-queue" dir="rtl"><span class="sh-allclear">✓ لا توجد مهام معلّقة — كل القوائم فارغة</span></div>
+  {% endif %}
 
   <div class="sh-grid">
     {% for b in stat_boxes %}
@@ -65,9 +96,16 @@ Unfold CSS build; colors mirror the frontend brand tokens.
     {% endfor %}
   </div>
 
+  <div class="sh-rangebar">
+    <span style="font-size:12px;color:var(--sub);font-weight:700;">Range</span>
+    {% for r in day_ranges %}
+      <a class="sh-range {% if r == days %}is-active{% endif %}" href="?days={{ r }}">{{ r }}d</a>
+    {% endfor %}
+  </div>
+
   <div class="sh-charts">
     <div class="sh-card">
-      <h3>Activity — last 14 days</h3>
+      <h3>Activity — last {{ days }} days</h3>
       <canvas id="shTrend" height="120"></canvas>
     </div>
     <div class="sh-card">

@@ -30,7 +30,7 @@ export default function MessageBubble({
               ))}
             </div>
           )}
-          {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+          {m.body && <p dir="auto" className="whitespace-pre-wrap break-words">{m.body}</p>}
           <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${m.mine ? "text-white/70" : "text-sub"}`}>
             <span>{clockTime(m.created_at)}</span>
             {m.mine && <ReadReceipt read={readByOther} />}

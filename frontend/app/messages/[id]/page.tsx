@@ -11,6 +11,7 @@ import { LockIcon } from "@/components/icons";
 import ThreadHeader from "@/components/chat/ThreadHeader";
 import MessageBubble from "@/components/chat/MessageBubble";
 import MessageComposer from "@/components/chat/MessageComposer";
+import ChatSafetyNotice from "@/components/chat/ChatSafetyNotice";
 import type { Conversation } from "@/components/chat/types";
 import type { ChatAttachment, ChatMessage } from "@/lib/chatFormat";
 
@@ -163,6 +164,7 @@ export default function ThreadPage() {
       <ThreadHeader conv={conv} />
 
       <div ref={scrollerRef} className="flex-1 space-y-3 overflow-y-auto bg-bg p-4">
+        <ChatSafetyNotice conversationId={id} />
         <div className="mx-auto max-w-md rounded-m bg-tint/60 px-3 py-2 text-center text-[11px] leading-relaxed text-primary-dark">
           إن لم تُقرأ رسالتك خلال 10 دقائق نُرسل للطرف الآخر بريدًا تلقائيًا برابط المحادثة — مرة واحدة لكل رسالة.
         </div>

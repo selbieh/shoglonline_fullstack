@@ -33,15 +33,21 @@ def create_invoice_request(*, worker, employer, period_type: str, anchor: date =
 
     anchor = anchor or timezone.now().date()
     start, end = period_bounds(period_type, anchor)
-    contracts = Contract.objects.filter(
-        worker=worker, employer=employer, status=Contract.Status.COMPLETED,
-        completed_at__date__gte=start, completed_at__date__lte=end,
-    ).exclude(
-        # Never bill the same contract on two invoices (overlapping periods would double-count the
-        # same earnings into conflicting documents). Rejected invoices free their contracts again.
-        invoice_lines__invoice__status__in=[InvoiceRequest.Status.REQUESTED, InvoiceRequest.Status.CONFIRMED],
+    # Lock the candidate contract rows (of=self so we don't lock joined tables) for the duration
+    # of this atomic block. Two concurrent invoice requests for overlapping periods would otherwise
+    # both evaluate the exclude() before either committed its lines and double-bill the same
+    # contract; the row lock serializes them so the second sees the contract already billed.
+    contracts = list(
+        Contract.objects.select_for_update(of=("self",)).filter(
+            worker=worker, employer=employer, status=Contract.Status.COMPLETED,
+            completed_at__date__gte=start, completed_at__date__lte=end,
+        ).exclude(
+            # Never bill the same contract on two invoices (overlapping periods would double-count
+            # the same earnings into conflicting documents). Rejected invoices free contracts again.
+            invoice_lines__invoice__status__in=[InvoiceRequest.Status.REQUESTED, InvoiceRequest.Status.CONFIRMED],
+        )
     )
-    if not contracts.exists():
+    if not contracts:
         raise ValidationError(ERR["empty"])
 
     invoice = InvoiceRequest.objects.create(
@@ -60,9 +66,13 @@ def create_invoice_request(*, worker, employer, period_type: str, anchor: date =
 
 @transaction.atomic
 def confirm_invoice(invoice: InvoiceRequest, employer) -> InvoiceRequest:
+    # Take a row lock and read the authoritative status from it so concurrent confirm/reject on the
+    # same invoice serialize and cannot both pass the REQUESTED guard. We mutate the caller's
+    # `invoice` instance in place (the view serializes that object).
+    locked = InvoiceRequest.objects.select_for_update().get(pk=invoice.pk)
     if invoice.employer_id != employer.id:
         raise PermissionDenied(ERR["not_employer"])
-    if invoice.status != InvoiceRequest.Status.REQUESTED:
+    if locked.status != InvoiceRequest.Status.REQUESTED:
         raise ValidationError(ERR["not_pending"])
     invoice.status = InvoiceRequest.Status.CONFIRMED
     invoice.confirmed_at = timezone.now()
@@ -74,10 +84,14 @@ def confirm_invoice(invoice: InvoiceRequest, employer) -> InvoiceRequest:
     return invoice
 
 
+@transaction.atomic
 def reject_invoice(invoice: InvoiceRequest, employer, reason: str) -> InvoiceRequest:
+    # Row lock + authoritative status read (mirrors confirm_invoice) so confirm/reject transitions
+    # on the same invoice serialize instead of both passing the REQUESTED guard.
+    locked = InvoiceRequest.objects.select_for_update().get(pk=invoice.pk)
     if invoice.employer_id != employer.id:
         raise PermissionDenied(ERR["not_employer"])
-    if invoice.status != InvoiceRequest.Status.REQUESTED:
+    if locked.status != InvoiceRequest.Status.REQUESTED:
         raise ValidationError(ERR["not_pending"])
     invoice.status = InvoiceRequest.Status.REJECTED
     invoice.reject_reason = reason

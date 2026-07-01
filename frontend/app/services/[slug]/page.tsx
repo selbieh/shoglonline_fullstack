@@ -51,7 +51,7 @@ export default async function ServiceDetailPage({ params }: { params: { slug: st
       <ServiceDetailView
         s={s}
         titleActions={<ReportButton kind="service" id={s.id} label="إبلاغ" />}
-        buyBox={<BuyBox service={{ id: s.id, base_price: s.base_price, addons: s.addons }} />}
+        buyBox={<BuyBox service={{ id: s.id, base_price: s.base_price, addons: s.addons, worker: s.worker }} />}
       />
     </>
   );

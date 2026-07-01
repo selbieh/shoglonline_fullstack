@@ -1,5 +1,6 @@
 from django.db.models import Count, Sum
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import serializers
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -71,7 +72,10 @@ class MyBidsHistoryView(APIView):
         elif period == "current_year":
             qs = qs.filter(created_at__year=now.year)
         elif period == "custom":
-            frm, to = request.query_params.get("from"), request.query_params.get("to")
+            # parse_date returns None for a malformed value, so we ignore bad input instead of
+            # passing a raw string to the ORM lookup (which raises ValidationError -> 500).
+            frm = parse_date(request.query_params.get("from") or "")
+            to = parse_date(request.query_params.get("to") or "")
             if frm:
                 qs = qs.filter(created_at__date__gte=frm)
             if to:

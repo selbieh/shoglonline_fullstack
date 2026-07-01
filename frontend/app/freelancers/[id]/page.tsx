@@ -56,7 +56,7 @@ export default async function FreelancerDetailPage({ params }: { params: { id: s
       <FreelancerProfileView
         f={f}
         services={services}
-        headerSlot={<a href="/freelancers" className="text-sm font-medium text-primary-dark hover:underline">← كل المستقلين</a>}
+        headerSlot={<a href="/freelancers" className="text-sm font-medium text-primary-dark hover:underline">→ كل المستقلين</a>}
         actions={<ProfileActions profileId={f.id} />}
       />
     </>

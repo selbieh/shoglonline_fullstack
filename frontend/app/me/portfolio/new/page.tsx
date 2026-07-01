@@ -91,7 +91,7 @@ export default function AddPortfolioPage() {
     <main dir="rtl" className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">إضافة عمل جديد</h1>
-        <a href="/me/profile" className="text-sm text-primary-dark">← ملفي</a>
+        <a href="/me/profile" className="text-sm text-primary-dark">→ ملفي</a>
       </div>
       <p className="mt-1 text-sm text-sub">اعرض أفضل أعمالك وشارك إنجازاتك مع العملاء.</p>
 

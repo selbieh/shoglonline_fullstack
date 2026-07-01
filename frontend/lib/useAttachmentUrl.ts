@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { API_URL, tokens } from "./api";
+import { API_URL, refreshAccess, tokens } from "./api";
 
 /**
  * Resolve a chat attachment to a browser-usable object URL.
@@ -21,7 +21,10 @@ async function fetchBlobUrl(id: number, retry = true): Promise<string> {
   const headers: Record<string, string> = {};
   if (tokens.access) headers.Authorization = `Bearer ${tokens.access}`;
   const res = await fetch(`${API_URL}/uploads/${id}`, { headers });
-  if (res.status === 401 && retry) {
+  // On 401, refresh the access token BEFORE retrying (mirrors api()/uploadFile). Retrying with the
+  // same expired token — as before — could never succeed, so the attachment stayed permanently
+  // broken after the token expired even though a valid refresh token existed.
+  if (res.status === 401 && retry && (await refreshAccess())) {
     cache.delete(id);
     return fetchBlobUrl(id, false);
   }

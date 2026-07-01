@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
+import { pluralizeDays } from "@/lib/arabic";
 import { AlertIcon, ArrowLeftIcon, ClockIcon, HeartIcon, SearchIcon } from "@/components/icons";
 import { CategoryIcon } from "@/components/CategoryIcon";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -281,7 +282,7 @@ export default function ServicesClient({
                         <div className="flex items-center gap-4 border-t border-line pt-3 text-xs text-sub">
                           <span className="inline-flex items-center gap-1" title="مدة التسليم">
                             <ClockIcon className="text-[14px] text-primary" />
-                            <span className="font-bold text-ink">{s.delivery_days.toLocaleString("en-US")}</span> يوم
+                            <span className="font-bold text-ink">{pluralizeDays(s.delivery_days)}</span>
                           </span>
                           <span className="inline-flex items-center gap-1" title="المفضلة">
                             <HeartIcon className="text-[14px] text-danger" />

@@ -57,7 +57,7 @@ export default function SubscriptionsPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">اشتراكات الفئات</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
       <p className="mt-1 text-sm text-sub">
         اشترك في فئة لتصلك إشعارات بالوظائف الجديدة فيها. يمكنك إلغاء الاشتراك في أي وقت.

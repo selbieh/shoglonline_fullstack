@@ -153,7 +153,10 @@ export default function ContractDetailPage() {
   const isEmployer = c.my_role === "employer";
   const openSub = submissions.find((s) => s.status === "open");
   const pendingUpdate = update_requests.find((u) => u.status === "pending" || u.status === "pending_funding");
-  const canDeliver = c.my_role === "worker" && (c.status === "active" || c.status === "delivered");
+  // Only when the worker can actually create a submission (status active). In the 'delivered' state a
+  // submission is already OPEN awaiting review, so the backend rejects a new one ("submission already
+  // open") — showing the deliver form there is a guaranteed dead-end.
+  const canDeliver = c.my_role === "worker" && c.status === "active";
   const canReviewSub = isEmployer && c.status === "delivered" && openSub;
   const canChangeTerms = c.status === "active" || c.status === "delivered";
   // P2-15: a typed budget must parse to a positive number before we allow submitting the request.
@@ -162,7 +165,7 @@ export default function ContractDetailPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <a href="/contracts" className="text-sm text-primary-dark">← كل العقود</a>
+        <a href="/contracts" className="text-sm text-primary-dark">→ كل العقود</a>
         <span className={`rounded-full px-3 py-1 text-xs ${STATUS_CHIP[c.status]}`}>{STATUS_LABEL[c.status]}</span>
       </div>
 

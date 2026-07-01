@@ -70,6 +70,11 @@ export default function PortfolioManagePage() {
   async function save() {
     setBusy(true);
     setMsg(null);
+    // A fresh upload links its attachment. If instead the user pasted a cover URL over an existing
+    // uploaded image (no new upload), unlink the old attachment ([]) so image_url clears — otherwise
+    // the display keeps preferring the uploaded image_url and the pasted cover_url never shows.
+    const replacingImageWithUrl = !coverAtt && !!existingImage && !!f.cover_url;
+    const attachment_ids = coverAtt ? [coverAtt] : replacingImageWithUrl ? [] : undefined;
     try {
       await api(`/me/portfolio/${params.id}`, {
         method: "PATCH",
@@ -85,13 +90,15 @@ export default function PortfolioManagePage() {
           completed_at: f.completed_at || null,
           budget: f.budget || null,
           features,
-          attachment_ids: coverAtt ? [coverAtt] : undefined,
+          attachment_ids,
         }),
       });
       if (uploadedUrl) {
         setExistingImage(uploadedUrl);
         setUploadedUrl("");
         setCoverAtt(null);
+      } else if (replacingImageWithUrl) {
+        setExistingImage(""); // the uploaded image was unlinked; the pasted cover now renders
       }
       setMsg({ ok: true, text: "✅ تم حفظ التعديلات" });
     } catch (e) {
@@ -113,7 +120,7 @@ export default function PortfolioManagePage() {
     <main dir="rtl" className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">إدارة العمل</h1>
-        <a href="/me/profile" className="text-sm text-primary-dark">← ملفي</a>
+        <a href="/me/profile" className="text-sm text-primary-dark">→ ملفي</a>
       </div>
 
       {msg && (

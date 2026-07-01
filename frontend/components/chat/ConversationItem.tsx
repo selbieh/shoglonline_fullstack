@@ -30,7 +30,7 @@ export default function ConversationItem({ conv, active }: { conv: Conversation;
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1 text-xs text-sub">
             {conv.read_only && <LockIcon className="shrink-0 text-[11px]" />}
-            <span className="truncate">{conv.last_message_snippet || "—"}</span>
+            <span dir="auto" className="truncate">{conv.last_message_snippet || "—"}</span>
           </p>
           {conv.unread > 0 && (
             <span className="grid h-5 min-w-5 shrink-0 place-content-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-white">

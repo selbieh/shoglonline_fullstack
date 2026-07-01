@@ -4,6 +4,7 @@ import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { pluralizeDays } from "@/lib/arabic";
 import { signinHereHref } from "@/lib/nav";
 import { useFieldErrors, validateFields } from "@/lib/useFieldErrors";
 import Field from "@/components/Field";
@@ -157,7 +158,7 @@ export default function OwnerServicePage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      <a href="/me/services" className="text-sm font-medium text-primary-dark hover:underline">← خدماتي</a>
+      <a href="/me/services" className="text-sm font-medium text-primary-dark hover:underline">→ خدماتي</a>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -166,7 +167,7 @@ export default function OwnerServicePage() {
             <span className={`chip ${ST_CHIP[s.status] ?? "bg-tint text-primary-dark"}`}>{ST_LABEL[s.status] ?? s.status}</span>
             {s.category_name && <span>{s.category_name}</span>}
             <span className="font-bold text-primary">{formatUSD(s.base_price)}</span>
-            <span>· {s.delivery_days.toLocaleString("en-US")} يوم</span>
+            <span>· {pluralizeDays(s.delivery_days)}</span>
           </div>
           {s.status === "rejected" && s.reject_reason && (
             <p className="mt-2 rounded-m bg-danger-t p-3 text-sm text-danger">
@@ -273,11 +274,11 @@ export default function OwnerServicePage() {
           )}
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           {/* service info */}
           <DetailRail title="معلومات الخدمة">
             <RailRow icon={<WalletIcon />} label="السعر الأساسي" value={<span>{formatUSD(s.base_price)}</span>} />
-            <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
+            <RailRow icon={<ClockIcon />} label="مدة التسليم" value={pluralizeDays(s.delivery_days)} />
             {s.category_name && <RailRow icon={<GridIcon />} label="التصنيف" value={s.category_name} />}
           </DetailRail>
 
@@ -312,7 +313,7 @@ export default function OwnerServicePage() {
                     <span className="min-w-0 truncate">{a.title}</span>
                     <span className="shrink-0 text-sub">
                       <span className="font-bold text-ink">{formatUSD(a.price, { signed: true })}</span>
-                      {a.extra_days > 0 && ` · +${a.extra_days.toLocaleString("en-US")} يوم`}
+                      {a.extra_days > 0 && ` · +${pluralizeDays(a.extra_days)}`}
                     </span>
                   </li>
                 ))}

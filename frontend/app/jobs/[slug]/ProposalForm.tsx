@@ -7,7 +7,7 @@ import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { apiError } from "@/lib/errors";
 import { useFieldErrors, validateFields } from "@/lib/useFieldErrors";
-import { digitsOnly, toAsciiDigits } from "@/lib/arabic";
+import { digitsOnly, pluralizeDays, toAsciiDigits } from "@/lib/arabic";
 import { timeAgo } from "@/lib/format";
 import {
   PROPOSAL_STATUS_LABEL,
@@ -232,7 +232,7 @@ export default function ProposalForm({ job }: { job: Job }) {
           </div>
           <div className="rounded-m bg-white p-3">
             <dt className="text-xs text-sub">مدة التسليم</dt>
-            <dd className="mt-0.5 font-bold text-ink">{existing.delivery_days.toLocaleString("en-US")} يوم</dd>
+            <dd className="mt-0.5 font-bold text-ink">{pluralizeDays(existing.delivery_days)}</dd>
           </div>
         </dl>
 

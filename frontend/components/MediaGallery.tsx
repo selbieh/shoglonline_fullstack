@@ -149,9 +149,9 @@ function Lightbox({
 
       {many && (
         <>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label="السابق"
+          <button type="button" onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label="السابق"
             className="absolute right-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-content-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20">‹</button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label="التالي"
+          <button type="button" onClick={(e) => { e.stopPropagation(); move(1); }} aria-label="التالي"
             className="absolute left-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-content-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20">›</button>
           <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
             {images.map((_, j) => (

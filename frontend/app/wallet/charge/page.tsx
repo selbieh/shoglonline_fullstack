@@ -171,8 +171,16 @@ function ChargeInner() {
         body: JSON.stringify({ amount: chargeAmount, return_url: window.location.origin + "/wallet/charge" }),
       });
       window.location.href = order.approval_url;
-    } catch {
-      setMsg({ ok: false, text: "⚠️ تحقق من المبلغ" });
+    } catch (e) {
+      // Only a 400 from the charge endpoint is an amount/validation problem; a 500, network
+      // failure, or PayPal/config error is not — telling the user to "check the amount" then is
+      // misleading and leaves them retrying a perfectly valid amount.
+      const err = e as { status?: number; body?: { message_ar?: string } };
+      const text =
+        err.status === 400
+          ? err.body?.message_ar || "⚠️ تحقق من المبلغ"
+          : "تعذّر بدء عملية الدفع — حاول مجددًا";
+      setMsg({ ok: false, text });
       setBusy(false);
     }
   }
@@ -198,7 +206,7 @@ function ChargeInner() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">شحن المحفظة</h1>
-        <a href={returnTo} className="text-sm text-primary-dark">← رجوع</a>
+        <a href={returnTo} className="text-sm text-primary-dark">→ رجوع</a>
       </div>
 
       {/* balance + (optional) why-you're-here context */}

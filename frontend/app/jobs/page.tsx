@@ -18,9 +18,12 @@ export default async function JobsPage({ searchParams }: { searchParams: SP }) {
     subcategory: one(searchParams.subcategory),
     skill: one(searchParams.skill),
     q: one(searchParams.search),
+    // Honor a shared/bookmarked sort order (e.g. ?ordering=-budget_max) instead of always
+    // forcing the default — the client reads this back so URL and highlighted segment agree.
+    ordering: one(searchParams.ordering) || "-published_at",
   };
 
-  const sp = new URLSearchParams({ ordering: "-published_at", limit: String(PAGE), offset: "0" });
+  const sp = new URLSearchParams({ ordering: filters.ordering, limit: String(PAGE), offset: "0" });
   if (filters.category) sp.set("category", filters.category);
   if (filters.subcategory) sp.set("subcategory", filters.subcategory);
   if (filters.skill) sp.set("skill", filters.skill);

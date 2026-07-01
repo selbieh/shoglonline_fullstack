@@ -1,4 +1,4 @@
-.PHONY: up down logs test lint seed superuser reset admin verify migrate-legacy
+.PHONY: up down logs test lint seed superuser reset admin verify migrate-legacy e2e-full
 
 up:            ## start the full stack
 	docker compose up -d --build
@@ -16,6 +16,14 @@ admin:         ## create a default dev admin (admin@shoghlonline.com / admin1234
 	  -e DJANGO_SUPERUSER_PASSWORD=admin12345 \
 	  backend python manage.py createsuperuser --noinput || true
 
+e2e-full:      ## FULL happy-path (15 steps) + edge/negative money flows — real auth+chat, PayPal deposit stubbed (stack up)
+	docker compose exec -T backend python manage.py migrate
+	docker compose exec -T backend python manage.py seed_settings   ## canonical settings
+	docker compose exec -T backend python manage.py seed_catalog    ## categories for the job-create picker
+	docker compose exec -T backend python manage.py seed_demo       ## bid plans etc. for the edge suite
+	$(MAKE) admin                                  ## ensure admin@shoghlonline.com exists (admin step)
+	cd frontend && npx playwright test e2e/full-workflow.spec.ts e2e/edge-cases.spec.ts --workers=1
+
 verify:        ## wait for services then check API + admin reachable
 	@echo "waiting for backend…"; sleep 8
 	@docker compose exec -T backend python manage.py migrate --check && echo "✅ migrations applied"
@@ -31,6 +39,7 @@ test:          ## backend tests
 lint:
 	docker compose exec backend python -m ruff check .
 	docker compose exec frontend npx tsc --noEmit
+	docker compose exec frontend npx next lint          ## ESLint + jsx-a11y (labels, alt, dialog names…)
 
 seed:
 	docker compose exec backend python manage.py makemigrations

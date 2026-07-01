@@ -106,7 +106,7 @@ export default function MyJobsPage() {
         <h1 className="text-3xl font-extrabold">وظائفي</h1>
         <div className="flex gap-3">
           <a href="/jobs/new" className="btn-primary">+ نشر وظيفة</a>
-          <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+          <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
         </div>
       </div>
 

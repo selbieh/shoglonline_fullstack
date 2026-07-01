@@ -55,6 +55,7 @@ def mirror_conversation(conversation) -> None:
         "context": conversation.context_type,
         "contractId": conversation.contract_id,
         "jobId": conversation.job_id,
+        "serviceId": conversation.service_id,
         "lastMessageAt": conversation.last_message_at,
         "updatedAt": admin_firestore.SERVER_TIMESTAMP,
     }, merge=True)

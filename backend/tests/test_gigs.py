@@ -55,6 +55,18 @@ def fund(user, amount):
              bucket=Transaction.Bucket.AVAILABLE, amount=Decimal(str(amount)), note="seed")
 
 
+@pytest.mark.regression
+def test_service_slug_is_unique_across_same_title(worker, category):
+    """Regression: two services with the same title (and no explicit slug) must each get a distinct,
+    non-blank slug. Before the model auto-slug fix, the second insert kept a blank slug and violated
+    the unique constraint → unhandled 500 IntegrityError (hit via the API create path + seeds)."""
+    a = Service.objects.create(worker=worker, title="تصميم شعار", description="وصف",
+                               category=category, base_price=Decimal("100"), delivery_days=5)
+    b = Service.objects.create(worker=worker, title="تصميم شعار", description="وصف",
+                               category=category, base_price=Decimal("100"), delivery_days=5)
+    assert a.slug and b.slug and a.slug != b.slug
+
+
 # ------------------------------------------------------------------ lifecycle
 @pytest.mark.django_db
 class TestServiceLifecycle:

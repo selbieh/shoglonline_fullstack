@@ -1,12 +1,34 @@
-"""Conversation oversight (ADM-6): read, search by participant, archive (read-only)."""
+"""Conversation oversight (ADM-6): read, search by participant, archive (read-only),
+plus a dedicated two-pane Chat Inbox (Firestore-backed) for reading a thread as chat bubbles."""
+import math
+
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count
+from django.http import Http404, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.template.response import TemplateResponse
+from django.urls import path
 from unfold.admin import ModelAdmin, TabularInline
 
 from apps.core.models import AuditLog
 
-from . import services
+from . import oversight, services
 from .models import ChatReport, Conversation, ConversationMember, Message
+
+INBOX_PAGE_SIZE = 40
+
+
+def _client_ip(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR")
+    return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR")
+
+
+def _client_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 class MessageInline(TabularInline):
@@ -67,6 +89,105 @@ class ConversationAdmin(ModelAdmin):
         for conv in queryset:
             services.set_read_only(conv)
         self.message_user(request, f"أُرشفت {queryset.count()} محادثة")
+
+    # ---------------------------------------------------------------- Chat Inbox (ADM-6)
+    # A dedicated two-pane reader: conversations on one side, the selected thread rendered as
+    # chat bubbles on the other. Threads are read live from Firestore (Postgres mirror fallback)
+    # via apps.chat.oversight. The three URLs live in the `admin` namespace so the sidebar and
+    # templates can reverse them (admin:chat_inbox / _thread / _action).
+    def get_urls(self):
+        inbox = [
+            path("inbox/", self.admin_site.admin_view(self.inbox_view), name="chat_inbox"),
+            path("inbox/<int:conv_id>/thread/",
+                 self.admin_site.admin_view(self.inbox_thread), name="chat_inbox_thread"),
+            path("inbox/<int:conv_id>/action/",
+                 self.admin_site.admin_view(self.inbox_action), name="chat_inbox_action"),
+        ]
+        return inbox + super().get_urls()
+
+    def inbox_view(self, request):
+        """The Chat Inbox page — conversation list (searchable, paginated) + an empty thread pane."""
+        if not self.has_view_permission(request):
+            raise PermissionDenied
+        q = request.GET.get("q", "").strip()
+        status = request.GET.get("status", "").strip()
+        context = request.GET.get("context", "").strip()
+        has_messages = request.GET.get("has_messages", "") in ("1", "on", "true")
+        try:
+            page = max(1, int(request.GET.get("page", "1")))
+        except (TypeError, ValueError):
+            page = 1
+        offset = (page - 1) * INBOX_PAGE_SIZE
+        items, total = oversight.list_conversations(
+            search=q, status=status, context=context, has_messages=has_messages,
+            limit=INBOX_PAGE_SIZE, offset=offset,
+        )
+        num_pages = max(1, math.ceil(total / INBOX_PAGE_SIZE))
+        ctx = {
+            **self.admin_site.each_context(request),
+            "title": "Chat inbox",
+            "conversations": items,
+            "q": q,
+            "status": status,
+            "context": context,
+            "has_messages": has_messages,
+            "page": page,
+            "num_pages": num_pages,
+            "total": total,
+            "has_prev": page > 1,
+            "has_next": page < num_pages,
+            "prev_page": page - 1,
+            "next_page": page + 1,
+            "can_moderate": self.has_change_permission(request),
+            "opts": self.model._meta,
+        }
+        return TemplateResponse(request, "admin/chat/inbox.html", ctx)
+
+    def inbox_thread(self, request, conv_id):
+        """JSON for one thread (messages + participants + source), fetched by the inbox JS."""
+        if not self.has_view_permission(request):
+            return JsonResponse({"error": "forbidden"}, status=403)
+        try:
+            data = oversight.get_thread(conv_id)
+        except Conversation.DoesNotExist as exc:
+            raise Http404("conversation not found") from exc
+        return JsonResponse(data)
+
+    def inbox_action(self, request, conv_id):
+        """Inline moderation from the inbox: archive / reactivate a conversation, or freeze a party."""
+        if request.method != "POST":
+            return JsonResponse({"error": "method_not_allowed"}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({"error": "forbidden"}, status=403)
+        conv = get_object_or_404(Conversation, pk=conv_id)
+        action = request.POST.get("action", "")
+
+        if action == "archive":
+            services.set_read_only(conv)
+            self._audit(request, "admin.chat_archive", conv)
+            message = "أُرشفت المحادثة (للقراءة فقط)"
+        elif action == "reactivate":
+            services.set_active(conv)
+            self._audit(request, "admin.chat_reactivate", conv)
+            message = "أُعيد تفعيل المحادثة"
+        elif action == "freeze":
+            user_id = _client_int(request.POST.get("user_id"))
+            if user_id not in (conv.user_a_id, conv.user_b_id):
+                return JsonResponse({"error": "not_a_participant"}, status=400)
+            from apps.accounts.services import freeze_user
+            target = conv.user_a if user_id == conv.user_a_id else conv.user_b
+            freeze_user(target, reason=f"admin chat inbox (conversation #{conv.pk})",
+                        actor=request.user, ip=_client_ip(request))
+            message = f"جُمّد الحساب: {target.email or target.pk}"
+        else:
+            return JsonResponse({"error": "unknown_action"}, status=400)
+
+        conv.refresh_from_db()
+        return JsonResponse({"ok": True, "message": message, "status": conv.status})
+
+    def _audit(self, request, action, conv):
+        AuditLog.objects.create(actor=request.user, action=action,
+                                model="Conversation", object_id=str(conv.pk), ip=_client_ip(request))
 
 
 @admin.register(ConversationMember)

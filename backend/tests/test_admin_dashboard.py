@@ -9,7 +9,7 @@ from apps.core.analytics import _chart_data, dashboard_callback
 @pytest.mark.django_db
 def test_chart_data_shape():
     cd = _chart_data()
-    assert set(cd) == {"trend", "contract_status"}
+    assert set(cd) == {"trend", "contract_status", "jobs_by_category"}
     assert len(cd["trend"]["labels"]) == 14
 
 

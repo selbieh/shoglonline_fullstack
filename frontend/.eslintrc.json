@@ -1,0 +1,23 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals", "plugin:jsx-a11y/recommended"],
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "warn",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn",
+    "jsx-a11y/media-has-caption": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "e2e/**"],
+      "rules": {
+        "jsx-a11y/label-has-associated-control": "off",
+        "@next/next/no-img-element": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["node_modules/", ".next/", "coverage/", "test-results/", "playwright-report/", "next-env.d.ts"]
+}

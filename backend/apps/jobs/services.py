@@ -267,8 +267,11 @@ def accept_proposal(proposal: Proposal):
     job = Job.objects.select_for_update().get(pk=proposal.job_id)
     if job.status != Job.Status.PUBLISHED:
         raise ValidationError(ERR["not_open"])
-    if proposal.status not in Proposal.OPEN_STATUSES:
-        raise ValidationError(ERR["not_open"])  # suspended/withdrawn/cancelled can't be awarded (BR-23)
+    # Only a live, moderation-cleared proposal may be awarded. Deliberately excludes
+    # PENDING_APPROVAL (which OPEN_STATUSES contains) so an employer can't accept a proposal that
+    # is still awaiting admin review while proposals.auto_publish is OFF.
+    if proposal.status not in (Proposal.Status.SUBMITTED, Proposal.Status.VIEWED):
+        raise ValidationError(ERR["not_open"])  # suspended/withdrawn/cancelled/pending can't be awarded
     from apps.accounts.services import assert_active  # noqa: PLC0415 (avoid import cycle)
     assert_active(proposal.worker)  # BR-23: never bind a contract to a frozen worker
     if job.proposals.filter(status=Proposal.Status.ACCEPTED).exists():
@@ -297,6 +300,10 @@ def invite_worker(*, employer, job: Job, worker, message: str = "") -> Invitatio
     assert_active(worker)  # BR-23: cannot invite a frozen worker
     if job.status != Job.Status.PUBLISHED:
         raise ValidationError(ERR["not_open"])
+    # (job, worker) is unique — re-inviting (e.g. after a decline) would raise an IntegrityError
+    # (500). Surface a clean domain error instead.
+    if Invitation.objects.filter(job=job, worker=worker).exists():
+        raise ValidationError({"code": "already_invited", "message_ar": "تمت دعوة هذا المستقل لهذه الوظيفة بالفعل"})
     invitation = Invitation.objects.create(job=job, employer=employer, worker=worker, private_message=message)
     # The job is already live, so _publish won't fire again — notify the worker here (FR-JOB-12).
     _notify_invited_worker(job, worker, message)

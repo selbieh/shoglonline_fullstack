@@ -3,6 +3,7 @@
 import { useState, type MouseEvent } from "react";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { useDialogA11y } from "@/lib/useDialogA11y";
 import { AlertIcon, CheckIcon } from "@/components/icons";
 
 /* Report-to-admin trigger + modal for any public entity — a service, job, freelancer card,
@@ -68,6 +69,8 @@ export default function ReportButton({
     setTimeout(() => { setReason(""); setDetail(""); setDone(false); setError(""); }, 200);
   }
 
+  const dialogRef = useDialogA11y(open, close);
+
   async function submit(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -102,9 +105,12 @@ export default function ReportButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 grid place-content-center overflow-y-auto bg-black/40 p-4"
+          ref={dialogRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 grid place-content-center overflow-y-auto bg-black/40 p-4 focus:outline-none"
           role="dialog"
           aria-modal="true"
+          aria-label="الإبلاغ عن مخالفة"
           onClick={close}
         >
           <div

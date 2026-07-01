@@ -35,6 +35,7 @@ export default function AccountInfoPage() {
   const [savingName, setSavingName] = useState(false);
   const [blockers, setBlockers] = useState<Blocker[] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [reason, setReason] = useState("");
   // email change (slide-31)
   const [emailEdit, setEmailEdit] = useState(false);
@@ -163,17 +164,21 @@ export default function AccountInfoPage() {
   }
 
   async function deleteAccount() {
+    if (deleting) return;
+    setDeleting(true);
     setMsg(null);
     setBlockers(null);
     try {
       await api("/auth/me", { method: "DELETE", body: JSON.stringify({ reason: reason || "user_request" }) });
       tokens.clear();
       router.push("/");
+      return; // keep the button disabled through the redirect (don't re-enable on success)
     } catch (e) {
       const body = (e as { body?: { blockers?: Blocker[] } }).body;
       if (body?.blockers?.length) setBlockers(body.blockers);
       else setMsg({ ok: false, text: apiError(e).message_ar });
     }
+    setDeleting(false); // only re-enable on failure, so the user can retry
   }
 
   if (!me || !prefs) {
@@ -312,7 +317,7 @@ export default function AccountInfoPage() {
           <div className="mt-3 space-y-2">
             <input className="field" placeholder="سبب الحذف (اختياري)" value={reason} onChange={(e) => setReason(e.target.value)} />
             <div className="flex gap-2">
-              <button onClick={deleteAccount} className="btn-primary bg-danger hover:bg-danger">تأكيد الحذف النهائي</button>
+              <button onClick={deleteAccount} disabled={deleting} className="btn-primary bg-danger hover:bg-danger disabled:opacity-50">{deleting ? "جارٍ الحذف…" : "تأكيد الحذف النهائي"}</button>
               <button onClick={() => setConfirmDelete(false)} className="btn-secondary">إلغاء</button>
             </div>
           </div>

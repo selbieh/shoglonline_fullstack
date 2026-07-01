@@ -5,11 +5,18 @@ import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { apiError } from "@/lib/errors";
 import { signinHereHref } from "@/lib/nav";
-import { HeartIcon } from "@/components/icons";
+import { HeartIcon, EnvelopeIcon } from "@/components/icons";
 import { formatUSD } from "@/lib/currency";
 
 export type Addon = { id: number; title: string; price: string; extra_days: number };
-export type ServiceLite = { id: number; base_price: string; addons: Addon[] };
+export type ServiceLite = {
+  id: number;
+  base_price: string;
+  addons: Addon[];
+  /** The freelancer who owns this service — lets us hide the «تواصل» button when the owner views
+      their own service (they can't open an inquiry chat with themselves). */
+  worker: number;
+};
 
 /** Interactive favourite + buy box (client island); the service content is SSR. */
 export default function BuyBox({ service }: { service: ServiceLite }) {
@@ -21,12 +28,16 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
   const [favBusy, setFavBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [contactBusy, setContactBusy] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [myId, setMyId] = useState<number | null>(null);
 
   useEffect(() => {
     const a = Boolean(tokens.access);
     setAuthed(a);
     if (!a) return;
+    // Learn who's viewing so we can hide «تواصل» on the owner's own service (self-chat is blocked).
+    api<{ id: number }>(`/auth/me`).then((m) => setMyId(m.id)).catch(() => undefined);
     // Hydrate the heart from the server so an already-favorited service shows as favorited.
     api<unknown>(`/me/favorites?kind=service`)
       .then((rows) => {
@@ -35,6 +46,10 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
       })
       .catch(() => undefined);
   }, [service.id]);
+
+  // Owner viewing their own service — no "contact myself" button. Unauthed viewers are never the
+  // owner, so they still see it (and get bounced to sign-in on click, returning here after login).
+  const isOwner = authed && myId != null && myId === service.worker;
 
   const addonsTotal = service.addons
     .filter((a) => picked.includes(a.id))
@@ -74,6 +89,25 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
       setMsg({ ok: false, text: `⚠️ ${apiError(e).message_ar}` });
     } finally {
       setBusy(false);
+    }
+  }
+
+  // Open (or resurface) a pre-purchase inquiry chat with the freelancer, then jump into the thread.
+  // Unauthenticated → sign in first and come back here (the requirement: gate + return to page).
+  async function contact() {
+    if (!tokens.access) return router.push(signinHereHref());
+    if (contactBusy) return;
+    setContactBusy(true);
+    setMsg(null);
+    try {
+      const conv = await api<{ id: number }>(`/conversations`, {
+        method: "POST",
+        body: JSON.stringify({ service_id: service.id }),
+      });
+      router.push(`/messages/${conv.id}`);  // stay busy — we're navigating away
+    } catch (e) {
+      setMsg({ ok: false, text: `⚠️ ${apiError(e).message_ar}` });
+      setContactBusy(false);
     }
   }
 
@@ -120,8 +154,8 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
         )}
 
         <div className="flex items-center gap-3">
-          <label className="text-sm text-sub">الكمية</label>
-          <input type="number" min={1} className="w-20 field"
+          <label htmlFor="buybox-qty" className="text-sm text-sub">الكمية</label>
+          <input id="buybox-qty" type="number" min={1} className="w-20 field"
             value={qty} onChange={(e) => setQty(Math.max(1, Number(e.target.value)))} />
         </div>
 
@@ -136,6 +170,19 @@ export default function BuyBox({ service }: { service: ServiceLite }) {
           <button className="btn-primary w-full" disabled={busy} onClick={buy}>إرسال طلب الشراء</button>
         ) : (
           <button type="button" onClick={() => router.push(signinHereHref())} className="btn-primary block w-full text-center">سجّل الدخول لإرسال الطلب</button>
+        )}
+        {!isOwner && (
+          <div className="border-t border-line pt-3">
+            <p className="mb-2 text-center text-xs text-sub">لديك سؤال قبل الشراء؟</p>
+            <button
+              type="button"
+              onClick={contact}
+              disabled={contactBusy}
+              className="btn-secondary flex w-full items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <EnvelopeIcon className="text-[15px]" /> تواصل مع المستقل
+            </button>
+          </div>
         )}
         <p className="text-xs text-sub">
           يُحجز المبلغ في الضمان عند قبول المستقل ويُحرَّر بعد تسليمك وقبولك للعمل.

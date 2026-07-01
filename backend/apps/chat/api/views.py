@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -23,17 +24,35 @@ class MyConversationsView(ListAPIView):
     def get_queryset(self):
         u = self.request.user
         return Conversation.objects.filter(Q(user_a=u) | Q(user_b=u)).select_related(
-            "user_a", "user_b", "job", "contract", "contract__service", "contract__job",
+            "user_a", "user_b", "job", "service", "contract", "contract__service", "contract__job",
         )
 
 
 class StartConversationView(APIView):
-    """POST /conversations {contract_id} — rule D-2: chat opens only for an active contract
-    between the two parties (proposal-stage chat is no longer supported)."""
+    """POST /conversations — open (or resurface) a conversation. Two entry points:
+
+    * {service_id} — a buyer opens a pre-purchase inquiry chat with the service's freelancer to
+      ask questions before ordering (does NOT need a contract; see get_or_create_for_service).
+    * {contract_id} — rule D-2: contract chat, only once an active contract exists between the two
+      parties (proposal-stage chat is no longer supported).
+
+    Rate-limited (chat_send scope) so neither path can be used to flood users with fresh chats.
+    """
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "chat_send"
 
     def post(self, request):
+        service_id = request.data.get("service_id")
+        if service_id:
+            from apps.gigs.models import Service
+            service = get_object_or_404(
+                Service.objects.filter(status__in=Service.DISCOVERABLE), pk=service_id,
+            )
+            conv = services.get_or_create_for_service(request.user, service)
+            return Response(ConversationSerializer(conv, context={"request": request}).data, status=201)
+
         contract_id = request.data.get("contract_id")
         if not contract_id:
             return Response(
@@ -115,6 +134,12 @@ class FirebaseTokenView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        # Enforce the global kill-switch at the control seam: while chat is disabled we refuse to
+        # mint a Firestore identity, so clients cannot obtain/refresh one to keep writing directly
+        # to Firestore (the primary path, which bypasses send_message's own guard). Existing custom
+        # tokens are short-lived, so live sessions drain once the flag is off.
+        if not services.chat_enabled():
+            raise ValidationError(services.ERR["disabled"])
         return Response({
             "token": firebase.mint_custom_token(request.user),
             "projectId": settings.FIREBASE_PROJECT_ID,

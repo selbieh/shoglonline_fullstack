@@ -28,6 +28,10 @@ class Conversation(models.Model):
     contract = models.ForeignKey("contracts.Contract", null=True, blank=True,
                                  on_delete=models.SET_NULL, related_name="conversations")
     job = models.ForeignKey("jobs.Job", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    # Set only for SERVICE context: a pre-purchase inquiry chat opened from a service page so a
+    # buyer can ask the freelancer questions BEFORE ordering. This is the one path that opens a
+    # conversation without an active contract — the contract flow (rule D-2) is untouched.
+    service = models.ForeignKey("gigs.Service", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     frozen_prev_status = models.CharField(max_length=10, blank=True, default="")  # restore target on unfreeze (BR-23)
     last_message_snippet = models.CharField(max_length=160, blank=True)
@@ -40,6 +44,12 @@ class Conversation(models.Model):
             models.CheckConstraint(condition=~Q(user_a=models.F("user_b")), name="conversation_no_self"),
             models.UniqueConstraint(fields=["user_a", "user_b", "context_type", "contract", "job"],
                                     name="uniq_conversation_per_context"),
+            # A SERVICE inquiry has contract=job=NULL, so the constraint above (NULLs compare
+            # distinct in Postgres) can't dedupe it — this partial index gives one inquiry chat per
+            # (buyer, freelancer, service) pair and makes get_or_create race-safe.
+            models.UniqueConstraint(fields=["user_a", "user_b", "service"],
+                                    condition=Q(context_type="service"),
+                                    name="uniq_service_conversation"),
         ]
 
     def has_member(self, user) -> bool:

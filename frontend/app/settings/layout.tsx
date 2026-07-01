@@ -22,11 +22,11 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">الإعدادات</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-4">
-        <aside className="lg:sticky lg:top-6 lg:self-start">
+        <aside className="lg:sticky lg:top-20 lg:self-start">
           <nav className="card flex gap-1 overflow-x-auto p-2 lg:flex-col">
             {NAV.map((n) => {
               const active = pathname === n.href;

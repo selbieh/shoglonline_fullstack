@@ -1,5 +1,6 @@
 import { LOCATION_LABEL, type Job } from "@/lib/types";
 import { timeAgo } from "@/lib/format";
+import { pluralizeDays } from "@/lib/arabic";
 import {
   MapPinIcon, UsersIcon, WalletIcon, ClockIcon, GridIcon,
   AlertIcon, BadgeCheckIcon, SparklesIcon, ClipboardIcon, LightbulbIcon,
@@ -72,7 +73,7 @@ export default function JobDetailBody({ job }: { job: Job }) {
               <Fact icon={<MapPinIcon />} label="نوع العمل" value={onsite && place ? `${LOCATION_LABEL[job.location_type]} · ${place}` : LOCATION_LABEL[job.location_type]} />
               <Fact icon={<GridIcon />} label="التصنيف" value={job.category_name} />
               <Fact icon={<UsersIcon />} label="العروض المقدّمة" value={`${job.proposals_count} عرض`} />
-              {job.expected_days ? <Fact icon={<ClockIcon />} label="مدة التنفيذ المتوقعة" value={`${job.expected_days} يوم`} /> : null}
+              {job.expected_days ? <Fact icon={<ClockIcon />} label="مدة التنفيذ المتوقعة" value={pluralizeDays(job.expected_days)} /> : null}
               {posted && <Fact icon={<ClockIcon />} label="تاريخ النشر" value={posted} />}
               {expires && <Fact icon={<AlertIcon />} label="ينتهي التقديم" value={expires} />}
             </div>
@@ -138,7 +139,7 @@ export default function JobDetailBody({ job }: { job: Job }) {
         </div>
 
         {/* ── proposal form (sticky sidebar) ── */}
-        <section className="card w-full shrink-0 space-y-4 lg:sticky lg:top-6 lg:w-[440px]">
+        <section className="card w-full shrink-0 space-y-4 lg:sticky lg:top-20 lg:w-[440px]">
           <div className="-mx-5 -mt-5 mb-1 rounded-t-l bg-hero px-5 py-4 text-white">
             <h2 className="text-lg font-bold">قدّم عرضك</h2>
             <p className="mt-0.5 text-xs text-tint">أبرز ما يميّزك واربح المشروع</p>

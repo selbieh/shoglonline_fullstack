@@ -125,7 +125,9 @@ class AddonWriteSerializer(serializers.ModelSerializer):
 class ServiceWriteSerializer(serializers.ModelSerializer):
     keywords = serializers.ListField(child=serializers.CharField(max_length=40), required=False)
     addons = AddonWriteSerializer(many=True, required=False)
-    base_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    # max_value keeps base_price × qty (≤999) from overflowing BuyingRequest.total_price
+    # (DecimalField max_digits=12) and generally rejects nonsensical prices up front.
+    base_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0, max_value=1_000_000)
     # Mirror the wizard's client-side rule (≥ 1 day) so it can't be bypassed via the API,
     # and so the failure comes back field-keyed for per-input display.
     delivery_days = serializers.IntegerField(

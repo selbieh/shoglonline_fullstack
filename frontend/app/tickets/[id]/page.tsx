@@ -68,7 +68,7 @@ export default function TicketThreadPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex items-center justify-between">
-        <a href="/support" className="text-sm text-primary-dark">← الدعم</a>
+        <a href="/support" className="text-sm text-primary-dark">→ الدعم</a>
         <span className="rounded-full bg-bg px-3 py-1 text-xs text-sub">{ST_LABEL[t.status]}</span>
       </div>
       <h1 className="mt-3 text-2xl font-extrabold">{t.title}</h1>
@@ -99,6 +99,7 @@ export default function TicketThreadPage() {
         <div className="mt-6 flex gap-2">
           <input
             className="flex-1 field"
+            aria-label="اكتب ردًا"
             placeholder="اكتب ردًا…"
             value={body}
             onChange={(e) => setBody(e.target.value)}

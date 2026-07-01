@@ -72,7 +72,7 @@ export const myProfileCache = lsCache(MY_PROFILE_KEY);
 // the rest would fail → the user gets bounced to sign-in. Coalesce concurrent refreshes into one.
 let refreshInFlight: Promise<boolean> | null = null;
 
-function refreshAccess(): Promise<boolean> {
+export function refreshAccess(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     const refresh = tokens.refresh;
@@ -100,6 +100,11 @@ export async function api<T = unknown>(
   path: string,
   options: RequestInit = {},
   retry = true,
+  // When false, a terminal 401 still clears tokens (logs the UI out) but does NOT hard-navigate to
+  // sign-in. Used by optimistic/background auth probes (e.g. the global header on public pages) so a
+  // stale session downgrades the header to logged-out chrome instead of ejecting the visitor from a
+  // page that needs no auth. Page loaders that DO require auth keep the default (redirect).
+  redirectOnAuthFail = true,
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -110,12 +115,12 @@ export async function api<T = unknown>(
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
   if (res.status === 401 && retry && (await refreshAccess())) {
-    return api<T>(path, options, false);
+    return api<T>(path, options, false, redirectOnAuthFail);
   }
   if (res.status === 401) {
     tokens.clear();
     // bounce to sign-in, remembering the current page so login returns the user here
-    if (typeof window !== "undefined") window.location.href = signinHereHref();
+    if (redirectOnAuthFail && typeof window !== "undefined") window.location.href = signinHereHref();
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

@@ -539,7 +539,13 @@ export default function ProfileWizard() {
             <Field label="وسيلة تواصل" required error={errors.private_contact_channel || errors.private_contact_value}>
               <div className="flex flex-wrap gap-2">
                 <select className="field w-36 shrink-0" value={draft.private_contact_channel} aria-label="نوع وسيلة التواصل"
-                  onChange={(e) => set({ private_contact_channel: e.target.value })}>
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    // phone & whatsapp share the E.164 format; any other switch changes the
+                    // expected format, so drop the stale value to avoid saving it under a mismatched channel
+                    const bothPhone = /^(phone|whatsapp)$/.test(draft.private_contact_channel) && /^(phone|whatsapp)$/.test(next);
+                    set({ private_contact_channel: next, private_contact_value: bothPhone ? draft.private_contact_value : "" });
+                  }}>
                   {CONTACT_CHANNELS.map((c) => <option key={c.v} value={c.v}>{c.l}</option>)}
                 </select>
                 {draft.private_contact_channel === "phone" || draft.private_contact_channel === "whatsapp" ? (
@@ -894,8 +900,8 @@ export default function ProfileWizard() {
                 <span className="chip mt-2 bg-warn-t text-warn">قيد المراجعة ⏳</span>
               ) : (
                 <>
-                  <label className="mt-2 block text-xs text-sub">نوع المستند</label>
-                  <select className="field mt-1" value={docType} onChange={(e) => setDocType(e.target.value)} aria-label="نوع المستند">
+                  <label htmlFor="onb-doctype" className="mt-2 block text-xs text-sub">نوع المستند</label>
+                  <select id="onb-doctype" className="field mt-1" value={docType} onChange={(e) => setDocType(e.target.value)} aria-label="نوع المستند">
                     <option value="national_id">بطاقة هوية وطنية</option>
                     <option value="passport">جواز سفر</option>
                     <option value="driver_license">رخصة قيادة</option>

@@ -50,12 +50,17 @@ export default function SiteHeader() {
       return;
     }
     setMe((prev) => prev ?? profileCache.read<Me>());
-    api<Me>("/auth/me")
+    // Optimistic probe: never force a redirect from here (the header renders on public pages too).
+    // On a terminal 401 api() clears tokens; we just downgrade the header to logged-out chrome.
+    api<Me>("/auth/me", {}, true, false)
       .then((fresh) => {
         setMe(fresh);
         profileCache.write(fresh);
       })
-      .catch(() => {});
+      .catch(() => {
+        setAuthed(!!tokens.access);
+        if (!tokens.access) setMe(null);
+      });
   }, [pathname]);
 
   useEffect(() => {

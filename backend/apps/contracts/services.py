@@ -288,7 +288,10 @@ def reject_submission(submission: Submission, employer, reason: str) -> Submissi
     submission.decided_at = timezone.now()
     submission.save(update_fields=["status", "reject_reason", "decided_at"])
     contract.status = Contract.Status.ACTIVE
-    contract.save(update_fields=["status"])
+    # A new delivery window opens now, so re-arm the once-per-overdue notifier (it filters on
+    # overdue_notified_at__isnull=True and would otherwise never warn again after this cycle).
+    contract.overdue_notified_at = None
+    contract.save(update_fields=["status", "overdue_notified_at"])
     _event(contract, "rejected", actor=employer, detail=reason[:200])
     return submission
 
@@ -400,7 +403,9 @@ def respond_update(update: UpdateRequest, actor, *, accept: bool, reason: str = 
 
     if update.new_deadline is not None:
         contract.deadline = update.new_deadline
-        contract.save(update_fields=["deadline"])
+        # New deadline → re-arm the overdue notifier so a subsequently-blown deadline warns again.
+        contract.overdue_notified_at = None
+        contract.save(update_fields=["deadline", "overdue_notified_at"])
 
     update.status = UpdateRequest.Status.ACCEPTED
     update.decided_at = timezone.now()
@@ -470,7 +475,12 @@ def open_dispute(contract: Contract, actor, *, reason: str = "", ticket_ref: str
         raise ValidationError(ERR["bad_state"])
     contract.status = Contract.Status.DISPUTED
     contract.dispute_ticket_ref = ticket_ref
-    contract.save(update_fields=["status", "dispute_ticket_ref"])
+    # A pending mutual-cancel request must not survive the dispute: otherwise after a
+    # resolve("resume") the stale request could still be confirmed, cancelling (and refunding) a
+    # contract that both parties were just told to resume.
+    contract.cancel_requested_by = None
+    contract.cancel_reason = ""
+    contract.save(update_fields=["status", "dispute_ticket_ref", "cancel_requested_by", "cancel_reason"])
     _event(contract, "disputed", actor=actor, detail=reason[:200])
     return contract
 
@@ -489,9 +499,15 @@ def resolve_dispute(contract: Contract, *, outcome: str, refund_pct: Decimal = D
         raise ValidationError(ERR["bad_state"])
 
     if outcome == "resume":
-        contract.status = Contract.Status.DELIVERED if contract.delivered_at else Contract.Status.ACTIVE
+        # Base the resumed state on whether a submission is actually OPEN — not on the sticky
+        # delivered_at flag (never cleared on reject), which would resume a rejected-only contract
+        # into DELIVERED with nothing to review and wedge the flow.
+        has_open_submission = contract.submissions.filter(status=Submission.Status.OPEN).exists()
+        contract.status = Contract.Status.DELIVERED if has_open_submission else Contract.Status.ACTIVE
         contract.resolution_note = note
-        contract.save(update_fields=["status", "resolution_note"])
+        # Re-arm the overdue notifier for the resumed working window.
+        contract.overdue_notified_at = None
+        contract.save(update_fields=["status", "resolution_note", "overdue_notified_at"])
 
     elif outcome == "complete":
         _post_completion_legs(contract)

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BarChartIcon, ClipboardIcon, ClockIcon, GridIcon, HeartIcon, UserIcon } from "@/components/icons";
+import { pluralizeDays } from "@/lib/arabic";
 import MediaGallery from "@/components/MediaGallery";
 import { DetailRail, RailRow } from "@/components/DetailRail";
 import OwnerCard from "@/components/OwnerCard";
@@ -74,7 +75,7 @@ export default function ServiceDetailView({
           {s.worker_rating != null && s.worker_rating > 0 && (
             <StarRating value={s.worker_rating} count={s.worker_rating_count} />
           )}
-          <span className="inline-flex items-center gap-1.5"><ClockIcon className="text-[15px] text-primary" /> {s.delivery_days.toLocaleString("en-US")} يوم</span>
+          <span className="inline-flex items-center gap-1.5"><ClockIcon className="text-[15px] text-primary" /> {pluralizeDays(s.delivery_days)}</span>
           <span className="inline-flex items-center gap-1.5"><HeartIcon className="text-[15px] text-danger" /> {s.favorites_count.toLocaleString("en-US")}</span>
           {s.category_name && <span className="chip bg-tint text-primary-dark">{s.category_name}</span>}
         </div>
@@ -118,11 +119,11 @@ export default function ServiceDetailView({
           </div>
 
           {/* sidebar: buy box + service info + freelancer card */}
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             {buyBox}
 
             <DetailRail title="معلومات الخدمة">
-              <RailRow icon={<ClockIcon />} label="مدة التسليم" value={`${s.delivery_days.toLocaleString("en-US")} يوم`} />
+              <RailRow icon={<ClockIcon />} label="مدة التسليم" value={pluralizeDays(s.delivery_days)} />
               {s.category_name && <RailRow icon={<GridIcon />} label="التصنيف" value={s.category_name} />}
               {s.purchases_count != null && <RailRow icon={<ClipboardIcon />} label="مرات الشراء" value={s.purchases_count.toLocaleString("en-US")} />}
               {s.views_count != null && <RailRow icon={<BarChartIcon />} label="عدد المشاهدات" value={s.views_count.toLocaleString("en-US")} />}

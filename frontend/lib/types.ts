@@ -221,4 +221,7 @@ export const PROPOSAL_STATUS_LABEL: Record<string, string> = {
   rejected: "مرفوض",
   cancelled: "ملغى",
   withdrawn: "مسحوب — استُرد عرضك",
+  // Set on a worker's open proposals when their account is frozen (BR-23). Without this the raw
+  // English token "suspended" leaked into the Arabic UI via the `?? p.status` fallback.
+  suspended: "موقوف",
 };

@@ -24,7 +24,7 @@ import { formatUSDRange } from "@/lib/currency";
 
 const PAGE = 12; // load-more page size (server caps limit at 100)
 
-export type JobsFilters = { category: string; subcategory: string; skill: string; q: string };
+export type JobsFilters = { category: string; subcategory: string; skill: string; q: string; ordering: string };
 
 /* Client island for /jobs. The server component (page.tsx) reads the URL filters, fetches the
    matching first page + the category tree, and seeds this — so crawlers/visitors get real SSR HTML;
@@ -49,7 +49,7 @@ export default function JobsClient({
   const [subcategory, setSubcategory] = useState<string>(initialFilters.subcategory);
   const [skill, setSkill] = useState(initialFilters.skill);
   const [q, setQ] = useState(initialFilters.q);
-  const [ordering, setOrdering] = useState("-published_at");
+  const [ordering, setOrdering] = useState(initialFilters.ordering || "-published_at");
   const catalog = useSkillCatalog(); // full skills catalog → searchable skill filter
   const favIds = useFavoriteIds("job"); // pre-fill hearts for items the user already saved
   const router = useRouter();
@@ -388,6 +388,8 @@ export default function JobsClient({
             <div className="relative">
               <input
                 className="field pe-9"
+                type="search"
+                aria-label="ابحث بعنوان الوظيفة أو المهارة"
                 placeholder="ابحث بعنوان الوظيفة أو المهارة…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}

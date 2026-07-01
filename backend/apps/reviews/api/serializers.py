@@ -18,8 +18,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         return req.user if req else None
 
     def get_author_name(self, obj) -> str:
+        # This serializer is served on the PUBLIC, unauthenticated reviews endpoint, so never
+        # fall back to the author's email (email-OTP users are provisioned with blank names).
         a = obj.author
-        return (f"{a.first_name} {a.last_name}".strip() or a.email)
+        return f"{a.first_name} {a.last_name}".strip() or "مستخدم"
 
     def get_mine(self, obj) -> bool:
         u = self._user()

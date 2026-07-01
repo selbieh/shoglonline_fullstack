@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -26,13 +27,20 @@ class MySubscriptionsView(APIView):
     def put(self, request):
         """Replace the full set: [{category: id, subcategory: id|null}, …]"""
         items = request.data if isinstance(request.data, list) else []
-        CategorySubscription.objects.filter(user=request.user).delete()
+        # Validate the ENTIRE payload before touching the DB, and do the replace inside one
+        # atomic block — otherwise an invalid item would leave the user's rows already deleted
+        # (a 400 does not roll back a bare .delete()).
+        validated = []
         for item in items:
             serializer = SubscriptionSerializer(data=item)
             serializer.is_valid(raise_exception=True)
-            CategorySubscription.objects.get_or_create(
-                user=request.user,
-                category_id=serializer.validated_data["category"].id,
-                subcategory=serializer.validated_data.get("subcategory"),
-            )
+            validated.append(serializer.validated_data)
+        with transaction.atomic():
+            CategorySubscription.objects.filter(user=request.user).delete()
+            for data in validated:
+                CategorySubscription.objects.get_or_create(
+                    user=request.user,
+                    category_id=data["category"].id,
+                    subcategory=data.get("subcategory"),
+                )
         return self.get(request)

@@ -61,7 +61,7 @@ export default function BidsPage() {
       <main className="mx-auto max-w-3xl px-6 py-16 text-center">
         <h1 className="text-2xl font-extrabold">نظام العروض معطّل حاليًا</h1>
         <p className="mt-3 text-sub">التقديم على الوظائف متاح مجانًا — لا حاجة لرصيد عروض.</p>
-        <a href="/dashboard" className="btn-primary mt-6 inline-block">← العودة للوحتي</a>
+        <a href="/dashboard" className="btn-primary mt-6 inline-block">→ العودة للوحتي</a>
       </main>
     );
   }
@@ -86,7 +86,7 @@ export default function BidsPage() {
     <main className="mx-auto max-w-5xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">رصيد العروض</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
 
       {msg && (

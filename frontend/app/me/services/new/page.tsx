@@ -195,7 +195,7 @@ export default function ServiceCreateWizard() {
               : "أصبحت خدمتك ظاهرة للعملاء. جارٍ تحويلك إلى صفحة الخدمة…"}
           </p>
           <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-            <a href="/me/services" className="btn-secondary px-6 py-3">← خدماتي</a>
+            <a href="/me/services" className="btn-secondary px-6 py-3">→ خدماتي</a>
             {!done.pending && (
               <a href={`/services/${done.slug}`} className="btn-primary px-6 py-3">عرض الخدمة</a>
             )}
@@ -210,7 +210,7 @@ export default function ServiceCreateWizard() {
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-6 py-4">
           <h1 className="text-lg font-extrabold">إضافة خدمة جديدة</h1>
-          <a href="/me/services" className="text-sm text-primary-dark">← خدماتي</a>
+          <a href="/me/services" className="text-sm text-primary-dark">→ خدماتي</a>
         </div>
       </header>
 

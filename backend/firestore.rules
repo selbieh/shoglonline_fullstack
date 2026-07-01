@@ -46,6 +46,10 @@ service cloud.firestore {
                       && request.resource.data.body is string
                       && request.resource.data.body.size() <= 5000
                       && request.resource.data.files is list
+                      // createdAt must be the server timestamp (serverTimestamp() == request.time):
+                      // otherwise a client can pin a message with an arbitrary far-future/past time
+                      // and corrupt ordering (orderBy('createdAt')) and read receipts.
+                      && request.resource.data.createdAt == request.time
                       && request.resource.data.keys().hasOnly(['sender', 'body', 'files', 'createdAt', 'pgId']);
 
         // messages are an immutable audit trail.

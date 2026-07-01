@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import ModeToggle from "@/components/ModeToggle";
 import DashboardShell from "@/components/DashboardShell";
 import { api, tokens, type Me } from "@/lib/api";
+import { isAuthError } from "@/lib/errors";
 import { signinHereHref } from "@/lib/nav";
 import { bidsEnabled, fetchPublicSettings } from "@/lib/settings";
 import { STATUS_CHIP, STATUS_LABEL } from "@/lib/contractStatus";
@@ -48,6 +49,7 @@ const JOB_STATUS: Record<string, string> = {
 export default function Dashboard() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [kpis, setKpis] = useState<Kpi[] | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -136,10 +138,28 @@ export default function Dashboard() {
         await loadKpis(data.active_mode);
         loadActivity(data.active_mode);
       })
-      .catch(() => router.replace(signinHereHref()));
+      // Only a genuine 401 should eject to sign-in. A transient 500/network error must NOT redirect
+      // (with valid tokens the sign-in page bounces straight back → infinite loop); show a retry.
+      .catch((e) => {
+        if (isAuthError(e)) router.replace(signinHereHref());
+        else setLoadError(true);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (!me && loadError) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <p className="mb-4 text-sub">تعذّر تحميل لوحة التحكم — تحقّق من اتصالك وحاول مجددًا.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-xl bg-primary px-5 py-2.5 font-semibold text-white"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
   if (!me) return <PageLoader />;
 
   const worker = me.active_mode === "find_job";

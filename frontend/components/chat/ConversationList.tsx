@@ -124,8 +124,9 @@ export default function ConversationList({ activeId }: { activeId: number | null
       </div>
 
       <div className="flex items-center justify-between border-b border-line px-3 py-1.5 text-xs text-sub">
-        <span>ترتيب حسب</span>
+        <label htmlFor="conv-sort">ترتيب حسب</label>
         <select
+          id="conv-sort"
           value={sort}
           onChange={(e) => setSort(e.target.value as Sort)}
           className="rounded-m border border-line bg-white px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"

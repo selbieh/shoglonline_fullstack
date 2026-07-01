@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin
 
 from apps.core.admin_export import ExportCsvMixin
@@ -45,7 +46,7 @@ class UserAdmin(ExportCsvMixin, DjangoUserAdmin, ModelAdmin):
                 '<img src="{}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" loading="lazy">',
                 obj.avatar_url,
             )
-        return format_html('<span style="opacity:.4">—</span>')
+        return mark_safe('<span style="opacity:.4">—</span>')  # constant markup, no interpolation
 
     @admin.display(description="معاينة الصورة")
     def avatar_preview(self, obj):

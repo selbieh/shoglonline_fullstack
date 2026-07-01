@@ -42,7 +42,8 @@
     "/tmp/nbA/types/**/*.ts",
     "/tmp/nbB/types/**/*.ts",
     "/tmp/nbC/types/**/*.ts",
-    "/tmp/nbS/types/**/*.ts"
+    "/tmp/nbS/types/**/*.ts",
+    ".next-prodcheck/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

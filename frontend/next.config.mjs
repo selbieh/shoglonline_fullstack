@@ -37,6 +37,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Allow an isolated build dir (e.g. CI prod-check builds) without clobbering a running
+  // `next dev` server's `.next` cache. Defaults to `.next` for normal dev/prod.
+  distDir: process.env.BUILD_DIST_DIR || ".next",
   output: "standalone", // slim Docker runtime (SRS §20.1)
   poweredByHeader: false, // don't advertise the stack
   compress: true,

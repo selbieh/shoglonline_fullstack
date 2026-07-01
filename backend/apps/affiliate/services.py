@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
@@ -37,11 +38,24 @@ def get_or_create_profile(user) -> AffiliateProfile:
     if profile:
         return profile
     base = slugify(user.email.split("@")[0])[:30] or f"u{user.id}"
-    slug, i = base, 1
-    while AffiliateProfile.objects.filter(slug=slug).exists():
-        i += 1
-        slug = f"{base}-{i}"
-    return AffiliateProfile.objects.create(user=user, slug=slug)
+    # The exists()-then-create check is not atomic: two users whose email prefixes slugify to the
+    # same base (or the same user opening the dashboard twice) can both pass it and collide on the
+    # unique slug/user constraint -> 500. Retry inside a savepoint on IntegrityError.
+    for i in range(1, 12):
+        slug = base if i == 1 else f"{base}-{i}"
+        if AffiliateProfile.objects.filter(slug=slug).exists():
+            continue
+        try:
+            with transaction.atomic():
+                return AffiliateProfile.objects.create(user=user, slug=slug)
+        except IntegrityError:
+            existing = AffiliateProfile.objects.filter(user=user).first()
+            if existing:
+                return existing  # a concurrent request already created this user's profile
+            continue  # slug was taken by a concurrent create — try the next suffix
+    # Fallback: a user-id suffix is effectively collision-proof.
+    existing = AffiliateProfile.objects.filter(user=user).first()
+    return existing or AffiliateProfile.objects.create(user=user, slug=f"{base}-{user.id}")
 
 
 @transaction.atomic
@@ -167,7 +181,9 @@ def accrue_for_contract(contract, *, base_override=None) -> int:
                  bucket=Transaction.Bucket.AVAILABLE, amount=amount,
                  idempotency_key=f"affiliate:{commission.pk}",
                  note=f"عمولة إحالة على العقد #{contract.pk}")
-        AffiliateProfile.objects.filter(pk=profile.pk).update(total_earned=profile.total_earned + amount)
+        # Atomic DB-side increment (not read-modify-write): concurrent accruals/clawbacks for the
+        # same referrer must compose, not clobber each other's value.
+        AffiliateProfile.objects.filter(pk=profile.pk).update(total_earned=F("total_earned") + amount)
         accrued += 1
     return accrued
 
@@ -185,7 +201,7 @@ def clawback(commission: AffiliateCommission) -> AffiliateCommission:
     commission.save(update_fields=["status"])
     profile = AffiliateProfile.objects.filter(user=commission.referrer).first()
     if profile:
-        AffiliateProfile.objects.filter(pk=profile.pk).update(total_earned=profile.total_earned - commission.amount)
+        AffiliateProfile.objects.filter(pk=profile.pk).update(total_earned=F("total_earned") - commission.amount)
     return commission
 
 

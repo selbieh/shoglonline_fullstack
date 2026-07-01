@@ -290,8 +290,9 @@ export default function GalleryClient({
             </div>
           )}
 
-          {/* results grid */}
-          {!loading && !error && items.length > 0 && (
+          {/* results grid — NOT gated on !error, so an append ("load more") failure keeps the
+              already-loaded works on screen instead of blanking the whole page. */}
+          {!loading && items.length > 0 && (
             <>
               {/* flex-wrap + justify-center (not grid) so a partial last row centers
                   under the row above instead of being stranded on the start side */}
@@ -300,7 +301,16 @@ export default function GalleryClient({
                   <GalleryCard key={it.id} it={it} favorited={favIds.has(it.id)} />
                 ))}
               </div>
-              {hasMore && (
+              {/* append failed but we still have results: show an inline retry, not a blank page */}
+              {error && (
+                <div className="pt-3 text-center">
+                  <p className="text-sm text-sub">تعذّر تحميل المزيد من الأعمال</p>
+                  <button onClick={() => load(items.length)} className="btn-secondary mt-2 text-sm">
+                    إعادة المحاولة
+                  </button>
+                </div>
+              )}
+              {!error && hasMore && (
                 <div className="flex justify-center pt-2">
                   <button
                     onClick={() => load(items.length)}
@@ -341,6 +351,8 @@ export default function GalleryClient({
             <div className="relative">
               <input
                 className="field pe-9"
+                type="search"
+                aria-label="ابحث في الأعمال أو المستقلين"
                 placeholder="ابحث في الأعمال أو المستقلين…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}

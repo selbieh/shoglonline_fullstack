@@ -4,6 +4,7 @@ import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
+import { pluralizeDays } from "@/lib/arabic";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
 import { timeAgo } from "@/lib/format";
@@ -165,7 +166,7 @@ export default function JobProposalsPage() {
           <h1 className="text-2xl font-extrabold sm:text-3xl">العروض المستلمة</h1>
           {job && <p className="mt-1 truncate text-sm text-sub">على وظيفة «{job.title}» · {proposals.length} عرض</p>}
         </div>
-        <a href="/me/jobs" className="text-sm text-primary-dark">← وظائفي</a>
+        <a href="/me/jobs" className="text-sm text-primary-dark">→ وظائفي</a>
       </div>
 
       {msg && (
@@ -191,7 +192,7 @@ export default function JobProposalsPage() {
                   </a>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                     <span className="font-bold text-ink">{formatUSD(p.budget)}</span>
-                    <span>التسليم خلال {p.delivery_days.toLocaleString("en-US")} يوم</span>
+                    <span>التسليم خلال {pluralizeDays(p.delivery_days)}</span>
                     {timeAgo(p.created_at) && <span>{timeAgo(p.created_at)}</span>}
                   </div>
                 </div>

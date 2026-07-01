@@ -246,7 +246,7 @@ export default function FreelancerProfileView({
           </div>
 
           {/* ── RIGHT rail (CV) ── */}
-          <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-6 lg:self-start">
+          <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-20 lg:self-start">
             {/* quick-facts — keeps the rail informative even when the CV sections are sparse */}
             <RailSection title="لمحة سريعة" icon={<SparklesIcon />}>
               <ul className="space-y-2.5 text-sm">

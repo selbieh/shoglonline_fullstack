@@ -40,6 +40,11 @@ class MeSerializer(serializers.ModelSerializer):
         # `avatar_attachment_id` is handled out-of-band (link + public URL); it's not a model field.
         set_avatar_id = "avatar_attachment_id" in validated_data
         attachment_id = validated_data.pop("avatar_attachment_id", None)
+        # Changing the phone number invalidates any prior OTP verification — otherwise a
+        # never-verified (or blank) number would keep being shown as verified. The OTP flow
+        # (verify_phone_otp) is the only path that may set phone_verified back to True.
+        if "phone" in validated_data and validated_data["phone"] != instance.phone:
+            instance.phone_verified = False
         instance = super().update(instance, validated_data)
         if set_avatar_id:
             from ..services import set_avatar  # noqa: PLC0415 (avoid import cycle)

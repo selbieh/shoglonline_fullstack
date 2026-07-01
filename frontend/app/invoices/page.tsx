@@ -86,18 +86,18 @@ export default function InvoicesPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">الفواتير</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
 
       <section className="card mt-5 space-y-3">
         <h2 className="font-bold">طلب فاتورة فترة</h2>
         <div className="flex flex-wrap gap-2">
-          <select className="field"
+          <select className="field" aria-label="صاحب العمل"
             value={employerId} onChange={(e) => setEmployerId(Number(e.target.value) || "")}>
             <option value="">اختر صاحب العمل…</option>
             {employers.map((em) => <option key={em.id} value={em.id}>{em.name}</option>)}
           </select>
-          <select className="field"
+          <select className="field" aria-label="فترة الفاتورة"
             value={period} onChange={(e) => setPeriod(e.target.value)}>
             <option value="month">شهري</option>
             <option value="week">أسبوعي</option>

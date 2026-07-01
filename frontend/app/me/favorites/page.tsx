@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, tokens } from "@/lib/api";
@@ -36,19 +36,50 @@ type FavItem = {
   image_url?: string; cover_url?: string;
 };
 
+/* A missing OR broken thumbnail (e.g. a dead legacy cover) degrades to the branded icon tile
+   instead of the browser's broken-image glyph. Declared at MODULE scope (not inside the page
+   component) so React keeps it mounted across parent re-renders and its `broken` state persists —
+   otherwise every re-render remounts the <img> and re-requests the known-dead URL. */
+function FavThumb({ thumb, round }: { thumb?: string; round: boolean }) {
+  const [broken, setBroken] = useState(false);
+  const shape = round ? "rounded-full" : "rounded-m";
+  if (!thumb || broken) {
+    return <div className={`icon-tile h-16 w-16 shrink-0 text-[26px] sm:h-20 sm:w-20 ${shape}`}><SparklesIcon /></div>;
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={thumb} alt="" loading="lazy" onError={() => setBroken(true)}
+      className={`h-16 w-16 shrink-0 object-cover ring-1 ring-line sm:h-20 sm:w-20 ${shape}`} />
+  );
+}
+
 export default function MyFavoritesPage() {
   const router = useRouter();
   const [tab, setTab] = useState("services");
   const [items, setItems] = useState<FavItem[] | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [err, setErr] = useState(false);
+  // which tab the currently-shown `items` actually belong to (may lag `tab` mid-fetch)
+  const [loadedTab, setLoadedTab] = useState("services");
+  // bumped on every load; a response whose generation is stale is dropped (latest-wins)
+  const seq = useRef(0);
 
   const load = useCallback(async (t: string) => {
+    const my = ++seq.current;
     setErr(false);
     setItems(null);
     const kind = KIND[t];
     const url = kind === "service" ? "/me/favorites" : `/me/favorites?kind=${kind}`;
-    setItems(await api<FavItem[]>(url));
+    try {
+      const data = await api<FavItem[]>(url);
+      if (my !== seq.current) return; // a newer load started — drop this stale response
+      setItems(data);
+      setLoadedTab(t); // remember which tab these items are for, for correct deletes
+    } catch {
+      if (my !== seq.current) return; // stale error from a superseded load — ignore
+      // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
+      setErr(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -56,15 +87,16 @@ export default function MyFavoritesPage() {
       router.replace(signinHereHref());
       return;
     }
-    // api() already bounces a real 401 to sign-in; only 5xx/network errors reach here.
-    load(tab).catch(() => setErr(true));
+    load(tab);
   }, [tab, load, router]);
 
   async function remove(id: number) {
     setBusyId(id);
     const prev = items;
     setItems((l) => l?.filter((x) => x.id !== id) ?? null);
-    const kind = KIND[tab];
+    // derive kind from the tab the shown items belong to, not the live `tab`, so a
+    // stale-rendered row is deleted against the correct endpoint
+    const kind = KIND[loadedTab];
     const url = kind === "service" ? `/me/favorites/${id}` : `/me/favorites/${kind}/${id}`;
     try {
       await api(url, { method: "DELETE" });
@@ -104,28 +136,13 @@ export default function MyFavoritesPage() {
     portfolio: { text: "لا أعمال محفوظة بعد" },
   };
 
-  /* A missing OR broken thumbnail (e.g. a dead legacy cover) degrades to the branded icon tile
-     instead of the browser's broken-image glyph. */
-  function FavThumb({ thumb, round }: { thumb?: string; round: boolean }) {
-    const [broken, setBroken] = useState(false);
-    const shape = round ? "rounded-full" : "rounded-m";
-    if (!thumb || broken) {
-      return <div className={`icon-tile h-16 w-16 shrink-0 text-[26px] sm:h-20 sm:w-20 ${shape}`}><SparklesIcon /></div>;
-    }
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={thumb} alt="" loading="lazy" onError={() => setBroken(true)}
-        className={`h-16 w-16 shrink-0 object-cover ring-1 ring-line sm:h-20 sm:w-20 ${shape}`} />
-    );
-  }
-
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-3xl font-extrabold">
           <HeartIcon filled className="text-[26px] text-danger" /> المفضلة
         </h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
       <p className="mt-1 text-sm text-sub">احفظ ما يعجبك للرجوع إليه لاحقًا: خدمات، مستقلون، وظائف، أو أعمال.</p>
 
@@ -136,7 +153,7 @@ export default function MyFavoritesPage() {
       {err ? (
         <div className="card mt-6 py-14 text-center text-sub">
           <p className="font-bold">تعذّر تحميل المفضلة.</p>
-          <button type="button" onClick={() => load(tab).catch(() => setErr(true))}
+          <button type="button" onClick={() => load(tab)}
             className="btn-secondary mt-4 inline-block text-sm">إعادة المحاولة</button>
         </div>
       ) : items === null ? (

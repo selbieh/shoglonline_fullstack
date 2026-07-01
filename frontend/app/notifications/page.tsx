@@ -61,7 +61,7 @@ export default function NotificationsPage() {
             <button onClick={markAll} className="text-sm text-primary-dark">تعليم الكل كمقروء</button>
           )}
           <a href="/settings" className="inline-flex items-center gap-1 text-sm text-sub hover:text-primary"><GearIcon className="text-[15px]" /> تفضيلات الإشعارات</a>
-          <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+          <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
         </div>
       </div>
 

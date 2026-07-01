@@ -53,6 +53,8 @@ class ConversationSerializer(serializers.ModelSerializer):
     def get_context(self, obj):
         """Header deep-link to the originating service/job/contract — powers «عرض الخدمة»
         (and «عرض الوظيفة» / «عرض العقد»). Returns None for plain/direct conversations."""
+        if obj.context_type == Conversation.Context.SERVICE and obj.service_id:
+            return {"label": "عرض الخدمة", "title": obj.service.title, "href": f"/services/{obj.service.slug}"}
         if obj.context_type == Conversation.Context.PROPOSAL and obj.job_id:
             return {"label": "عرض الوظيفة", "title": obj.job.title, "href": f"/jobs/{obj.job.slug}"}
         if obj.context_type == Conversation.Context.CONTRACT and obj.contract_id:

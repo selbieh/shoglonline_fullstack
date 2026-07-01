@@ -93,7 +93,7 @@ export default function SupportPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">الدعم</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
 
       <button className="btn-primary mt-5" onClick={() => setShowForm((s) => !s)}>
@@ -104,6 +104,7 @@ export default function SupportPage() {
         <section className="card mt-4 space-y-3">
           <select
             className="w-full field"
+            aria-label="نوع التذكرة"
             value={typeId}
             onChange={(e) => setTypeId(Number(e.target.value) || "")}
           >
@@ -114,6 +115,7 @@ export default function SupportPage() {
           </select>
           <input
             className="w-full field"
+            aria-label="عنوان التذكرة"
             placeholder="العنوان"
             maxLength={200}
             value={title}
@@ -121,6 +123,7 @@ export default function SupportPage() {
           />
           <textarea
             className="w-full field"
+            aria-label="رسالة التذكرة"
             rows={4}
             placeholder="اشرح مشكلتك…"
             maxLength={5000}

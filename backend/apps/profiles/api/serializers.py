@@ -260,6 +260,22 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
     # soft gate lives in services.submit_profile_for_publication, which diverts a flagged profile to
     # admin review instead of rejecting it.
 
+    def validate_skills(self, value):
+        # De-dup by skill_id: a UI can submit the same skill twice, and WorkerSkill has
+        # unique_together (profile, skill), so a duplicate would raise an IntegrityError mid
+        # replace-all (a 500) after the old skills were already deleted. Keep the last entry.
+        deduped = {}
+        for item in value:
+            deduped[item["skill_id"]] = item
+        return list(deduped.values())
+
+    def validate_hourly_rate(self, value):
+        # A negative rate would render on the public freelancer card and sort to the top of an
+        # ascending hourly_rate ordering.
+        if value is not None and value < 0:
+            raise serializers.ValidationError("قيمة غير صالحة")
+        return value
+
     def validate(self, attrs):
         # When the private contact channel is a phone or WhatsApp number, the value must be a valid
         # international number (Israel excluded) — same rule the frontend's country dropdown enforces.

@@ -41,7 +41,9 @@ async function getWorker(id: string): Promise<Worker | null> {
 function fmtDate(v?: string | null): string {
   if (!v) return "";
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric" });
+  // ar-u-nu-latn → Latin digits, matching the app-wide date convention (plain "ar" renders
+  // Arabic-Indic numerals, inconsistent with every other date in the app).
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("ar-u-nu-latn", { year: "numeric", month: "long", day: "numeric" });
 }
 
 export async function generateMetadata(
@@ -167,7 +169,7 @@ export default async function PortfolioItemPage({ params }: { params: { id: stri
           </div>
 
           {/* right rail */}
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <DetailRail title="بيانات العمل">
               {it.project_type && <RailRow icon={<BriefcaseIcon />} label="نوع المشروع" value={it.project_type} />}
               {it.created_at && <RailRow icon={<ClockIcon />} label="تاريخ نشر العمل" value={fmtDate(it.created_at)} />}

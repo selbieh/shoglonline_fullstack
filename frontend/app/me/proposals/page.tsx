@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { pluralizeDays } from "@/lib/arabic";
 import { apiError } from "@/lib/errors";
 import { timeAgo } from "@/lib/format";
 import {
@@ -132,7 +133,7 @@ export default function MyProposalsPage() {
                   </a>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                     <span className="font-bold text-ink">{formatUSD(p.budget)}</span>
-                    <span>التسليم خلال {p.delivery_days.toLocaleString("en-US")} يوم</span>
+                    <span>التسليم خلال {pluralizeDays(p.delivery_days)}</span>
                     {timeAgo(p.created_at) && <span>{timeAgo(p.created_at)}</span>}
                   </div>
                 </div>

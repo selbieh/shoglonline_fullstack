@@ -38,12 +38,12 @@ def _ordered(u1, u2):
 
 
 @transaction.atomic
-def _get_or_create(user1, user2, *, context_type, contract=None, job=None) -> Conversation:
+def _get_or_create(user1, user2, *, context_type, contract=None, job=None, service=None) -> Conversation:
     if user1.id == user2.id:
         raise PermissionDenied(ERR["self"])  # BR-21
     a, b = _ordered(user1, user2)
     conv, created = Conversation.objects.get_or_create(
-        user_a=a, user_b=b, context_type=context_type, contract=contract, job=job,
+        user_a=a, user_b=b, context_type=context_type, contract=contract, job=job, service=service,
     )
     if created:
         ConversationMember.objects.bulk_create([
@@ -76,6 +76,20 @@ def get_or_create_for_contract(contract) -> Conversation:
         raise ValidationError(ERR["no_active_contract"])
     return _get_or_create(contract.employer, contract.worker,
                           context_type=Conversation.Context.CONTRACT, contract=contract)
+
+
+def get_or_create_for_service(buyer, service) -> Conversation:
+    """Pre-purchase inquiry chat: a prospective buyer opens a direct line to the freelancer from a
+    service page to ask questions BEFORE ordering. This deliberately does NOT require a contract
+    (unlike rule D-2's contract chat) — it's the marketplace's "contact the seller" entry point.
+
+    The freelancer can never cold-start this (only the visiting buyer clicks «تواصل»), and the owner
+    opening their own service is rejected by _get_or_create (self-chat, BR-21). Idempotent: the same
+    (buyer, freelancer, service) always resolves to one conversation."""
+    if not chat_enabled():
+        raise ValidationError(ERR["disabled"])  # honour the global kill-switch (E1, AC-6)
+    return _get_or_create(buyer, service.worker,
+                          context_type=Conversation.Context.SERVICE, service=service)
 
 
 def start_from_proposal(employer, proposal) -> Conversation:
@@ -136,10 +150,14 @@ def persist_synced_message(conversation: Conversation, sender, *, body: str = ""
     if not conversation.has_member(sender):
         raise PermissionDenied(ERR["not_member"])
 
+    # Banned-word masking must also run on the primary (Firestore) send path — the client wrote the
+    # raw body straight to Firestore, so this PG mirror (used for oversight + unread email) is the
+    # backend's only chance to mask it, mirroring send_message().
+    clean_body = _filter_banned(body or "")
     message, created = Message.objects.get_or_create(
         firestore_id=firestore_id,
         defaults={"conversation": conversation, "sender": sender,
-                  "body": body or "", "files": files or []},
+                  "body": clean_body, "files": files or []},
     )
     if not created:
         return message  # a concurrent/retried sync already persisted this exact message
@@ -147,7 +165,7 @@ def persist_synced_message(conversation: Conversation, sender, *, body: str = ""
     if attachment_ids:
         from apps.attachments.services import attach  # noqa: PLC0415 (avoid import cycle)
         attach(attachment_ids, message, sender)
-    conversation.last_message_snippet = (body or "")[:160]
+    conversation.last_message_snippet = clean_body[:160]
     conversation.last_message_at = message.created_at
     conversation.save(update_fields=["last_message_snippet", "last_message_at"])
     ConversationMember.objects.filter(conversation=conversation, user=sender).update(
@@ -156,7 +174,7 @@ def persist_synced_message(conversation: Conversation, sender, *, body: str = ""
     recipient = conversation.other(sender)
     from apps.notifications.services import notify  # noqa: PLC0415 (avoid cycle)
     notify(recipient, kind="chat_message", title=f"رسالة جديدة من {sender.first_name or sender.email}",
-           body=(body or "")[:120], deep_link=f"/messages/{conversation.pk}", email=False)
+           body=clean_body[:120], deep_link=f"/messages/{conversation.pk}", email=False)
     return message
 
 
@@ -193,6 +211,20 @@ def set_read_only(conversation: Conversation) -> None:
         return
     conversation.status = Conversation.Status.READ_ONLY
     conversation.save(update_fields=["status"])
+    firestore.mirror_status(conversation)
+
+
+@transaction.atomic
+def set_active(conversation: Conversation) -> None:
+    """Admin override — reopen a read-only conversation (Postgres + Firestore mirror).
+
+    The inverse of set_read_only: clears any preserved freeze target so a later unfreeze can't
+    silently re-lock a conversation an admin deliberately reopened."""
+    if conversation.status == Conversation.Status.ACTIVE:
+        return
+    conversation.status = Conversation.Status.ACTIVE
+    conversation.frozen_prev_status = ""
+    conversation.save(update_fields=["status", "frozen_prev_status"])
     firestore.mirror_status(conversation)
 
 

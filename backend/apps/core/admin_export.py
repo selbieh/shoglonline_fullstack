@@ -36,7 +36,18 @@ class ExportCsvMixin:
         )
         return response
 
-    @staticmethod
-    def _cell(obj, name):
+    # Leading chars that spreadsheet apps (Excel/Calc/Sheets) treat as a formula trigger.
+    _FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+    @classmethod
+    def _cell(cls, obj, name):
         value = getattr(obj, name, "")
-        return "" if value is None else str(value)
+        if value is None:
+            return ""
+        text = str(value)
+        # CSV-injection guard: neutralize user-controlled values that would execute as a
+        # formula when the export is opened in a spreadsheet. Prefixing with ' is the
+        # standard mitigation (quoting alone does NOT stop it).
+        if text and text[0] in cls._FORMULA_PREFIXES:
+            text = "'" + text
+        return text

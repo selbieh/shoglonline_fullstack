@@ -19,6 +19,7 @@ from apps.bids.models import BidLedger
 from apps.catalog.models import Category
 from apps.chat import services as chat
 from apps.chat.models import Conversation, Message
+from apps.gigs.models import Service
 from apps.chat.tasks import lock_idle_conversations, send_unread_chat_emails
 from apps.contracts import services as cs
 from apps.contracts.models import Contract
@@ -84,6 +85,17 @@ def make_unfunded_contract(employer, worker, category, budget="100"):
 def conv_for(employer, worker, category):
     """The conversation auto-opened for a funded/active contract."""
     return make_funded_contract(employer, worker, category).conversations.first()
+
+
+def make_live_service(worker, category, *, price="100"):
+    return Service.objects.create(worker=worker, title="تصميم شعار", description="وصف",
+                                  category=category, base_price=Decimal(price), delivery_days=5,
+                                  status=Service.Status.LIVE)
+
+
+@pytest.fixture()
+def buyer(db):
+    return User.objects.create_user(email="buyer@example.com", first_name="مشترٍ")
 
 
 # ------------------------------------------------------------------ initiation (rule D-2)
@@ -243,3 +255,71 @@ class TestChatAPI:
         assert client.get("/api/v1/me/notifications/unread-count").json()["unread"] >= 1
         client.post("/api/v1/me/notifications/read-all", format="json")
         assert client.get("/api/v1/me/notifications/unread-count").json()["unread"] == 0
+
+
+# ------------------------------------------------------------------ pre-purchase inquiry chat
+# A buyer may open a direct line to the freelancer from a service page BEFORE ordering (to ask
+# questions). This is the one path that opens a conversation without a contract — rule D-2's
+# contract chat is untouched; these tests pin the new behaviour AND that it stays scoped.
+@pytest.mark.django_db
+class TestServiceInquiryChat:
+    def test_service_fn_opens_conversation_without_contract(self, buyer, worker, category):
+        service = make_live_service(worker, category)
+        conv = chat.get_or_create_for_service(buyer, service)
+        assert conv.context_type == Conversation.Context.SERVICE
+        assert conv.service_id == service.id
+        assert conv.contract_id is None  # no contract needed (unlike D-2)
+        assert conv.has_member(buyer) and conv.has_member(worker)
+
+    def test_inquiry_is_deduped(self, buyer, worker, category):
+        service = make_live_service(worker, category)
+        c1 = chat.get_or_create_for_service(buyer, service)
+        c2 = chat.get_or_create_for_service(buyer, service)
+        assert c1.pk == c2.pk
+
+    def test_owner_cannot_inquire_on_own_service(self, worker, category):
+        """Self-chat is blocked (BR-21): the freelancer can't open an inquiry with themselves."""
+        service = make_live_service(worker, category)
+        with pytest.raises(PermissionDenied):
+            chat.get_or_create_for_service(worker, service)
+
+    def test_kill_switch_blocks_inquiry(self, buyer, worker, category):
+        service = make_live_service(worker, category)
+        set_setting("chat.enabled", False)
+        with pytest.raises(ValidationError):
+            chat.get_or_create_for_service(buyer, service)
+
+    def test_api_buyer_opens_inquiry(self, buyer, worker, category):
+        service = make_live_service(worker, category)
+        client = APIClient()
+        client.force_authenticate(buyer)
+        res = client.post("/api/v1/conversations", {"service_id": service.id}, format="json")
+        assert res.status_code == 201
+        body = res.json()
+        assert body["context_type"] == "service"
+        assert body["other"]["id"] == worker.id
+        assert body["context"]["href"] == f"/services/{service.slug}"  # deep-links back to the service
+
+    def test_api_owner_inquiry_is_forbidden(self, worker, category):
+        service = make_live_service(worker, category)
+        client = APIClient()
+        client.force_authenticate(worker)
+        res = client.post("/api/v1/conversations", {"service_id": service.id}, format="json")
+        assert res.status_code == 403  # self-chat (BR-21)
+
+    def test_api_inquiry_requires_live_service(self, buyer, worker, category):
+        draft = make_live_service(worker, category)
+        Service.objects.filter(pk=draft.pk).update(status=Service.Status.DRAFT)
+        client = APIClient()
+        client.force_authenticate(buyer)
+        res = client.post("/api/v1/conversations", {"service_id": draft.id}, format="json")
+        assert res.status_code == 404  # only discoverable services are contactable
+
+    def test_inquiry_shows_under_services_filter(self, buyer, worker, category):
+        """The buyer's inquiry lands in their conversation list as a service-context chat."""
+        service = make_live_service(worker, category)
+        chat.get_or_create_for_service(buyer, service)
+        client = APIClient()
+        client.force_authenticate(buyer)
+        rows = client.get("/api/v1/me/conversations").json()["results"]
+        assert any(r["context_type"] == "service" for r in rows)

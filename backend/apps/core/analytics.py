@@ -272,12 +272,29 @@ def analytics_widgets() -> dict:
     }
 
 
+DASHBOARD_RANGES = (7, 14, 30, 90)  # date-range selector presets on the dashboard (ADM-2)
+
+
+def _clamp_days(raw) -> int:
+    """Chart window in days — one of the selector presets, defaulting to 14."""
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        return 14
+    return days if days in DASHBOARD_RANGES else 14
+
+
 def dashboard_callback(request, context):
     """Inject KPI stat boxes + chart datasets into the Unfold admin index (ADM-2)."""
+    from apps.core.admin_badges import action_queue
+
     kpis = compute_kpis()
-    days = (request.GET.get("days") if request is not None else None) or 14
+    days = _clamp_days(request.GET.get("days") if request is not None else None)
     links = _stat_links()
     context["kpis"] = kpis
+    context["action_queue"] = action_queue()  # non-zero operator queues, most-urgent first
+    context["days"] = days
+    context["day_ranges"] = DASHBOARD_RANGES
     context["kpi_cards"] = [{"label": label, "value": kpis.get(key, 0)} for key, label in _CARDS]
     context["stat_boxes"] = [
         {

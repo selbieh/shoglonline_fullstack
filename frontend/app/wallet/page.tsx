@@ -7,6 +7,7 @@ import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { USD_LABEL } from "@/lib/currency";
 import { toAsciiDigits } from "@/lib/arabic";
+import { useDialogA11y } from "@/lib/useDialogA11y";
 import { AlertIcon, ClockIcon, LockIcon, ReceiptIcon, ShieldIcon, WalletIcon } from "@/components/icons";
 import KpiCard from "@/components/KpiCard";
 
@@ -70,6 +71,7 @@ function WalletInner() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState<Tx | null>(null);
+  const receiptRef = useDialogA11y(!!receipt, () => setReceipt(null));
 
   const load = useCallback(async () => {
     try {
@@ -130,7 +132,7 @@ function WalletInner() {
     <main className="mx-auto max-w-screen-2xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-extrabold">محفظتي</h1>
-        <a href="/dashboard" className="text-sm text-primary-dark">← لوحتي</a>
+        <a href="/dashboard" className="text-sm text-primary-dark">→ لوحتي</a>
       </div>
 
       {msg && (
@@ -198,9 +200,9 @@ function WalletInner() {
               <a href="/settings/payouts" className="inline-block text-xs font-medium text-primary-dark hover:underline">إدارة وسائل الاستلام ←</a>
 
               <div className="flex flex-wrap gap-2">
-                <input className="w-32 field" placeholder="المبلغ" inputMode="decimal"
+                <input className="w-32 field" aria-label="مبلغ السحب" placeholder="المبلغ" inputMode="decimal"
                   value={wdAmount} onChange={(e) => setWdAmount(toAsciiDigits(e.target.value))} />
-                <input className="min-w-48 flex-1 field" dir="auto" type="email" inputMode="email"
+                <input className="min-w-48 flex-1 field" aria-label="بريد PayPal للاستلام" dir="auto" type="email" inputMode="email"
                   placeholder="بريد PayPal (افتراضيًا بريد حسابك)"
                   value={wdEmail} onChange={(e) => setWdEmail(e.target.value)} />
                 <button className="btn-secondary" disabled={busy || !(Number(wdAmount) >= 10)} onClick={withdraw}>طلب سحب</button>
@@ -267,7 +269,7 @@ function WalletInner() {
       </section>
 
       {receipt && (
-        <div className="fixed inset-0 z-50 grid place-content-center bg-black/40 p-4" role="dialog" aria-modal="true"
+        <div ref={receiptRef} tabIndex={-1} className="fixed inset-0 z-50 grid place-content-center bg-black/40 p-4 focus:outline-none" role="dialog" aria-modal="true" aria-label="إيصال المعاملة"
           onClick={() => setReceipt(null)}>
           <div className="w-full max-w-sm rounded-l bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 border-b border-line pb-3">

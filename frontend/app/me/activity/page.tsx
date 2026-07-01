@@ -3,6 +3,7 @@
 import PageLoader from "@/components/PageLoader";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { pluralizeDays } from "@/lib/arabic";
 import { api, tokens, type Me } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
 import { apiError } from "@/lib/errors";
@@ -250,7 +251,7 @@ export default function ActivityPage() {
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sub">
                         <span>المستقل: <span className="text-ink">{r.worker_name ?? "—"}</span></span>
                         <span className="font-bold text-ink">{formatUSD(r.total_price)}</span>
-                        {r.delivery_days ? <span>التسليم خلال {r.delivery_days.toLocaleString("en-US")} يوم</span> : null}
+                        {r.delivery_days ? <span>التسليم خلال {pluralizeDays(r.delivery_days)}</span> : null}
                         {timeAgo(r.created_at) && <span>{timeAgo(r.created_at)}</span>}
                       </div>
                     </div>

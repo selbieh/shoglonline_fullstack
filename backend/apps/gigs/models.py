@@ -2,9 +2,12 @@
 (SRS §4.6 FR-SVC, §9.3). Accepting a buying request creates a Contract that runs
 through the same delivery/escrow layer as jobs (§9.4).
 """
+import uuid
+
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import Q
+from django.utils.text import slugify
 
 
 class Service(models.Model):
@@ -58,6 +61,30 @@ class Service(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    def save(self, *args, **kwargs):
+        # Guarantee a unique slug on EVERY write path (API create, seed, admin, data import).
+        # The field is blank=True + unique=True; without this, two rows inserted with a blank slug
+        # (e.g. the API create sets the slug only AFTER insert, and seeds create services with no
+        # slug) collide on the unique constraint and raise an unhandled 500 IntegrityError.
+        if self.slug:
+            return super().save(*args, **kwargs)
+        base = slugify(self.title, allow_unicode=True)[:150] or "service"
+        # The exists()-then-insert check below is not atomic: two concurrent inserts computing the
+        # same slug both see it free and the loser hits the unique constraint. Retry on that race
+        # inside a savepoint (so the outer transaction survives) with the next suffix.
+        for i in range(1, 8):
+            self.slug = base if i == 1 else f"{base}-{i}"
+            if Service.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                continue
+            try:
+                with transaction.atomic():
+                    return super().save(*args, **kwargs)
+            except IntegrityError:
+                continue
+        # Fallback after repeated contention: a random suffix is effectively collision-proof.
+        self.slug = f"{base}-{uuid.uuid4().hex[:6]}"
+        return super().save(*args, **kwargs)
 
 
 class ServiceAddon(models.Model):

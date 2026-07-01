@@ -12,6 +12,7 @@ const service: ServiceLite = {
   id: 1,
   base_price: "100",
   addons: [{ id: 7, title: "تسليم سريع", price: "20", extra_days: 1 }],
+  worker: 42,
 };
 
 describe("<BuyBox>", () => {

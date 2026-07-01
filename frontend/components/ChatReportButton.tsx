@@ -3,6 +3,7 @@
 import { useState, type MouseEvent } from "react";
 import { api, tokens } from "@/lib/api";
 import { signinHereHref } from "@/lib/nav";
+import { useDialogA11y } from "@/lib/useDialogA11y";
 import { AlertIcon, CheckIcon } from "@/components/icons";
 
 /* Report a conversation to the admin chat-review queue (POST /conversations/<id>/report
@@ -50,6 +51,8 @@ export default function ChatReportButton({
     setTimeout(() => { setReason(""); setDetail(""); setDone(false); setError(""); }, 200);
   }
 
+  const dialogRef = useDialogA11y(open, close);
+
   async function submit(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -84,9 +87,12 @@ export default function ChatReportButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 grid place-content-center bg-black/40 p-4"
+          ref={dialogRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 grid place-content-center bg-black/40 p-4 focus:outline-none"
           role="dialog"
           aria-modal="true"
+          aria-label="الإبلاغ عن المحادثة"
           onClick={close}
         >
           <div className="w-full max-w-md rounded-l bg-white p-6 text-right shadow-xl" onClick={(e) => e.stopPropagation()}>

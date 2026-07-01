@@ -102,9 +102,14 @@ def request_service(*, employer, service: Service, quantity: int = 1, descriptio
         qty = int(quantity)
     except (TypeError, ValueError):
         raise ValidationError({"code": "bad_quantity", "message_ar": "كمية غير صالحة"})
-    qty = min(max(1, qty), 999)  # cap so total_price can't overflow DecimalField(max_digits=12)
+    qty = min(max(1, qty), 999)
     unit = Decimal(service.base_price) + sum((a.price for a in addons), Decimal("0"))
     total = unit * qty
+    # total_price is DecimalField(max_digits=12, decimal_places=2) -> must stay < 10^10. The qty cap
+    # alone does NOT bound this (base_price + add-ons are large), so a big price × qty could overflow
+    # the column and raise a DB DataError (unhandled 500). Reject cleanly instead.
+    if total > Decimal("9999999999.99"):
+        raise ValidationError({"code": "amount_too_large", "message_ar": "إجمالي الطلب كبير جدًا"})
     extra_days = sum((a.extra_days for a in addons), 0)
 
     request = BuyingRequest.objects.create(

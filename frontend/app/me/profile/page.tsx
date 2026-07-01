@@ -436,8 +436,11 @@ export default function ProfileEditPage() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm font-bold">سعر الساعة (بالدولار الأمريكي)
-            <input type="number" min={0} step="0.01" className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
-              onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value ? String(Number(e.target.value)) : null })} />
+            {/* inputMode=decimal + keep the RAW sanitized string (one dot, digits only). The old
+                String(Number(value)) round-trip collapsed "12." → "12" on every keystroke, making a
+                trailing decimal point impossible to type. Coercion to a number happens at save. */}
+            <input inputMode="decimal" className={`mt-1 ${inputCls}`} value={profile.hourly_rate ?? ""}
+              onChange={(e) => setProfile({ ...profile, hourly_rate: e.target.value.replace(/[^\d.]/g, "").replace(/(\..*?)\./g, "$1") || null })} />
           </label>
           <label className="text-sm font-bold">التوفّر
             <select className={`mt-1 ${inputCls}`} value={profile.availability}
@@ -461,7 +464,13 @@ export default function ProfileEditPage() {
           <span className="block text-sm font-bold">وسيلة تواصل (للمنصة فقط)</span>
           <div className="mt-1 flex flex-wrap gap-2">
             <select className={`w-36 shrink-0 ${inputCls}`} aria-label="نوع وسيلة التواصل" value={profile.private_contact_channel}
-              onChange={(e) => setProfile({ ...profile, private_contact_channel: e.target.value })}>
+              onChange={(e) => {
+                const next = e.target.value;
+                // phone & whatsapp share the same E.164 format, so a value can carry over between
+                // them; every other switch changes the expected format, so clear the stale value
+                const bothPhone = /^(phone|whatsapp)$/.test(profile.private_contact_channel) && /^(phone|whatsapp)$/.test(next);
+                setProfile({ ...profile, private_contact_channel: next, private_contact_value: bothPhone ? profile.private_contact_value : "" });
+              }}>
               {CONTACT_CHANNELS.map((c) => <option key={c.v} value={c.v}>{c.l}</option>)}
             </select>
             {profile.private_contact_channel === "phone" || profile.private_contact_channel === "whatsapp" ? (
